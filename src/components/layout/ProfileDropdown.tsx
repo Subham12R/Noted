@@ -3,20 +3,28 @@
 import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { signOut } from "@/lib/auth-client"
+import { useAuth } from "@/context/AuthContext"
 
-interface ProfileDropdownProps {
-  avatarSrc?: string
-  userName?: string
-  userEmail?: string
+// Get initials from name
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2)
 }
 
-export function ProfileDropdown({
-  avatarSrc = "/avatar.jpeg",
-  userName = "Subham",
-  userEmail = "subham@example.com",
-}: ProfileDropdownProps) {
+export function ProfileDropdown() {
+  const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  const userName = user?.name || "User"
+  const userEmail = user?.email || ""
+  const avatarSrc = user?.image || undefined
+  const initials = getInitials(userName)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -37,25 +45,37 @@ export function ProfileDropdown({
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
-        <Image
-          src={avatarSrc}
-          alt={userName}
-          width={32}
-          height={32}
-          className="rounded-full h-8 w-8 object-cover"
-        />
+        {avatarSrc ? (
+          <Image
+            src={avatarSrc}
+            alt={userName}
+            width={32}
+            height={32}
+            className="rounded-full h-8 w-8 object-cover"
+          />
+        ) : (
+          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-indigo-600 text-white text-sm font-medium">
+            {initials}
+          </div>
+        )}
       </button>
 
       {isOpen && (
         <div className="absolute top-[calc(100%+0.5rem)] right-0 min-w-60 bg-zinc-950/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="flex items-center gap-3 p-4">
-            <Image
-              src={avatarSrc}
-              alt={userName}
-              width={40}
-              height={40}
-              className="rounded-full h-10 w-10 object-cover"
-            />
+            {avatarSrc ? (
+              <Image
+                src={avatarSrc}
+                alt={userName}
+                width={40}
+                height={40}
+                className="rounded-full h-10 w-10 object-cover"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-10 w-10 rounded-full bg-indigo-600 text-white text-base font-medium">
+                {initials}
+              </div>
+            )}
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-semibold text-foreground truncate">{userName}</span>
               <span className="text-xs text-foreground/50 truncate">{userEmail}</span>
@@ -95,7 +115,14 @@ export function ProfileDropdown({
           <div className="h-px bg-white/10 my-1" />
 
           <div className="py-1">
-            <button className="flex items-center gap-3 w-full px-4 py-2.5 bg-transparent border-none text-red-500 text-sm cursor-pointer transition-all duration-150 hover:bg-red-500/10 [&_svg]:text-red-500" onClick={() => setIsOpen(false)}>
+            <button
+              className="flex items-center gap-3 w-full px-4 py-2.5 bg-transparent border-none text-red-500 text-sm cursor-pointer transition-all duration-150 hover:bg-red-500/10 [&_svg]:text-red-500"
+              onClick={async () => {
+                setIsOpen(false)
+                await signOut()
+                window.location.href = "/login"
+              }}
+            >
               <LogoutIcon />
               <span>Sign Out</span>
             </button>

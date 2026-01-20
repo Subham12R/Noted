@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1768914817905,
+      "tag": "0000_organic_starhawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1768917278927,
+      "tag": "0001_add-page-content",
+      "breakpoints": true
+    }
+  ]
+}

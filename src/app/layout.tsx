@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Grandstander } from "next/font/google";
 import { NotesProvider } from "@/context/NotesContext";
 import { SidebarProvider } from "@/context/SidebarContext";
+import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,6 +13,12 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const grandstander = Grandstander({
+  variable: "--font-grandstander",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -27,13 +34,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${grandstander.variable} antialiased`}
       >
-        <SidebarProvider>
-          <NotesProvider>
-            {children}
-          </NotesProvider>
-        </SidebarProvider>
+        <AuthProvider>
+          <SidebarProvider>
+            <NotesProvider>
+              {children}
+            </NotesProvider>
+          </SidebarProvider>
+        </AuthProvider>
       </body>
     </html>
   );

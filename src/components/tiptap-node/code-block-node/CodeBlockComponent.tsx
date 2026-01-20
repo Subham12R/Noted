@@ -1,14 +1,29 @@
 "use client"
 
 import { NodeViewContent, NodeViewWrapper, NodeViewProps } from "@tiptap/react"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { supportedLanguages } from "./code-block-node-extension"
 
 export function CodeBlockComponent({ node, updateAttributes, extension }: NodeViewProps) {
   const [copied, setCopied] = useState(false)
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const language = node.attrs.language || extension.options.defaultLanguage || "plaintext"
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowLanguageDropdown(false)
+      }
+    }
+
+    if (showLanguageDropdown) {
+      document.addEventListener("mousedown", handleClickOutside)
+      return () => document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [showLanguageDropdown])
 
   const handleCopy = useCallback(async () => {
     const content = node.textContent
@@ -26,63 +41,104 @@ export function CodeBlockComponent({ node, updateAttributes, extension }: NodeVi
     setShowLanguageDropdown(false)
   }, [updateAttributes])
 
-  return (
-    <NodeViewWrapper className="code-block-wrapper group relative my-3">
-      {/* Floating toolbar - appears on hover */}
-      <div className="absolute -top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-        {/* Language selector */}
-        <div className="relative">
-          <button
-            onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-md border border-zinc-700 transition-colors shadow-sm"
-          >
-            <span>{supportedLanguages.find(l => l.value === language)?.label || language}</span>
-            <ChevronDownIcon />
-          </button>
+  const languageLabel = supportedLanguages.find(l => l.value === language)?.label || language
 
-          {showLanguageDropdown && (
-            <div className="absolute top-full right-0 mt-1 w-40 max-h-56 overflow-y-auto bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50">
-              {supportedLanguages.map((lang) => (
-                <button
-                  key={lang.value}
-                  onClick={() => handleLanguageChange(lang.value)}
-                  className={`w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-700 transition-colors ${
-                    language === lang.value ? "text-blue-400 bg-zinc-700/50" : "text-zinc-300"
-                  }`}
-                >
-                  {lang.label}
-                </button>
-              ))}
-            </div>
-          )}
+  return (
+    <NodeViewWrapper className="code-block-wrapper group relative my-4" data-language={language}>
+      <div className="code-block-container">
+        {/* Header bar */}
+        <div className="code-block-header" contentEditable={false}>
+          {/* Language selector */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+              className="code-block-lang-btn"
+            >
+              <CodeIcon />
+              <span>{languageLabel}</span>
+              <ChevronDownIcon className={showLanguageDropdown ? "rotate-180" : ""} />
+            </button>
+
+            {showLanguageDropdown && (
+              <div className="code-block-dropdown">
+                <div className="code-block-dropdown-search">
+                  <input
+                    type="text"
+                    placeholder="Search languages..."
+                    className="code-block-search-input"
+                    autoFocus
+                    onChange={(e) => {
+                      const searchValue = e.target.value.toLowerCase()
+                      const items = document.querySelectorAll('.code-block-dropdown-item')
+                      items.forEach((item) => {
+                        const text = item.textContent?.toLowerCase() || ''
+                        ;(item as HTMLElement).style.display = text.includes(searchValue) ? 'block' : 'none'
+                      })
+                    }}
+                  />
+                </div>
+                <div className="code-block-dropdown-list">
+                  {supportedLanguages.map((lang) => (
+                    <button
+                      key={lang.value}
+                      onClick={() => handleLanguageChange(lang.value)}
+                      className={`code-block-dropdown-item ${language === lang.value ? "active" : ""}`}
+                    >
+                      {lang.label}
+                      {language === lang.value && <CheckIcon />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Copy button */}
+          <button
+            onClick={handleCopy}
+            className={`code-block-copy-btn ${copied ? "copied" : ""}`}
+            title={copied ? "Copied!" : "Copy code"}
+          >
+            {copied ? (
+              <>
+                <CheckIcon />
+                <span>Copied!</span>
+              </>
+            ) : (
+              <>
+                <CopyIcon />
+                <span>Copy</span>
+              </>
+            )}
+          </button>
         </div>
 
-        {/* Copy button */}
-        <button
-          onClick={handleCopy}
-          className="flex items-center justify-center w-7 h-7 text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-md border border-zinc-700 transition-colors shadow-sm"
-          title={copied ? "Copied!" : "Copy code"}
-        >
-          {copied ? <CheckIcon /> : <CopyIcon />}
-        </button>
-      </div>
-
-      {/* Code content */}
-      <div className="relative rounded-md bg-zinc-900 dark:bg-zinc-950 overflow-hidden">
-        <pre className="m-0 p-4 overflow-x-auto">
-          <code className={`language-${language} text-[13px] leading-relaxed font-mono`}>
-            <NodeViewContent />
-          </code>
-        </pre>
+        {/* Code area with line numbers */}
+        <div className="code-block-content">
+          <pre>
+            <code className={`language-${language}`}>
+              <NodeViewContent />
+            </code>
+          </pre>
+        </div>
       </div>
     </NodeViewWrapper>
   )
 }
 
 // Icons
-function ChevronDownIcon() {
+function CodeIcon() {
   return (
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16 18 22 12 16 6"/>
+      <polyline points="8 6 2 12 8 18"/>
+    </svg>
+  )
+}
+
+function ChevronDownIcon({ className }: { className?: string }) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-200 ${className || ""}`}>
       <path d="m6 9 6 6 6-6"/>
     </svg>
   )

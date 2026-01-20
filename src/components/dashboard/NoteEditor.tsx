@@ -231,20 +231,17 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
   const { height } = useWindowSize()
   const [mobileView, setMobileView] = useState<"main" | "highlighter" | "link">("main")
   const toolbarRef = useRef<HTMLDivElement>(null)
-  const initialContentRef = useRef<string | null>(null)
 
-  const { getPageById, getPageContent, updatePageContent } = useNotes()
+  const { getPageById, getPageContent, updatePageContent, isLoading } = useNotes()
   const pageInfo = getPageById(pageId)
+
+  // Get initial content synchronously (it's already in memory from context)
+  const initialContent = getPageContent(pageId)
 
   // Debounce the save operation to prevent cursor jumping
   const debouncedSave = useDebounce((id: string, content: string) => {
     updatePageContent(id, content)
   }, 500)
-
-  // Get initial content only once per pageId
-  if (initialContentRef.current === null) {
-    initialContentRef.current = getPageContent(pageId)
-  }
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -294,32 +291,51 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
       }),
       WhiteboardNode,
     ],
-    content: initialContentRef.current,
+    content: initialContent,
     onUpdate: ({ editor }) => {
       // Use debounced save to prevent cursor jumping
       debouncedSave(pageId, editor.getHTML())
     },
-  })
+  }, [initialContent])
+
+  // Store toolbar height in state to avoid ref access during render
+  const [toolbarHeight, setToolbarHeight] = useState(0)
+
+  useEffect(() => {
+    if (toolbarRef.current) {
+      setToolbarHeight(toolbarRef.current.getBoundingClientRect().height)
+    }
+  }, [])
 
   const rect = useCursorVisibility({
     editor,
-    overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0,
+    overlayHeight: toolbarHeight,
   })
 
-  useEffect(() => {
-    if (!isMobile && mobileView !== "main") {
-      setMobileView("main")
-    }
-  }, [isMobile, mobileView])
+  // Reset mobile view when switching to desktop
+  const effectiveMobileView = !isMobile ? "main" : mobileView
 
   // Load content when pageId changes
   useEffect(() => {
     if (editor && pageId) {
       const content = getPageContent(pageId)
-      initialContentRef.current = content
       editor.commands.setContent(content)
     }
-  }, [pageId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pageId, editor, getPageContent])
+
+  // Show loading spinner while data is being fetched
+  if (isLoading) {
+    return (
+      <div className="simple-editor-wrapper">
+        <div className="flex items-center justify-center h-full">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+            <p className="text-sm text-zinc-500">Loading...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!pageInfo) {
     return (
@@ -332,41 +348,43 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
   }
 
   return (
-    <div className="simple-editor-wrapper">
-      <div className="main-content">
-        <EditorContext.Provider value={{ editor }}>
-          <Toolbar
-            ref={toolbarRef}
-            style={{
-              ...(isMobile
-                ? {
-                    bottom: `calc(100% - ${height - rect.y}px)`,
-                  }
-                : {}),
-            }}
-          >
-            {mobileView === "main" ? (
-              <MainToolbarContent
-                onHighlighterClick={() => setMobileView("highlighter")}
-                onLinkClick={() => setMobileView("link")}
-                isMobile={isMobile}
-                folderId={pageInfo.folderId}
-              />
-            ) : (
-              <MobileToolbarContent
-                type={mobileView === "highlighter" ? "highlighter" : "link"}
-                onBack={() => setMobileView("main")}
-              />
-            )}
-          </Toolbar>
+    <>
+      <div className="simple-editor-wrapper">
+        <div className="main-content">
+          <EditorContext.Provider value={{ editor }}>
+            <Toolbar
+              ref={toolbarRef}
+              style={{
+                ...(isMobile
+                  ? {
+                      bottom: `calc(100% - ${height - rect.y}px)`,
+                    }
+                  : {}),
+              }}
+            >
+              {effectiveMobileView === "main" ? (
+                <MainToolbarContent
+                  onHighlighterClick={() => setMobileView("highlighter")}
+                  onLinkClick={() => setMobileView("link")}
+                  isMobile={isMobile}
+                  folderId={pageInfo.folderId}
+                />
+              ) : (
+                <MobileToolbarContent
+                  type={effectiveMobileView === "highlighter" ? "highlighter" : "link"}
+                  onBack={() => setMobileView("main")}
+                />
+              )}
+            </Toolbar>
 
-          <EditorContent
-            editor={editor}
-            role="presentation"
-            className="simple-editor-content"
-          />
-        </EditorContext.Provider>
+            <EditorContent
+              editor={editor}
+              role="presentation"
+              className="simple-editor-content"
+            />
+          </EditorContext.Provider>
+        </div>
       </div>
-    </div>
+    </>
   )
 }

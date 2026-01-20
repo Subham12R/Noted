@@ -1,41 +1,84 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import type { Folder, Page } from "@/components/sidebar"
 
-const generateId = () => Math.random().toString(36).substring(2, 9)
+// API response types
+interface ApiFolder {
+  id: string
+  name: string
+  ownerId: string
+  parentId: string | null
+  color: string | null
+  image: string | null
+  isExpanded: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
 
-const defaultFolders: Folder[] = [
-  {
-    id: "folder-1",
-    name: "My Notes",
-    isExpanded: true,
-    folders: [
-      {
-        id: "folder-1-1",
-        name: "Personal",
-        isExpanded: false,
-        pages: [
-          { id: "page-4", name: "Daily Journal", content: "" },
-        ],
-        folders: [],
-      },
-    ],
-    pages: [
-      { id: "page-1", name: "Welcome", content: "" },
-      { id: "page-2", name: "Getting Started", content: "" },
-    ],
-  },
-  {
-    id: "folder-2",
-    name: "Projects",
-    isExpanded: false,
-    folders: [],
-    pages: [
-      { id: "page-3", name: "Project Ideas", content: "" },
-    ],
-  },
-]
+interface ApiPage {
+  id: string
+  name: string
+  folderId: string
+  ownerId?: string
+  blocks?: unknown[]
+  ydocState?: string | null
+  sortOrder: number
+  isPublic?: boolean
+  version?: number
+  createdAt: string
+  updatedAt: string
+  lastSavedAt?: string | null
+}
+
+// Convert flat API folders to nested structure
+function buildFolderTree(
+  apiFolders: ApiFolder[],
+  apiPages: ApiPage[]
+): Folder[] {
+  const folderMap = new Map<string, Folder>()
+
+  // Create folder objects
+  apiFolders.forEach((f) => {
+    folderMap.set(f.id, {
+      id: f.id,
+      name: f.name,
+      isExpanded: f.isExpanded,
+      parentId: f.parentId,
+      pages: [],
+      folders: [],
+    })
+  })
+
+  // Add pages to folders
+  apiPages.forEach((p) => {
+    const folder = folderMap.get(p.folderId)
+    if (folder) {
+      folder.pages.push({
+        id: p.id,
+        name: p.name,
+        content: "", // Content is loaded separately when page is selected
+      })
+    }
+  })
+
+  // Build tree structure
+  const rootFolders: Folder[] = []
+  folderMap.forEach((folder) => {
+    if (folder.parentId) {
+      const parent = folderMap.get(folder.parentId)
+      if (parent) {
+        parent.folders = parent.folders || []
+        parent.folders.push(folder)
+      }
+    } else {
+      rootFolders.push(folder)
+    }
+  })
+
+  return rootFolders
+}
 
 // Helper to recursively update folders
 const updateFoldersRecursive = (
@@ -71,7 +114,7 @@ const findFolderById = (folderList: Folder[], folderId: string): Folder | null =
   return null
 }
 
-// Helper to delete folder recursively
+// Helper to delete folder recursively from local state
 const deleteFolderRecursive = (folderList: Folder[], folderId: string): Folder[] => {
   return folderList
     .filter((folder) => folder.id !== folderId)
@@ -79,19 +122,6 @@ const deleteFolderRecursive = (folderList: Folder[], folderId: string): Folder[]
       ...folder,
       folders: folder.folders ? deleteFolderRecursive(folder.folders, folderId) : [],
     }))
-}
-
-// Helper to check if a page exists in any folder
-const findPageInFolders = (folderList: Folder[], pageId: string): boolean => {
-  for (const folder of folderList) {
-    if (folder.pages.some((p) => p.id === pageId)) {
-      return true
-    }
-    if (folder.folders && findPageInFolders(folder.folders, pageId)) {
-      return true
-    }
-  }
-  return false
 }
 
 // Helper to get all page ids from a folder and its subfolders
@@ -108,8 +138,52 @@ const getAllPageIds = (folder: Folder): string[] => {
 export function useSidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const [mode, setMode] = useState<"floating" | "sticky">("floating")
-  const [folders, setFolders] = useState<Folder[]>(defaultFolders)
+  const [folders, setFolders] = useState<Folder[]>([])
   const [activePage, setActivePage] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch folders and pages from backend
+  const fetchData = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const [foldersRes, pagesRes] = await Promise.all([
+        fetch("/api/folders"),
+        fetch("/api/pages"),
+      ])
+
+      if (!foldersRes.ok || !pagesRes.ok) {
+        // If unauthorized (401), just set empty state - user not logged in
+        if (foldersRes.status === 401 || pagesRes.status === 401) {
+          setFolders([])
+          setIsLoading(false)
+          return
+        }
+        throw new Error("Failed to fetch data")
+      }
+
+      const foldersData = await foldersRes.json()
+      const pagesData = await pagesRes.json()
+
+      const nestedFolders = buildFolderTree(
+        foldersData.folders || [],
+        pagesData.pages || []
+      )
+      setFolders(nestedFolders)
+    } catch (err) {
+      console.error("Error fetching sidebar data:", err)
+      setError(err instanceof Error ? err.message : "Failed to load data")
+      setFolders([])
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const toggleSidebar = useCallback(() => {
     setIsOpen((prev) => !prev)
@@ -128,42 +202,88 @@ export function useSidebar() {
     }
   }, [])
 
-  const createFolder = useCallback((parentId?: string) => {
-    const newFolder: Folder = {
-      id: `folder-${generateId()}`,
-      name: "New Folder",
-      isExpanded: true,
-      pages: [],
-      folders: [],
-    }
+  const createFolder = useCallback(async (parentId?: string) => {
+    try {
+      const res = await fetch("/api/folders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "New Folder",
+          parentId: parentId || null,
+        }),
+      })
 
-    if (parentId) {
-      setFolders((prev) =>
-        updateFoldersRecursive(prev, parentId, (folder) => ({
-          ...folder,
-          isExpanded: true,
-          folders: [...(folder.folders || []), newFolder],
-        }))
-      )
-    } else {
-      setFolders((prev) => [...prev, newFolder])
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to create folder")
+      }
+
+      const { folder: newFolder } = await res.json()
+
+      // Add to local state
+      const folderToAdd: Folder = {
+        id: newFolder.id,
+        name: newFolder.name,
+        isExpanded: true,
+        parentId: newFolder.parentId,
+        pages: [],
+        folders: [],
+      }
+
+      if (parentId) {
+        setFolders((prev) =>
+          updateFoldersRecursive(prev, parentId, (folder) => ({
+            ...folder,
+            isExpanded: true,
+            folders: [...(folder.folders || []), folderToAdd],
+          }))
+        )
+      } else {
+        setFolders((prev) => [...prev, folderToAdd])
+      }
+    } catch (err) {
+      console.error("Error creating folder:", err)
+      setError(err instanceof Error ? err.message : "Failed to create folder")
     }
   }, [])
 
-  const createPage = useCallback((folderId: string) => {
-    const newPage: Page = {
-      id: `page-${generateId()}`,
-      name: "Untitled",
-      content: "",
+  const createPage = useCallback(async (folderId: string) => {
+    try {
+      const res = await fetch("/api/pages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Untitled",
+          folderId,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to create page")
+      }
+
+      const { page: newPage } = await res.json()
+
+      // Add to local state
+      const pageToAdd: Page = {
+        id: newPage.id,
+        name: newPage.name,
+        content: "",
+      }
+
+      setFolders((prev) =>
+        updateFoldersRecursive(prev, folderId, (folder) => ({
+          ...folder,
+          pages: [...folder.pages, pageToAdd],
+          isExpanded: true,
+        }))
+      )
+      setActivePage(newPage.id)
+    } catch (err) {
+      console.error("Error creating page:", err)
+      setError(err instanceof Error ? err.message : "Failed to create page")
     }
-    setFolders((prev) =>
-      updateFoldersRecursive(prev, folderId, (folder) => ({
-        ...folder,
-        pages: [...folder.pages, newPage],
-        isExpanded: true,
-      }))
-    )
-    setActivePage(newPage.id)
   }, [])
 
   const selectPage = useCallback((pageId: string) => {
@@ -173,53 +293,118 @@ export function useSidebar() {
     }
   }, [mode])
 
-  const deleteFolder = useCallback((folderId: string) => {
-    setFolders((prev) => {
-      const folderToDelete = findFolderById(prev, folderId)
-      if (folderToDelete) {
-        const pageIds = getAllPageIds(folderToDelete)
-        setActivePage((currentPage) => {
-          if (currentPage && pageIds.includes(currentPage)) {
-            return null
-          }
-          return currentPage
-        })
+  const deleteFolder = useCallback(async (folderId: string) => {
+    try {
+      const res = await fetch(`/api/folders/${folderId}`, {
+        method: "DELETE",
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to delete folder")
       }
-      return deleteFolderRecursive(prev, folderId)
-    })
+
+      // Update local state
+      setFolders((prev) => {
+        const folderToDelete = findFolderById(prev, folderId)
+        if (folderToDelete) {
+          const pageIds = getAllPageIds(folderToDelete)
+          setActivePage((currentPage) => {
+            if (currentPage && pageIds.includes(currentPage)) {
+              return null
+            }
+            return currentPage
+          })
+        }
+        return deleteFolderRecursive(prev, folderId)
+      })
+    } catch (err) {
+      console.error("Error deleting folder:", err)
+      setError(err instanceof Error ? err.message : "Failed to delete folder")
+    }
   }, [])
 
-  const deletePage = useCallback((folderId: string, pageId: string) => {
-    setFolders((prev) =>
-      updateFoldersRecursive(prev, folderId, (folder) => ({
-        ...folder,
-        pages: folder.pages.filter((p) => p.id !== pageId),
-      }))
-    )
-    setActivePage((currentPage) => (currentPage === pageId ? null : currentPage))
+  const deletePage = useCallback(async (folderId: string, pageId: string) => {
+    try {
+      const res = await fetch(`/api/pages/${pageId}`, {
+        method: "DELETE",
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to delete page")
+      }
+
+      // Update local state
+      setFolders((prev) =>
+        updateFoldersRecursive(prev, folderId, (folder) => ({
+          ...folder,
+          pages: folder.pages.filter((p) => p.id !== pageId),
+        }))
+      )
+      setActivePage((currentPage) => (currentPage === pageId ? null : currentPage))
+    } catch (err) {
+      console.error("Error deleting page:", err)
+      setError(err instanceof Error ? err.message : "Failed to delete page")
+    }
   }, [])
 
-  const renameFolder = useCallback((folderId: string, newName: string) => {
-    setFolders((prev) =>
-      updateFoldersRecursive(prev, folderId, (folder) => ({
-        ...folder,
-        name: newName,
-      }))
-    )
+  const renameFolder = useCallback(async (folderId: string, newName: string) => {
+    try {
+      const res = await fetch(`/api/folders/${folderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to rename folder")
+      }
+
+      // Update local state
+      setFolders((prev) =>
+        updateFoldersRecursive(prev, folderId, (folder) => ({
+          ...folder,
+          name: newName,
+        }))
+      )
+    } catch (err) {
+      console.error("Error renaming folder:", err)
+      setError(err instanceof Error ? err.message : "Failed to rename folder")
+    }
   }, [])
 
-  const renamePage = useCallback((folderId: string, pageId: string, newName: string) => {
-    setFolders((prev) =>
-      updateFoldersRecursive(prev, folderId, (folder) => ({
-        ...folder,
-        pages: folder.pages.map((page) =>
-          page.id === pageId ? { ...page, name: newName } : page
-        ),
-      }))
-    )
+  const renamePage = useCallback(async (folderId: string, pageId: string, newName: string) => {
+    try {
+      const res = await fetch(`/api/pages/${pageId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to rename page")
+      }
+
+      // Update local state
+      setFolders((prev) =>
+        updateFoldersRecursive(prev, folderId, (folder) => ({
+          ...folder,
+          pages: folder.pages.map((page) =>
+            page.id === pageId ? { ...page, name: newName } : page
+          ),
+        }))
+      )
+    } catch (err) {
+      console.error("Error renaming page:", err)
+      setError(err instanceof Error ? err.message : "Failed to rename page")
+    }
   }, [])
 
   const updatePageContent = useCallback((pageId: string, content: string) => {
+    // Update local state only - actual save is handled by the editor component
     const updatePagesRecursive = (folderList: Folder[]): Folder[] => {
       return folderList.map((folder) => ({
         ...folder,
@@ -249,6 +434,27 @@ export function useSidebar() {
     return findPage(folders) || ""
   }, [folders])
 
+  const updateFolderExpanded = useCallback(async (folderId: string, isExpanded: boolean) => {
+    try {
+      // Optimistically update local state first
+      setFolders((prev) =>
+        updateFoldersRecursive(prev, folderId, (folder) => ({
+          ...folder,
+          isExpanded,
+        }))
+      )
+
+      // Then sync with backend
+      await fetch(`/api/folders/${folderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isExpanded }),
+      })
+    } catch (err) {
+      console.error("Error updating folder expanded state:", err)
+    }
+  }, [])
+
   return {
     isOpen,
     setIsOpen,
@@ -269,5 +475,9 @@ export function useSidebar() {
     renamePage,
     updatePageContent,
     getPageContent,
+    updateFolderExpanded,
+    isLoading,
+    error,
+    refetch: fetchData,
   }
 }

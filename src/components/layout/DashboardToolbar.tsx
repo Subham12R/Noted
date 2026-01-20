@@ -4,10 +4,12 @@ import { useSidebarContext } from "@/context/SidebarContext"
 import { SidebarIcon } from "@/components/tiptap-icons/sidebar-icon"
 import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle"
 import { ProfileDropdown } from "./ProfileDropdown"
+import { useSession } from "@/lib/auth-client"
 import Link from "next/link"
 
 export function DashboardToolbar() {
   const { isOpen, toggleSidebar } = useSidebarContext()
+  const { data: session } = useSession()
 
   return (
     <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-2 bg-zinc-950/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-white/10">
@@ -32,7 +34,11 @@ export function DashboardToolbar() {
           Go +
         </Link>
         <ThemeToggle />
-        <ProfileDropdown />
+        <ProfileDropdown
+          userName={session?.user?.name || undefined}
+          userEmail={session?.user?.email || undefined}
+          avatarSrc={session?.user?.image || undefined}
+        />
       </div>
     </div>
   )

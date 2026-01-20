@@ -1,12 +1,14 @@
 "use client"
 
 import { useNotes } from "@/context/NotesContext"
+import { useAuth } from "@/context/AuthContext"
 import { FolderCard } from "./FolderCard"
 import { PageCard } from "./PageCard"
 import { PlusIcon } from "@/components/tiptap-icons/plus-icon"
 import { FolderIcon } from "@/components/tiptap-icons/folder-icon"
 
 export function Dashboard() {
+  const { user } = useAuth()
   const {
     folders,
     createFolder,
@@ -39,7 +41,7 @@ export function Dashboard() {
     <div className="min-h-screen bg-background p-8 max-sm:p-4">
       <div className="flex flex-col justify-start items-start h-full pb-10 border-b border-white/10">
         <h1 className="tracking-tighter text-6xl lg:text-[5vw] font-bold leading-tight">
-          <span className="text-zinc-500">Welcome Back, </span>Subham!
+          <span className="text-zinc-500">Welcome Back, </span>{user?.name?.split(" ")[0] || "User"}!
         </h1>
         <span className="tracking-tight font-medium text-lg lg:px-2 text-zinc-500 text-balance">
           Create notes, collaborate, use <strong className="text-white">AI</strong>, brief texts, documents at ease, take the power of notetaking in your hands.

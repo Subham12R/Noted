@@ -79,8 +79,8 @@ export const Columns = Node.create<ColumnsOptions>({
           const { $from, $to } = selection
 
           // Get the content to wrap in columns
-          const content = []
-          state.doc.nodesBetween($from.pos, $to.pos, (node, pos) => {
+          const content: ReturnType<typeof state.doc.toJSON>[] = []
+          state.doc.nodesBetween($from.pos, $to.pos, (node) => {
             if (node.isBlock && node.type.name !== "doc") {
               content.push(node.toJSON())
               return false
@@ -89,7 +89,7 @@ export const Columns = Node.create<ColumnsOptions>({
           })
 
           // Create column nodes with content distributed
-          const columnNodes = []
+          const columnNodes: { type: string; content: unknown[] }[] = []
           const itemsPerColumn = Math.ceil(content.length / columns) || 1
 
           for (let i = 0; i < columns; i++) {
