@@ -1,0 +1,126 @@
+.tiptap.ProseMirror {
+  .columns-node {
+    position: relative;
+    margin: 1.5rem 0;
+
+    &.selected {
+      .columns-content {
+        border-color: #3b82f6;
+      }
+    }
+
+    .columns-toolbar {
+      animation: fadeInToolbar 0.15s ease;
+    }
+
+    @keyframes fadeInToolbar {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    }
+  }
+
+  .columns-content {
+    min-height: 60px;
+  }
+
+  .columns-inner {
+    display: contents;
+  }
+
+  // Column styling
+  [data-type="column"] {
+    position: relative;
+    padding: 12px;
+    background: #fafafa;
+    border-radius: 8px;
+    border: 1px dashed #e5e7eb;
+    min-height: 60px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+      background: #f5f5f5;
+      border-color: #d1d5db;
+    }
+
+    &:focus-within {
+      background: #ffffff;
+      border-color: #3b82f6;
+      border-style: solid;
+    }
+
+    // Reset margins for first/last children
+    > *:first-child {
+      margin-top: 0;
+    }
+
+    > *:last-child {
+      margin-bottom: 0;
+    }
+
+    // Placeholder for empty columns
+    &:empty::before,
+    &:has(> p:only-child:empty)::before {
+      content: "Type or drag content here...";
+      color: #9ca3af;
+      font-size: 14px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+  }
+
+  // Drop zone indicator
+  .column-drop-zone {
+    position: absolute;
+    inset: 0;
+    background: rgba(59, 130, 246, 0.1);
+    border: 2px dashed #3b82f6;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #3b82f6;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+
+    &.active {
+      opacity: 1;
+    }
+  }
+}
+
+// Dark mode support
+.dark {
+  .tiptap.ProseMirror {
+    [data-type="column"] {
+      background: #1f1f1f;
+      border-color: #333;
+
+      &:hover {
+        background: #262626;
+        border-color: #444;
+      }
+
+      &:focus-within {
+        background: #1a1a1a;
+        border-color: #3b82f6;
+      }
+
+      &:empty::before,
+      &:has(> p:only-child:empty)::before {
+        color: #6b7280;
+      }
+    }
+  }
+}

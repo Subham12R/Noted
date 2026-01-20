@@ -1,0 +1,146 @@
+.tiptap.ProseMirror {
+  --tt-inline-code-bg-color: var(--tt-gray-light-a-100);
+  --tt-inline-code-text-color: var(--tt-gray-light-a-700);
+  --tt-inline-code-border-color: var(--tt-gray-light-a-200);
+
+  .dark & {
+    --tt-inline-code-bg-color: var(--tt-gray-dark-a-100);
+    --tt-inline-code-text-color: var(--tt-gray-dark-a-700);
+    --tt-inline-code-border-color: var(--tt-gray-dark-a-200);
+  }
+}
+
+/* =====================
+   INLINE CODE
+   ===================== */
+.tiptap.ProseMirror {
+  code {
+    background-color: var(--tt-inline-code-bg-color);
+    color: var(--tt-inline-code-text-color);
+    border: 1px solid var(--tt-inline-code-border-color);
+    font-family: "JetBrains Mono NL", ui-monospace, monospace;
+    font-size: 0.875em;
+    line-height: 1.4;
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+  }
+}
+
+/* =====================
+   CODE BLOCK WRAPPER
+   ===================== */
+.code-block-wrapper {
+  pre {
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  code {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    font-family: "JetBrains Mono NL", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+}
+
+/* =====================
+   SYNTAX HIGHLIGHTING
+   (Atom One Dark Theme)
+   ===================== */
+.code-block-wrapper code {
+  color: #abb2bf;
+}
+
+.code-block-wrapper code .hljs-comment,
+.code-block-wrapper code .hljs-quote {
+  color: #5c6370;
+  font-style: italic;
+}
+
+.code-block-wrapper code .hljs-doctag,
+.code-block-wrapper code .hljs-keyword,
+.code-block-wrapper code .hljs-formula {
+  color: #c678dd;
+}
+
+.code-block-wrapper code .hljs-section,
+.code-block-wrapper code .hljs-name,
+.code-block-wrapper code .hljs-selector-tag,
+.code-block-wrapper code .hljs-deletion,
+.code-block-wrapper code .hljs-subst {
+  color: #e06c75;
+}
+
+.code-block-wrapper code .hljs-literal {
+  color: #56b6c2;
+}
+
+.code-block-wrapper code .hljs-string,
+.code-block-wrapper code .hljs-regexp,
+.code-block-wrapper code .hljs-addition,
+.code-block-wrapper code .hljs-attribute,
+.code-block-wrapper code .hljs-meta .hljs-string {
+  color: #98c379;
+}
+
+.code-block-wrapper code .hljs-attr,
+.code-block-wrapper code .hljs-variable,
+.code-block-wrapper code .hljs-template-variable,
+.code-block-wrapper code .hljs-type,
+.code-block-wrapper code .hljs-selector-class,
+.code-block-wrapper code .hljs-selector-attr,
+.code-block-wrapper code .hljs-selector-pseudo,
+.code-block-wrapper code .hljs-number {
+  color: #d19a66;
+}
+
+.code-block-wrapper code .hljs-symbol,
+.code-block-wrapper code .hljs-bullet,
+.code-block-wrapper code .hljs-link,
+.code-block-wrapper code .hljs-meta,
+.code-block-wrapper code .hljs-selector-id,
+.code-block-wrapper code .hljs-title {
+  color: #61aeee;
+}
+
+.code-block-wrapper code .hljs-built_in,
+.code-block-wrapper code .hljs-title.class_,
+.code-block-wrapper code .hljs-class .hljs-title {
+  color: #e6c07b;
+}
+
+.code-block-wrapper code .hljs-emphasis {
+  font-style: italic;
+}
+
+.code-block-wrapper code .hljs-strong {
+  font-weight: bold;
+}
+
+.code-block-wrapper code .hljs-link {
+  text-decoration: underline;
+}
+
+/* Scrollbar styling for code blocks */
+.code-block-wrapper pre {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+  }
+}
