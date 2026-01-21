@@ -5,7 +5,8 @@
       "Bash(npx tsc:*)",
       "Bash(git -C \"d:\\\\noted\" status)",
       "Bash(ls -la \"d:\\\\noted\\\\src\\\\app\\\\api\\\\share\"\" 2>/dev/null || echo \"Directory not found or empty \")",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
