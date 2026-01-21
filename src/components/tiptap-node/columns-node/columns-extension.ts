@@ -89,14 +89,14 @@ export const Columns = Node.create<ColumnsOptions>({
           })
 
           // Create column nodes with content distributed
-          const columnNodes: { type: string; content: unknown[] }[] = []
+          const columnNodes: { type: string; content: Record<string, unknown>[] }[] = []
           const itemsPerColumn = Math.ceil(content.length / columns) || 1
 
           for (let i = 0; i < columns; i++) {
             const columnContent = content.slice(
               i * itemsPerColumn,
               (i + 1) * itemsPerColumn
-            )
+            ) as Record<string, unknown>[]
             columnNodes.push({
               type: "column",
               content:
@@ -110,7 +110,7 @@ export const Columns = Node.create<ColumnsOptions>({
             type: this.name,
             attrs: { columns },
             content: columnNodes,
-          })
+          } as Parameters<typeof commands.insertContent>[0])
         },
       unsetColumns:
         () =>
