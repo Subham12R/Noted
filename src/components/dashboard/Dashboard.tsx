@@ -1,11 +1,12 @@
 "use client"
 
-import { useSyncExternalStore } from "react"
+import { useState, useSyncExternalStore } from "react"
 import { useNotes } from "@/context/NotesContext"
 import { useAuth } from "@/context/AuthContext"
 import { FolderCard } from "./FolderCard"
 import { PageCard } from "./PageCard"
 import { SharedWithMe } from "./SharedWithMe"
+import { DashboardAIPanel } from "./DashboardAIPanel"
 import { DotLottieReact } from "@lottiefiles/dotlottie-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
@@ -14,6 +15,7 @@ import {
   Clock01Icon,
   Add01Icon,
   Share01Icon,
+  AiChat02Icon,
 } from "@hugeicons/core-free-icons"
 
 // Greeting based on time of day
@@ -54,6 +56,8 @@ export function Dashboard() {
   } = useNotes()
 
   const isHydrated = useHydrated()
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false)
+  const [aiPanelMode, setAiPanelMode] = useState<"flowchart" | "summarize" | "answer">("flowchart")
 
   // Get greeting and date only on client-side after hydration
   const greeting = isHydrated ? getGreeting() : "Hello"
@@ -164,13 +168,25 @@ export function Dashboard() {
                 <HugeiconsIcon icon={Folder01Icon} size={20} className="text-zinc-200 dark:text-zinc-200" />
                 <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">My Files</h2>
               </div>
-              <button
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-900/10 border border-zinc-200/10 text-zinc-900 dark:text-zinc-200 backdrop-blur-3xl rounded-xl font-medium text-sm hover:opacity-90 active:scale-[0.98] transition-all"
-                onClick={handleCreateFolder}
-              >
-                <HugeiconsIcon icon={Add01Icon} size={16} />
-                <span>New Folder</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 backdrop-blur-3xl rounded-xl font-medium text-sm hover:bg-indigo-500/30 active:scale-[0.98] transition-all"
+                  onClick={() => {
+                    setAiPanelMode("flowchart")
+                    setIsAIPanelOpen(true)
+                  }}
+                >
+                  <HugeiconsIcon icon={AiChat02Icon} size={16} />
+                  <span>AI Flowchart</span>
+                </button>
+                <button
+                  className="flex items-center gap-2 px-4 py-2 bg-zinc-900/10 border border-zinc-200/10 text-zinc-900 dark:text-zinc-200 backdrop-blur-3xl rounded-xl font-medium text-sm hover:opacity-90 active:scale-[0.98] transition-all"
+                  onClick={handleCreateFolder}
+                >
+                  <HugeiconsIcon icon={Add01Icon} size={16} />
+                  <span>New Folder</span>
+                </button>
+              </div>
             </div>
 
             <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 min-h-[300px]">
@@ -215,6 +231,13 @@ export function Dashboard() {
           </section>
         </div>
       </div>
+
+      {/* AI Panel for folder-based flowchart generation */}
+      <DashboardAIPanel
+        isOpen={isAIPanelOpen}
+        onClose={() => setIsAIPanelOpen(false)}
+        mode={aiPanelMode}
+      />
     </div>
   )
 }

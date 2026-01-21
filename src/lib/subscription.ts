@@ -81,83 +81,50 @@ export async function getSubscriptionWithUsage(
 }
 
 // Check if user can create more folders
+// NOTE: Pro system disabled - always allow
 export async function canCreateFolder(userId: string): Promise<{
   allowed: boolean
   reason?: string
   current: number
   limit: number
 }> {
-  const { tier } = await getUserSubscription(userId)
-  const limits = SUBSCRIPTION_TIERS[tier].limits
-  const usage = await getUserUsageStats(userId)
-
-  if (isLimitReached(usage.foldersCount, limits.maxFolders)) {
-    return {
-      allowed: false,
-      reason: `You've reached the maximum of ${limits.maxFolders} folders on the ${SUBSCRIPTION_TIERS[tier].name} plan. Upgrade to create more.`,
-      current: usage.foldersCount,
-      limit: limits.maxFolders,
-    }
-  }
-
+  // Pro system disabled - always allow
   return {
     allowed: true,
-    current: usage.foldersCount,
-    limit: limits.maxFolders,
+    current: 0,
+    limit: -1, // Unlimited
   }
 }
 
 // Check if user can create more pages/notes
+// NOTE: Pro system disabled - always allow
 export async function canCreatePage(userId: string): Promise<{
   allowed: boolean
   reason?: string
   current: number
   limit: number
 }> {
-  const { tier } = await getUserSubscription(userId)
-  const limits = SUBSCRIPTION_TIERS[tier].limits
-  const usage = await getUserUsageStats(userId)
-
-  if (isLimitReached(usage.notesCount, limits.maxNotes)) {
-    return {
-      allowed: false,
-      reason: `You've reached the maximum of ${limits.maxNotes} notes on the ${SUBSCRIPTION_TIERS[tier].name} plan. Upgrade to create more.`,
-      current: usage.notesCount,
-      limit: limits.maxNotes,
-    }
-  }
-
+  // Pro system disabled - always allow
   return {
     allowed: true,
-    current: usage.notesCount,
-    limit: limits.maxNotes,
+    current: 0,
+    limit: -1, // Unlimited
   }
 }
 
 // Check if user can use AI features
+// NOTE: Pro system disabled - always allow AI usage
 export async function canUseAI(userId: string): Promise<{
   allowed: boolean
   reason?: string
   current: number
   limit: number
 }> {
-  const { tier } = await getUserSubscription(userId)
-  const limits = SUBSCRIPTION_TIERS[tier].limits
-  const usage = await getUserUsageStats(userId)
-
-  if (isLimitReached(usage.aiRequestsThisMonth, limits.maxAiRequestsPerMonth)) {
-    return {
-      allowed: false,
-      reason: `You've used all ${limits.maxAiRequestsPerMonth} AI requests for this month on the ${SUBSCRIPTION_TIERS[tier].name} plan. Upgrade for more.`,
-      current: usage.aiRequestsThisMonth,
-      limit: limits.maxAiRequestsPerMonth,
-    }
-  }
-
+  // Pro system disabled - always allow
   return {
     allowed: true,
-    current: usage.aiRequestsThisMonth,
-    limit: limits.maxAiRequestsPerMonth,
+    current: 0,
+    limit: -1, // Unlimited
   }
 }
 

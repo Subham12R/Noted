@@ -50,6 +50,7 @@ import { ImageUploadNode } from "@/components/tiptap-node/image-upload-node/imag
 import { HorizontalRule } from "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import { EnhancedCodeBlock } from "@/components/tiptap-node/code-block-node/code-block-node-extension"
 import { WhiteboardNode } from "@/components/tiptap-node/whiteboard-node/whiteboard-node-extension"
+import { MermaidNode } from "@/components/tiptap-node/mermaid-node"
 import { ResizableImage } from "@/components/tiptap-node/image-node"
 import { DragHandle } from "@/components/tiptap-node/drag-handle"
 import { Columns, Column } from "@/components/tiptap-node/columns-node"
@@ -103,6 +104,7 @@ import { ShareModal } from "@/components/collaboration/ShareModal"
 import { SlashCommandMenu } from "@/components/editor/SlashCommandMenu"
 import { ExportMenu } from "@/components/editor/ExportMenu"
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal"
+import { Input } from "@/components/Input"
 
 // --- Lib ---
 import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils"
@@ -332,6 +334,8 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
   const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false)
   const [slashMenuOpen, setSlashMenuOpen] = useState(false)
   const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 })
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false)
+  const [aiMode, setAiMode] = useState<string | null>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
 
   const { getPageById, updatePageContent } = useNotes()
@@ -489,6 +493,7 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
         onError: (error) => console.error("Upload failed:", error),
       }),
       WhiteboardNode,
+      MermaidNode,
     ],
     content: initialContent,
     onUpdate: ({ editor }) => {
@@ -524,6 +529,21 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
     e.preventDefault()
     setIsKeyboardShortcutsOpen(true)
   }, { enableOnContentEditable: true, enableOnFormTags: true })
+
+  // Listen for AI panel open events from slash commands
+  useEffect(() => {
+    const handleOpenAIPanel = (event: Event) => {
+      const customEvent = event as CustomEvent<{ mode?: string }>
+      const mode = customEvent.detail?.mode || null
+      setAiMode(mode)
+      setIsAIPanelOpen(true)
+    }
+
+    window.addEventListener("openAIPanel", handleOpenAIPanel)
+    return () => {
+      window.removeEventListener("openAIPanel", handleOpenAIPanel)
+    }
+  }, [])
 
   // Slash command detection
   useEffect(() => {
@@ -737,6 +757,20 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
         isOpen={isKeyboardShortcutsOpen}
         onClose={() => setIsKeyboardShortcutsOpen(false)}
       />
+
+      {/* AI Input */}
+      {editor && canEditPage && (
+        <Input
+          editor={editor}
+          pageId={pageId}
+          isOpen={isAIPanelOpen}
+          onClose={() => {
+            setIsAIPanelOpen(false)
+            setAiMode(null)
+          }}
+          initialMode={aiMode}
+        />
+      )}
     </>
   )
 }

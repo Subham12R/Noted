@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Grandstander } from "next/font/google";
 import { NotesProvider } from "@/context/NotesContext";
 import { SidebarProvider } from "@/context/SidebarContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { AIProvider } from "@/context/AIContext";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -38,9 +39,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${grandstander.variable} antialiased`}
       >
         <AuthProvider>
-          <SidebarProvider>
-            <NotesProvider>
-              {children}
+          <AIProvider>
+            <SidebarProvider>
+              <NotesProvider>
+                {children}
               <Toaster
                 position="bottom-right"
                 expand={false}
@@ -63,8 +65,9 @@ export default function RootLayout({
                   },
                 }}
               />
-            </NotesProvider>
-          </SidebarProvider>
+              </NotesProvider>
+            </SidebarProvider>
+          </AIProvider>
         </AuthProvider>
       </body>
     </html>
