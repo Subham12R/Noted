@@ -61,9 +61,32 @@ export function MermaidChart({ chart, className = "" }: MermaidChartProps) {
     const currentAttempt = ++renderAttemptRef.current;
 
     const renderChart = async () => {
-      if (!chart.trim()) {
+      const trimmedChart = chart.trim();
+
+      if (!trimmedChart) {
         setIsLoading(false);
         setError("No chart content provided");
+        return;
+      }
+
+      // Basic validation - check if chart starts with a valid mermaid diagram type
+      const validDiagramTypes = [
+        'flowchart', 'graph', 'sequenceDiagram', 'classDiagram',
+        'stateDiagram', 'erDiagram', 'gantt', 'pie', 'journey',
+        'gitGraph', 'mindmap', 'timeline', 'quadrantChart',
+        'requirementDiagram', 'C4Context', 'sankey', 'xychart'
+      ];
+
+      const firstWord = trimmedChart.split(/[\s\n]/)[0].toLowerCase();
+      const isValidStart = validDiagramTypes.some(type =>
+        firstWord === type.toLowerCase() || firstWord.startsWith(type.toLowerCase())
+      );
+
+      if (!isValidStart) {
+        setIsLoading(false);
+        // Don't show error UI for clearly non-mermaid content - just return null
+        setError(null);
+        setSvg("");
         return;
       }
 
@@ -75,7 +98,7 @@ export function MermaidChart({ chart, className = "" }: MermaidChartProps) {
         const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
         // Render the chart
-        const { svg: renderedSvg } = await mermaid.render(id, chart.trim());
+        const { svg: renderedSvg } = await mermaid.render(id, trimmedChart);
 
         // Only update if this is still the current render attempt
         if (currentAttempt === renderAttemptRef.current) {
@@ -126,6 +149,11 @@ export function MermaidChart({ chart, className = "" }: MermaidChartProps) {
         </pre>
       </div>
     );
+  }
+
+  // If no SVG rendered (invalid content that was filtered out), return null
+  if (!svg) {
+    return null;
   }
 
   return (

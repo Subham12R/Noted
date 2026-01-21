@@ -334,6 +334,29 @@ export const aiUsage = pgTable(
 )
 
 // ============================================================================
+// TODOS
+// ============================================================================
+
+export const todos = pgTable(
+  "todos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    text: varchar("text", { length: 500 }).notNull(),
+    completed: boolean("completed").default(false).notNull(),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("todos_user_id_idx").on(table.userId),
+    index("todos_user_sort_idx").on(table.userId, table.sortOrder),
+  ]
+)
+
+// ============================================================================
 // SECURITY: RATE LIMITING
 // ============================================================================
 
@@ -367,6 +390,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   presence: many(presence),
   subscription: one(subscriptions),
   aiUsage: many(aiUsage),
+  todos: many(todos),
 }))
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -480,6 +504,13 @@ export const aiUsageRelations = relations(aiUsage, ({ one }) => ({
   }),
 }))
 
+export const todosRelations = relations(todos, ({ one }) => ({
+  user: one(users, {
+    fields: [todos.userId],
+    references: [users.id],
+  }),
+}))
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -522,3 +553,6 @@ export type NewSubscription = typeof subscriptions.$inferInsert
 
 export type AiUsage = typeof aiUsage.$inferSelect
 export type NewAiUsage = typeof aiUsage.$inferInsert
+
+export type Todo = typeof todos.$inferSelect
+export type NewTodo = typeof todos.$inferInsert

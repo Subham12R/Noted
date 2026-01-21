@@ -131,6 +131,73 @@ interface SharedPageState {
   error: string | null
 }
 
+const EditablePageName = ({
+  pageName,
+  onRename,
+}: {
+  pageName: string
+  onRename: (newName: string) => void
+}) => {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editValue, setEditValue] = useState(pageName)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [isEditing])
+
+  useEffect(() => {
+    setEditValue(pageName)
+  }, [pageName])
+
+  const handleSave = () => {
+    const trimmed = editValue.trim()
+    if (trimmed && trimmed !== pageName) {
+      onRename(trimmed)
+    } else {
+      setEditValue(pageName)
+    }
+    setIsEditing(false)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      handleSave()
+    } else if (e.key === "Escape") {
+      setEditValue(pageName)
+      setIsEditing(false)
+    }
+  }
+
+  if (isEditing) {
+    return (
+      <input
+        ref={inputRef}
+        type="text"
+        value={editValue}
+        onChange={(e) => setEditValue(e.target.value)}
+        onBlur={handleSave}
+        onKeyDown={handleKeyDown}
+        className="bg-transparent border border-zinc-600 rounded px-2 py-1 text-sm font-medium text-white focus:outline-none focus:border-indigo-500 max-w-[200px]"
+      />
+    )
+  }
+
+  return (
+    <button
+      onClick={() => setIsEditing(true)}
+      className="text-sm font-medium text-zinc-300 hover:text-white transition-colors truncate max-w-[200px] cursor-pointer"
+      title="Click to rename"
+    >
+      {pageName}
+    </button>
+  )
+}
+
 const MainToolbarContent = ({
   onHighlighterClick,
   onLinkClick,
@@ -142,6 +209,8 @@ const MainToolbarContent = ({
   activeUsers,
   editor,
   pageName,
+  pageId,
+  onRenamePage,
 }: {
   onHighlighterClick: () => void
   onLinkClick: () => void
@@ -153,6 +222,8 @@ const MainToolbarContent = ({
   activeUsers: { id: string; name: string; avatar: string | null; color: string }[]
   editor: ReturnType<typeof useEditor> | null
   pageName: string
+  pageId: string
+  onRenamePage: (newName: string) => void
 }) => {
   return (
     <>
@@ -165,6 +236,13 @@ const MainToolbarContent = ({
       </ToolbarGroup>
 
       <ToolbarSeparator />
+
+      <ToolbarGroup>
+        <EditablePageName
+          pageName={pageName}
+          onRename={onRenamePage}
+        />
+      </ToolbarGroup>
 
       <Spacer />
 
@@ -338,7 +416,7 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
   const [aiMode, setAiMode] = useState<string | null>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
 
-  const { getPageById, updatePageContent } = useNotes()
+  const { getPageById, updatePageContent, renamePage } = useNotes()
   const pageInfo = getPageById(pageId)
 
   // Keep pageInfo in a ref so we can use it in the fetch without triggering re-fetches
@@ -439,6 +517,22 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
   const debouncedSaveShared = useDebounce((id: string, content: string) => {
     saveSharedPageContent(id, content)
   }, 500)
+
+  // Handle page rename
+  const handleRenamePage = useCallback(async (newName: string) => {
+    if (!pageState.page) return
+    const folderId = pageState.page.folderId
+    try {
+      await renamePage(folderId, pageId, newName)
+      // Update local state to reflect the change immediately
+      setPageState(prev => ({
+        ...prev,
+        page: prev.page ? { ...prev.page, name: newName } : null
+      }))
+    } catch (err) {
+      console.error("Error renaming page:", err)
+    }
+  }, [pageState.page, pageId, renamePage])
 
   // Track if we're currently receiving a remote update to prevent echo
   const isRemoteUpdateRef = useRef(false)
@@ -698,6 +792,8 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
                     activeUsers={activeUsers}
                     editor={editor}
                     pageName={pageName}
+                    pageId={pageId}
+                    onRenamePage={handleRenamePage}
                   />
                 ) : (
                   <MobileToolbarContent

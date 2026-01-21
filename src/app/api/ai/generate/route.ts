@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json()
-    const { pageId, prompt, mode, model, stream = true } = body
+    const { pageId, prompt, mode, model, stream = true, context: providedContext } = body
 
     // Validate required fields
     if (!prompt || typeof prompt !== 'string') {
@@ -63,9 +63,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get page content for context if pageId provided
+    // Get context - use provided context (from dashboard) or fetch from page
     let context: string | undefined
-    if (pageId) {
+
+    // If context is directly provided (e.g., from dashboard with folder data)
+    if (providedContext && typeof providedContext === 'string') {
+      context = providedContext
+      // Limit context length
+      if (context.length > 12000) {
+        context = context.substring(0, 12000) + '...'
+      }
+    }
+    // Otherwise, get page content for context if pageId provided
+    else if (pageId) {
       const [page] = await db.select().from(pages).where(eq(pages.id, pageId))
       if (page?.content) {
         // Strip HTML tags for context

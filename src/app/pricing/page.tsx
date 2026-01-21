@@ -1,7 +1,7 @@
 "use client"
 
 import { useAuth } from "@/context/AuthContext"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -10,13 +10,33 @@ import {
   SubscriptionTier,
   formatPrice,
 } from "@/types/subscription"
+import { createCheckoutSession } from "@/lib/stripe-client"
 
 export default function PricingPage() {
   const { isLoading, isAuthenticated } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [billingPeriod, setBillingPeriod] = useState<"month" | "year">("month")
   const [currentTier, setCurrentTier] = useState<SubscriptionTier>("free")
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true)
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false)
+
+  // Handle success/cancel from Stripe checkout
+  useEffect(() => {
+    const success = searchParams.get("success")
+    const canceled = searchParams.get("canceled")
+
+    if (success === "true") {
+      toast.success("Payment successful! Your subscription is now active.", {
+        duration: 5000,
+      })
+      // Refresh subscription status
+      router.replace("/pricing")
+    } else if (canceled === "true") {
+      toast.info("Checkout was canceled. You can try again anytime.")
+      router.replace("/pricing")
+    }
+  }, [searchParams, router])
 
   useEffect(() => {
     async function fetchSubscription() {
@@ -54,8 +74,20 @@ export default function PricingPage() {
       return
     }
 
-    // TODO: Integrate with Stripe Checkout
-    toast.info(`Stripe checkout for ${SUBSCRIPTION_TIERS[tier].name} plan coming soon!`)
+    // Start Stripe checkout
+    setIsProcessingCheckout(true)
+    try {
+      const { url } = await createCheckoutSession(tier as 'pro' | 'team', billingPeriod)
+      if (url) {
+        window.location.href = url
+      } else {
+        throw new Error("No checkout URL returned")
+      }
+    } catch (error) {
+      console.error("Checkout error:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to start checkout")
+      setIsProcessingCheckout(false)
+    }
   }
 
   const tiers: SubscriptionTier[] = ["free", "pro", "team"]
@@ -176,7 +208,7 @@ export default function PricingPage() {
 
                 <button
                   onClick={() => handleSelectPlan(tier)}
-                  disabled={isCurrentPlan || isLoadingSubscription}
+                  disabled={isCurrentPlan || isLoadingSubscription || isProcessingCheckout}
                   className={`w-full py-2.5 rounded-xl font-medium text-sm transition-all ${
                     isCurrentPlan
                       ? "bg-foreground/5 text-foreground/30 cursor-not-allowed"
@@ -187,6 +219,8 @@ export default function PricingPage() {
                 >
                   {isLoadingSubscription
                     ? "Loading..."
+                    : isProcessingCheckout
+                    ? "Redirecting..."
                     : isCurrentPlan
                     ? "Current Plan"
                     : tier === "free"

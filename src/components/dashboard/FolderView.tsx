@@ -1,16 +1,13 @@
 "use client"
 
-import { useState } from "react"
 import { useNotes } from "@/context/NotesContext"
 import { FolderCard } from "./FolderCard"
 import { PageCard } from "./PageCard"
-import { DashboardAIPanel } from "./DashboardAIPanel"
+import { DashboardAIInput } from "./DashboardAIInput"
 import { PlusIcon } from "@/components/tiptap-icons/plus-icon"
 import { FolderIcon } from "@/components/tiptap-icons/folder-icon"
 import { FileIcon } from "@/components/tiptap-icons/file-icon"
 import { ChevronRightIcon } from "@/components/tiptap-icons/chevron-right-icon"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { AiChat02Icon } from "@hugeicons/core-free-icons"
 import Link from "next/link"
 
 interface FolderViewProps {
@@ -28,7 +25,6 @@ export function FolderView({ folderId }: FolderViewProps) {
     renamePage,
   } = useNotes()
 
-  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false)
   const folder = getFolderById(folderId)
 
   if (!folder) {
@@ -50,21 +46,12 @@ export function FolderView({ folderId }: FolderViewProps) {
         <span className="text-foreground font-medium">{folder.name}</span>
       </nav>
 
-      <div className="flex items-center justify-between border-b border-white/10 px-2 py-4 mb-4">
-        <div className="flex flex-col justify-start items-start">
-          <h1 className="tracking-tighter text-4xl font-bold leading-tight">{folder.name}</h1>
-          <span className="tracking-tight font-medium text-base text-zinc-500 mt-1">
-            {folder.pages.length} {folder.pages.length === 1 ? "note" : "notes"}
-            {folder.folders && folder.folders.length > 0 && ` · ${folder.folders.length} ${folder.folders.length === 1 ? "folder" : "folders"}`}
-          </span>
-        </div>
-        <button
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 backdrop-blur-3xl rounded-xl font-medium text-sm hover:bg-indigo-500/30 active:scale-[0.98] transition-all"
-          onClick={() => setIsAIPanelOpen(true)}
-        >
-          <HugeiconsIcon icon={AiChat02Icon} size={16} />
-          <span>AI Flowchart</span>
-        </button>
+      <div className="flex flex-col justify-start items-start border-b border-white/10 px-2 py-4 mb-4">
+        <h1 className="tracking-tighter text-4xl font-bold leading-tight">{folder.name}</h1>
+        <span className="tracking-tight font-medium text-base text-zinc-500 mt-1">
+          {folder.pages.length} {folder.pages.length === 1 ? "note" : "notes"}
+          {folder.folders && folder.folders.length > 0 && ` · ${folder.folders.length} ${folder.folders.length === 1 ? "folder" : "folders"}`}
+        </span>
       </div>
 
       {folder.folders && folder.folders.length > 0 && (
@@ -131,13 +118,8 @@ export function FolderView({ folderId }: FolderViewProps) {
         </div>
       </section>
 
-      {/* AI Panel for folder-based flowchart generation */}
-      <DashboardAIPanel
-        isOpen={isAIPanelOpen}
-        onClose={() => setIsAIPanelOpen(false)}
-        folder={folder}
-        mode="flowchart"
-      />
+      {/* Always visible AI input at bottom with folder pre-selected */}
+      <DashboardAIInput preSelectedFolder={folder} />
     </div>
   )
 }

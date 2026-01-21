@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useSyncExternalStore } from "react"
+import { useSyncExternalStore } from "react"
 import { useNotes } from "@/context/NotesContext"
 import { useAuth } from "@/context/AuthContext"
 import { FolderCard } from "./FolderCard"
 import { PageCard } from "./PageCard"
 import { SharedWithMe } from "./SharedWithMe"
-import { DashboardAIPanel } from "./DashboardAIPanel"
+import { DashboardAIInput } from "./DashboardAIInput"
 import { DotLottieReact } from "@lottiefiles/dotlottie-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
@@ -15,8 +15,9 @@ import {
   Clock01Icon,
   Add01Icon,
   Share01Icon,
-  AiChat02Icon,
+  CheckListIcon,
 } from "@hugeicons/core-free-icons"
+import { TodoList } from "./TodoList"
 
 // Greeting based on time of day
 function getGreeting(): string {
@@ -56,8 +57,6 @@ export function Dashboard() {
   } = useNotes()
 
   const isHydrated = useHydrated()
-  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false)
-  const [aiPanelMode, setAiPanelMode] = useState<"flowchart" | "summarize" | "answer">("flowchart")
 
   // Get greeting and date only on client-side after hydration
   const greeting = isHydrated ? getGreeting() : "Hello"
@@ -130,34 +129,46 @@ export function Dashboard() {
                 src="/lottie/Octahedron - Cube Morph.lottie"
                 loop
                 autoplay
-                style={{ width: "100%", height: "100%" }}
+                style={{ width: "100%", height: "100%", background: "transparent" }}
               />
             </div>
           </div>
         </header>
 
-        {/* Recent Notes Section */}
-        {recentPages.length > 0 && (
-          <section className="mb-12 ">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <HugeiconsIcon icon={Clock01Icon} size={20} className="text-zinc-200 dark:text-zinc-200" />
-                <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Recent Notes</h2>
+        {/* Recent Notes & Todo List Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-20">
+          {/* Recent Notes Section - Takes 2 columns */}
+          {recentPages.length > 0 && (
+            <section className="lg:col-span-2 h-full">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <HugeiconsIcon icon={Clock01Icon} size={20} className="text-zinc-200 dark:text-zinc-200" />
+                  <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Recent Notes</h2>
+                </div>
               </div>
+              <div className="flex gap-4 justify-start overflow-x-auto px-4 outline-1 outline-white/10 rounded-2xl py-4">
+                {recentPages.slice(0, 4).map(({ page, folderId }) => (
+                  <PageCard
+                    key={page.id}
+                    page={page}
+                    folderId={folderId}
+                    onDelete={deletePage}
+                    onRename={renamePage}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Todo List Section */}
+          <section className={recentPages.length > 0 ? "lg:col-span-1" : "lg:col-span-3"}>
+            <div className="flex items-center gap-3 mb-4 ">
+              <HugeiconsIcon icon={CheckListIcon} size={20} className="text-zinc-200 dark:text-zinc-200" />
+              <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Todo List</h2>
             </div>
-            <div className="flex  gap-6 justify-start overflow-x-auto  px-4 outline-1 outline-white/10 rounded-2xl py-4">
-              {recentPages.map(({ page, folderId }) => (
-                <PageCard
-                  key={page.id}
-                  page={page}
-                  folderId={folderId}
-                  onDelete={deletePage}
-                  onRename={renamePage}
-                />
-              ))}
-            </div>
+            <TodoList />
           </section>
-        )}
+        </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -168,25 +179,13 @@ export function Dashboard() {
                 <HugeiconsIcon icon={Folder01Icon} size={20} className="text-zinc-200 dark:text-zinc-200" />
                 <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">My Files</h2>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 backdrop-blur-3xl rounded-xl font-medium text-sm hover:bg-indigo-500/30 active:scale-[0.98] transition-all"
-                  onClick={() => {
-                    setAiPanelMode("flowchart")
-                    setIsAIPanelOpen(true)
-                  }}
-                >
-                  <HugeiconsIcon icon={AiChat02Icon} size={16} />
-                  <span>AI Flowchart</span>
-                </button>
-                <button
-                  className="flex items-center gap-2 px-4 py-2 bg-zinc-900/10 border border-zinc-200/10 text-zinc-900 dark:text-zinc-200 backdrop-blur-3xl rounded-xl font-medium text-sm hover:opacity-90 active:scale-[0.98] transition-all"
-                  onClick={handleCreateFolder}
-                >
-                  <HugeiconsIcon icon={Add01Icon} size={16} />
-                  <span>New Folder</span>
-                </button>
-              </div>
+              <button
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-900/10 border border-zinc-200/10 text-zinc-900 dark:text-zinc-200 backdrop-blur-3xl rounded-xl font-medium text-sm hover:opacity-90 active:scale-[0.98] transition-all"
+                onClick={handleCreateFolder}
+              >
+                <HugeiconsIcon icon={Add01Icon} size={16} />
+                <span>New Folder</span>
+              </button>
             </div>
 
             <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 min-h-[300px]">
@@ -232,12 +231,8 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* AI Panel for folder-based flowchart generation */}
-      <DashboardAIPanel
-        isOpen={isAIPanelOpen}
-        onClose={() => setIsAIPanelOpen(false)}
-        mode={aiPanelMode}
-      />
+      {/* Always visible AI input at bottom of dashboard */}
+      <DashboardAIInput />
     </div>
   )
 }
@@ -264,7 +259,7 @@ function EmptyState({
             src={lottie}
             loop
             autoplay
-            style={{ width: "100%", height: "100%" }}
+            style={{ width: "100%", height: "100%", background: "transparent" }}
           />
         </div>
       ) : (

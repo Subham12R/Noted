@@ -22,6 +22,13 @@
       "when": 1768919804437,
       "tag": "0002_cynical_dreadnoughts",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1769032834728,
+      "tag": "0003_tan_warpath",
+      "breakpoints": true
     }
   ]
 }

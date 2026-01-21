@@ -2,9 +2,10 @@
 
 import { useAuth } from "@/context/AuthContext"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { toast } from "sonner"
 import {
   SUBSCRIPTION_TIERS,
   SubscriptionTier,
@@ -14,6 +15,7 @@ import {
   TierLimits,
   UsageStats,
 } from "@/types/subscription"
+import { getCustomerPortalUrl } from "@/lib/stripe-client"
 
 function getInitials(name: string): string {
   return name
@@ -42,6 +44,27 @@ export default function ProfilePage() {
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null)
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true)
 
+  // Modal states
+  const [editNameModal, setEditNameModal] = useState(false)
+  const [editPasswordModal, setEditPasswordModal] = useState(false)
+  const [deleteAccountModal, setDeleteAccountModal] = useState(false)
+  const [editAvatarModal, setEditAvatarModal] = useState(false)
+
+  // Form states
+  const [newName, setNewName] = useState("")
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [deleteConfirmation, setDeleteConfirmation] = useState("")
+  const [avatarUrl, setAvatarUrl] = useState("")
+
+  // Loading states
+  const [isSaving, setIsSaving] = useState(false)
+  const [isOpeningPortal, setIsOpeningPortal] = useState(false)
+
+  // File input ref
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push("/login")
@@ -67,6 +90,195 @@ export default function ProfilePage() {
       fetchSubscription()
     }
   }, [isAuthenticated])
+
+  // Update name when user changes
+  useEffect(() => {
+    if (user?.name) {
+      setNewName(user.name)
+    }
+  }, [user?.name])
+
+  // Handle name update
+  const handleUpdateName = async () => {
+    if (!newName.trim()) {
+      toast.error("Name cannot be empty")
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const res = await fetch("/api/users/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName.trim() }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to update name")
+      }
+
+      toast.success("Name updated successfully")
+      setEditNameModal(false)
+      // Refresh the page to get updated user data
+      router.refresh()
+      window.location.reload()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update name")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Handle password update
+  const handleUpdatePassword = async () => {
+    if (!currentPassword) {
+      toast.error("Current password is required")
+      return
+    }
+    if (!newPassword) {
+      toast.error("New password is required")
+      return
+    }
+    if (newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters")
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match")
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const res = await fetch("/api/users/password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to update password")
+      }
+
+      toast.success("Password updated successfully")
+      setEditPasswordModal(false)
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update password")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Handle avatar update
+  const handleUpdateAvatar = async (imageUrl: string) => {
+    setIsSaving(true)
+    try {
+      const res = await fetch("/api/users/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: imageUrl || null }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to update avatar")
+      }
+
+      toast.success("Avatar updated successfully")
+      setEditAvatarModal(false)
+      setAvatarUrl("")
+      router.refresh()
+      window.location.reload()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update avatar")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Handle avatar file upload
+  const handleAvatarFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file")
+      return
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be less than 2MB")
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      // Convert to base64 data URL for simplicity
+      // In production, you'd upload to a storage service like S3 or Cloudinary
+      const reader = new FileReader()
+      reader.onload = async (event) => {
+        const dataUrl = event.target?.result as string
+        await handleUpdateAvatar(dataUrl)
+      }
+      reader.onerror = () => {
+        toast.error("Failed to read file")
+        setIsSaving(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (error) {
+      toast.error("Failed to upload avatar")
+      setIsSaving(false)
+    }
+  }
+
+  // Handle opening Stripe customer portal
+  const handleManageBilling = async () => {
+    setIsOpeningPortal(true)
+    try {
+      const url = await getCustomerPortalUrl()
+      window.location.href = url
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to open billing portal")
+      setIsOpeningPortal(false)
+    }
+  }
+
+  // Handle account deletion
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== "DELETE") {
+      toast.error("Please type DELETE to confirm")
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const res = await fetch("/api/users/profile", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmation: "DELETE" }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to delete account")
+      }
+
+      toast.success("Account deleted successfully")
+      await logout()
+      router.push("/login")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete account")
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   if (isLoading || !user) {
     return (
@@ -102,7 +314,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Header - Glassmorphism */}
+      {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-2xl bg-background/60 border-b border-foreground/5">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-foreground/70 hover:text-foreground no-underline transition-colors">
@@ -115,7 +327,7 @@ export default function ProfilePage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8">
-        {/* Profile Header - Glassmorphism */}
+        {/* Profile Header */}
         <div className="rounded-2xl bg-foreground/[0.02] backdrop-blur-xl border border-foreground/10 p-6 mb-6">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             {/* Avatar */}
@@ -133,7 +345,10 @@ export default function ProfilePage() {
                   {initials}
                 </div>
               )}
-              <button className="absolute bottom-0 right-0 p-1.5 bg-background rounded-full border border-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-foreground/5">
+              <button
+                onClick={() => setEditAvatarModal(true)}
+                className="absolute bottom-0 right-0 p-1.5 bg-background rounded-full border border-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-foreground/5"
+              >
                 <CameraIcon />
               </button>
             </div>
@@ -152,7 +367,10 @@ export default function ProfilePage() {
 
             {/* Quick Actions */}
             <div className="flex gap-2 flex-wrap">
-              <button className="px-3 py-1.5 bg-foreground/5 hover:bg-foreground/10 rounded-lg text-sm font-medium transition-colors border border-foreground/10">
+              <button
+                onClick={() => setEditNameModal(true)}
+                className="px-3 py-1.5 bg-foreground/5 hover:bg-foreground/10 rounded-lg text-sm font-medium transition-colors border border-foreground/10"
+              >
                 Edit
               </button>
               <button
@@ -208,10 +426,35 @@ export default function ProfilePage() {
             <div className="rounded-2xl bg-foreground/[0.02] backdrop-blur-xl border border-foreground/10 p-6">
               <h3 className="font-semibold mb-5">Account</h3>
               <div className="space-y-1">
-                <SettingsRow icon={<UserIcon />} label="Name" value={userName} action="Edit" />
-                <SettingsRow icon={<EmailIcon />} label="Email" value={userEmail} action="Change" verified={user.emailVerified} />
-                <SettingsRow icon={<LockIcon />} label="Password" value="••••••••" action="Update" />
-                <SettingsRow icon={<ShieldIcon />} label="2FA" value="Off" action="Enable" />
+                <SettingsRow
+                  icon={<UserIcon />}
+                  label="Name"
+                  value={userName}
+                  action="Edit"
+                  onAction={() => setEditNameModal(true)}
+                />
+                <SettingsRow
+                  icon={<EmailIcon />}
+                  label="Email"
+                  value={userEmail}
+                  action="Change"
+                  verified={user.emailVerified}
+                  onAction={() => toast.info("Email change is not yet available")}
+                />
+                <SettingsRow
+                  icon={<LockIcon />}
+                  label="Password"
+                  value="••••••••"
+                  action="Update"
+                  onAction={() => setEditPasswordModal(true)}
+                />
+                <SettingsRow
+                  icon={<ShieldIcon />}
+                  label="2FA"
+                  value="Off"
+                  action="Enable"
+                  onAction={() => toast.info("2FA is not yet available")}
+                />
               </div>
             </div>
 
@@ -291,8 +534,12 @@ export default function ProfilePage() {
                       <span>{new Date(subscriptionData.subscription.currentPeriodEnd).toLocaleDateString()}</span>
                     </div>
                   )}
-                  <button className="w-full mt-3 py-2 text-sm text-foreground/50 hover:text-foreground border border-foreground/10 rounded-lg transition-colors hover:bg-foreground/5">
-                    Manage
+                  <button
+                    onClick={handleManageBilling}
+                    disabled={isOpeningPortal}
+                    className="w-full mt-3 py-2 text-sm text-foreground/50 hover:text-foreground border border-foreground/10 rounded-lg transition-colors hover:bg-foreground/5 disabled:opacity-50"
+                  >
+                    {isOpeningPortal ? "Opening..." : "Manage Billing"}
                   </button>
                 </div>
               )}
@@ -304,13 +551,266 @@ export default function ProfilePage() {
               <p className="text-foreground/40 text-xs mb-4">
                 Permanently delete your account and all data.
               </p>
-              <button className="w-full py-2 text-sm text-red-500/70 hover:text-red-500 hover:bg-red-500/10 border border-red-500/20 rounded-lg transition-colors">
+              <button
+                onClick={() => setDeleteAccountModal(true)}
+                className="w-full py-2 text-sm text-red-500/70 hover:text-red-500 hover:bg-red-500/10 border border-red-500/20 rounded-lg transition-colors"
+              >
                 Delete Account
               </button>
             </div>
           </div>
         </div>
       </main>
+
+      {/* Edit Name Modal */}
+      {editNameModal && (
+        <Modal onClose={() => setEditNameModal(false)} title="Edit Name">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground/70 mb-2">Name</label>
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="w-full px-3 py-2 bg-foreground/5 border border-foreground/10 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+                placeholder="Your name"
+                maxLength={100}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setEditNameModal(false)}
+                className="px-4 py-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateName}
+                disabled={isSaving}
+                className="px-4 py-2 bg-foreground text-background rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {isSaving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Edit Password Modal */}
+      {editPasswordModal && (
+        <Modal onClose={() => setEditPasswordModal(false)} title="Update Password">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground/70 mb-2">Current Password</label>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-foreground/5 border border-foreground/10 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+                placeholder="••••••••"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground/70 mb-2">New Password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-foreground/5 border border-foreground/10 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+                placeholder="••••••••"
+              />
+              <p className="text-xs text-foreground/40 mt-1">At least 8 characters</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground/70 mb-2">Confirm New Password</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-foreground/5 border border-foreground/10 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+                placeholder="••••••••"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setEditPasswordModal(false)
+                  setCurrentPassword("")
+                  setNewPassword("")
+                  setConfirmPassword("")
+                }}
+                className="px-4 py-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdatePassword}
+                disabled={isSaving}
+                className="px-4 py-2 bg-foreground text-background rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {isSaving ? "Updating..." : "Update Password"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Edit Avatar Modal */}
+      {editAvatarModal && (
+        <Modal onClose={() => setEditAvatarModal(false)} title="Update Avatar">
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              {avatarSrc ? (
+                <Image
+                  src={avatarSrc}
+                  alt={userName}
+                  width={100}
+                  height={100}
+                  className="rounded-full h-24 w-24 object-cover ring-2 ring-foreground/10"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-24 w-24 rounded-full bg-foreground/10 text-foreground text-3xl font-semibold ring-2 ring-foreground/10">
+                  {initials}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSaving}
+                className="w-full py-2.5 bg-foreground/5 hover:bg-foreground/10 border border-foreground/10 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                Upload Image
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarFileUpload}
+                className="hidden"
+              />
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-foreground/10"></div>
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-background px-2 text-foreground/40">or</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground/70 mb-2">Image URL</label>
+                <input
+                  type="url"
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  className="w-full px-3 py-2 bg-foreground/5 border border-foreground/10 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-between gap-2">
+              {avatarSrc && (
+                <button
+                  onClick={() => handleUpdateAvatar("")}
+                  disabled={isSaving}
+                  className="px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              )}
+              <div className="flex-1 flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setEditAvatarModal(false)
+                    setAvatarUrl("")
+                  }}
+                  className="px-4 py-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleUpdateAvatar(avatarUrl)}
+                  disabled={isSaving || !avatarUrl}
+                  className="px-4 py-2 bg-foreground text-background rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete Account Modal */}
+      {deleteAccountModal && (
+        <Modal onClose={() => setDeleteAccountModal(false)} title="Delete Account">
+          <div className="space-y-4">
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <p className="text-sm text-red-400">
+                <strong>Warning:</strong> This action is irreversible. All your data including folders, notes, and settings will be permanently deleted.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground/70 mb-2">
+                Type <span className="font-mono text-red-500">DELETE</span> to confirm
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmation}
+                onChange={(e) => setDeleteConfirmation(e.target.value)}
+                className="w-full px-3 py-2 bg-foreground/5 border border-foreground/10 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                placeholder="DELETE"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setDeleteAccountModal(false)
+                  setDeleteConfirmation("")
+                }}
+                className="px-4 py-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={isSaving || deleteConfirmation !== "DELETE"}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? "Deleting..." : "Delete Account"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+// Modal Component
+function Modal({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative bg-background border border-foreground/10 rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <button
+            onClick={onClose}
+            className="p-1 text-foreground/40 hover:text-foreground transition-colors"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+        {children}
+      </div>
     </div>
   )
 }
@@ -365,13 +865,15 @@ function SettingsRow({
   label,
   value,
   action,
-  verified
+  verified,
+  onAction
 }: {
   icon: React.ReactNode
   label: string
   value: string
   action: string
   verified?: boolean
+  onAction?: () => void
 }) {
   return (
     <div className="flex items-center justify-between py-2.5 border-b border-foreground/5 last:border-0">
@@ -391,7 +893,10 @@ function SettingsRow({
           </div>
         </div>
       </div>
-      <button className="text-xs text-foreground/40 hover:text-foreground transition-colors">
+      <button
+        onClick={onAction}
+        className="text-xs text-foreground/40 hover:text-foreground transition-colors"
+      >
         {action}
       </button>
     </div>
@@ -421,7 +926,10 @@ function ConnectedAccount({
           Connected
         </span>
       ) : (
-        <button className="text-xs text-foreground/40 hover:text-foreground transition-colors">
+        <button
+          onClick={() => toast.info(`${name} connection is not yet available`)}
+          className="text-xs text-foreground/40 hover:text-foreground transition-colors"
+        >
           Connect
         </button>
       )}
@@ -535,6 +1043,15 @@ function CheckIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
     </svg>
   )
 }

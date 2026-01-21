@@ -20,7 +20,13 @@ const LOADING_MESSAGES = [
 ];
 
 // Lottie animation for processing state
-const NOTES_LOTTIE = "/lottie/Notes.lottie";
+const LOTTIE = [
+  "/lottie/Notes.lottie",
+  "/lottie/Dynamic Tri-Cubes.lottie",
+  "/lottie/Dynamic Tri-Cubes.lottie",
+  "/lottie/Learning.lottie",
+];
+
 
 interface ContextItem {
   id: string;
@@ -34,7 +40,7 @@ interface PendingEdit {
   action: 'insert' | 'replace';
 }
 
-import type { AIMode } from "@/types/ai";
+import type { AIMode, AIModel } from "@/types/ai";
 
 // Default prompts for each AI mode
 const MODE_DEFAULT_PROMPTS: Record<AIMode, string> = {
@@ -71,8 +77,12 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
   const [error, setError] = useState<string | null>(null);
   const [pendingEdit, setPendingEdit] = useState<PendingEdit | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("compound-beta");
+  const [availableModels, setAvailableModels] = useState<(AIModel & { available: boolean })[]>([]);
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const contextRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -161,6 +171,37 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
     }
   }, [isOpen]);
 
+  // Fetch available models
+  useEffect(() => {
+    async function fetchModels() {
+      try {
+        const res = await fetch("/api/ai/models");
+        if (res.ok) {
+          const data = await res.json();
+          setAvailableModels(data.allModels || []);
+          if (data.defaultModel) {
+            setSelectedModel(data.defaultModel);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch models:", error);
+      }
+    }
+    fetchModels();
+  }, []);
+
+  // Close model dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target as Node)) {
+        setIsModelDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Track if we've already auto-executed for this mode
   const hasAutoExecutedRef = useRef<string | null>(null);
 
@@ -237,7 +278,7 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
           pageId,
           prompt: prompt,
           mode: mode,
-          model: 'compound-beta',
+          model: selectedModel,
           context: contextText,
           stream: true,
         }),
@@ -332,7 +373,7 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
           pageId,
           prompt: inputValue.trim(),
           mode: activeMode || 'answer',
-          model: 'compound-beta',
+          model: selectedModel,
           context: contextText,
           stream: true,
         }),
@@ -626,10 +667,10 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 shrink-0">
                       <DotLottieReact
-                        src={NOTES_LOTTIE}
+                        src={LOTTIE[currentMessageIndex]}
                         loop
                         autoplay
-                        style={{ width: "100%", height: "100%" }}
+                        style={{ width: "100%", height: "100%", background: "transparent" }}
                       />
                     </div>
                     <span className="text-sm text-zinc-400">
@@ -998,6 +1039,71 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
 
           {/* Action Buttons */}
           <div className="flex items-center gap-1 px-2 py-2">
+            {/* Model Selector */}
+            <div className="relative" ref={modelDropdownRef}>
+              <button
+                onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                disabled={isProcessing}
+                className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 rounded-lg transition-colors disabled:opacity-50"
+                title="Select AI model"
+              >
+                <ModelIcon className="w-4 h-4" />
+                <span className="max-w-[80px] truncate hidden sm:inline">
+                  {availableModels.find(m => m.id === selectedModel)?.name?.split(' ')[0] || 'Model'}
+                </span>
+                <ChevronDownIcon className="w-3 h-3" />
+              </button>
+
+              {/* Model Dropdown */}
+              {isModelDropdownOpen && (
+                <div className="absolute bottom-full right-0 mb-2 w-72 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-xl overflow-hidden z-50">
+                  <div className="p-2 border-b border-zinc-100 dark:border-zinc-800">
+                    <p className="text-xs font-medium text-zinc-500 px-2">Select Model</p>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto p-1">
+                    {availableModels.map((model) => (
+                      <button
+                        key={model.id}
+                        onClick={() => {
+                          if (model.available) {
+                            setSelectedModel(model.id);
+                            setIsModelDropdownOpen(false);
+                          }
+                        }}
+                        disabled={!model.available}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                          selectedModel === model.id
+                            ? 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-400'
+                            : model.available
+                            ? 'text-neutral-700 dark:text-neutral-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                            : 'text-neutral-400 dark:text-neutral-600 cursor-not-allowed opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium truncate">{model.name}</span>
+                              {!model.available && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-zinc-200 dark:bg-zinc-700 rounded text-zinc-500 dark:text-zinc-400 shrink-0">
+                                  Unavailable
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-500 truncate mt-0.5">
+                              {model.description}
+                            </p>
+                          </div>
+                          {selectedModel === model.id && model.available && (
+                            <CheckIcon className="w-4 h-4 text-indigo-500 shrink-0 ml-2" />
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Upload Button */}
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -1305,5 +1411,35 @@ const ReplaceIcon = ({ className }: { className?: string }) => (
     <path d="M8 21H3v-5" />
     <path d="M21 3L14 10" />
     <path d="M3 21l7-7" />
+  </svg>
+);
+
+const ModelIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+    <path d="M2 17l10 5 10-5" />
+    <path d="M2 12l10 5 10-5" />
+  </svg>
+);
+
+const ChevronDownIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="m6 9 6 6 6-6" />
   </svg>
 );
