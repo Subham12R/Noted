@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
-import { db, pages, folders, pageCollaborators } from "@/db"
+import { db, pages, folders, pageCollaborators, folderCollaborators } from "@/db"
 import { eq, and, or } from "drizzle-orm"
 import { getServerSession } from "@/lib/auth-utils"
 import { updatePageSchema, sanitizeBlocks, sanitizeContent } from "@/lib/validation"
 
-// Check if user has access to a page (owner or collaborator)
+// Check if user has access to a page (owner, page collaborator, or folder collaborator)
 async function hasPageAccess(pageId: string, userId: string): Promise<{ hasAccess: boolean; role: string | null }> {
   const [page] = await db
-    .select({ ownerId: pages.ownerId })
+    .select({ ownerId: pages.ownerId, folderId: pages.folderId })
     .from(pages)
     .where(eq(pages.id, pageId))
 
@@ -19,7 +19,8 @@ async function hasPageAccess(pageId: string, userId: string): Promise<{ hasAcces
     return { hasAccess: true, role: "owner" }
   }
 
-  const [collaborator] = await db
+  // Check page-level collaborator
+  const [pageCollab] = await db
     .select({ role: pageCollaborators.role })
     .from(pageCollaborators)
     .where(
@@ -29,8 +30,23 @@ async function hasPageAccess(pageId: string, userId: string): Promise<{ hasAcces
       )
     )
 
-  if (collaborator) {
-    return { hasAccess: true, role: collaborator.role }
+  if (pageCollab) {
+    return { hasAccess: true, role: pageCollab.role }
+  }
+
+  // Check folder-level collaborator (inherited access)
+  const [folderCollab] = await db
+    .select({ role: folderCollaborators.role })
+    .from(folderCollaborators)
+    .where(
+      and(
+        eq(folderCollaborators.folderId, page.folderId),
+        eq(folderCollaborators.userId, userId)
+      )
+    )
+
+  if (folderCollab) {
+    return { hasAccess: true, role: folderCollab.role }
   }
 
   return { hasAccess: false, role: null }

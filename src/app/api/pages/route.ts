@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { db, pages, folders } from "@/db"
-import { eq, desc, asc, and } from "drizzle-orm"
+import { db, pages, folders, shareLinks, pageCollaborators } from "@/db"
+import { eq, desc, asc, and, or, sql } from "drizzle-orm"
 import { getServerSession } from "@/lib/auth-utils"
 import { createPageSchema, sanitizeBlocks } from "@/lib/validation"
 import { rateLimitMemory, RATE_LIMITS } from "@/lib/rate-limit"
@@ -75,7 +75,37 @@ export async function GET(request: NextRequest) {
           .limit(limit)
       : await query
 
-    return NextResponse.json({ pages: userPages })
+    // Check which pages have share links or collaborators
+    const pageIds = userPages.map((p) => p.id)
+
+    // Get pages with share links
+    const sharedLinkPages = pageIds.length > 0
+      ? await db
+          .selectDistinct({ pageId: shareLinks.pageId })
+          .from(shareLinks)
+          .where(sql`${shareLinks.pageId} IN ${pageIds}`)
+      : []
+
+    // Get pages with collaborators
+    const collaboratorPages = pageIds.length > 0
+      ? await db
+          .selectDistinct({ pageId: pageCollaborators.pageId })
+          .from(pageCollaborators)
+          .where(sql`${pageCollaborators.pageId} IN ${pageIds}`)
+      : []
+
+    const sharedPageIds = new Set([
+      ...sharedLinkPages.map((p) => p.pageId),
+      ...collaboratorPages.map((p) => p.pageId),
+    ])
+
+    // Add isShared field to pages
+    const pagesWithSharedStatus = userPages.map((page) => ({
+      ...page,
+      isShared: sharedPageIds.has(page.id),
+    }))
+
+    return NextResponse.json({ pages: pagesWithSharedStatus })
   } catch (error) {
     console.error("Get pages error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

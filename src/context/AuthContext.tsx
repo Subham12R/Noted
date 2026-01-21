@@ -24,8 +24,8 @@ interface AuthContextType {
   isLoading: boolean
   isAuthenticated: boolean
   signInWithEmail: (email: string, password: string) => Promise<{ error?: string }>
-  signInWithGoogle: () => Promise<void>
-  signInWithGitHub: () => Promise<void>
+  signInWithGoogle: (redirectTo?: string) => Promise<void>
+  signInWithGitHub: (redirectTo?: string) => Promise<void>
   signUpWithEmail: (
     email: string,
     password: string,
@@ -57,17 +57,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   )
 
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithGoogle = useCallback(async (redirectTo?: string) => {
     await signIn.social({
       provider: "google",
-      callbackURL: "/",
+      callbackURL: redirectTo || "/",
     })
   }, [])
 
-  const signInWithGitHub = useCallback(async () => {
+  const signInWithGitHub = useCallback(async (redirectTo?: string) => {
     await signIn.social({
       provider: "github",
-      callbackURL: "/",
+      callbackURL: redirectTo || "/",
     })
   }, [])
 

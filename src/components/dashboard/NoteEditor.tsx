@@ -97,6 +97,7 @@ import { useCursorVisibility } from "@/hooks/use-cursor-visibility"
 
 // --- Components ---
 import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle"
+import { ShareModal } from "@/components/collaboration/ShareModal"
 
 // --- Lib ---
 import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils"
@@ -108,14 +109,31 @@ interface NoteEditorProps {
   pageId: string
 }
 
+interface SharedPageData {
+  id: string
+  name: string
+  content: string
+  folderId: string
+  folder?: { id: string; name: string } | null
+}
+
+interface SharedPageState {
+  page: SharedPageData | null
+  role: string | null
+  isLoading: boolean
+  error: string | null
+}
+
 const MainToolbarContent = ({
   onHighlighterClick,
   onLinkClick,
+  onShareClick,
   isMobile,
   folderId,
 }: {
   onHighlighterClick: () => void
   onLinkClick: () => void
+  onShareClick: () => void
   isMobile: boolean
   folderId: string | null
 }) => {
@@ -190,10 +208,28 @@ const MainToolbarContent = ({
         <ColumnsButton />
       </ToolbarGroup>
 
+      <ToolbarSeparator />
+
+      <ToolbarGroup>
+        <Button data-style="ghost" onClick={onShareClick} title="Share">
+          <ShareIcon className="tiptap-button-icon" />
+        </Button>
+      </ToolbarGroup>
+
       <Spacer />
 
       {isMobile && <ToolbarSeparator />}
     </>
+  )
+}
+
+function ShareIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+      <polyline points="16 6 12 2 8 6" />
+      <line x1="12" x2="12" y1="2" y2="15" />
+    </svg>
   )
 }
 
@@ -230,21 +266,101 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
   const isMobile = useIsBreakpoint()
   const { height } = useWindowSize()
   const [mobileView, setMobileView] = useState<"main" | "highlighter" | "link">("main")
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const toolbarRef = useRef<HTMLDivElement>(null)
 
   const { getPageById, getPageContent, updatePageContent, isLoading } = useNotes()
   const pageInfo = getPageById(pageId)
 
+  // State for shared pages (not in local context)
+  // Start with isLoading: true if we don't have pageInfo yet (need to check if it's shared)
+  const [sharedPageState, setSharedPageState] = useState<{
+    page: SharedPageData | null
+    role: string | null
+    isLoading: boolean
+    hasFetched: boolean
+    error: string | null
+  }>({ page: null, role: null, isLoading: false, hasFetched: false, error: null })
+
+  // Fetch shared page if not found in local context
+  useEffect(() => {
+    // Skip if we have the page locally (owned page) - no need to fetch
+    if (pageInfo) {
+      return
+    }
+
+    // Skip if still loading context or already fetched
+    if (isLoading || !pageId || sharedPageState.hasFetched) {
+      return
+    }
+
+    let cancelled = false
+
+    const fetchSharedPage = async () => {
+      try {
+        const res = await fetch(`/api/pages/${pageId}`)
+        if (!res.ok) throw new Error("Failed to fetch page")
+        const data = await res.json()
+        if (cancelled) return
+        setSharedPageState({
+          page: {
+            id: data.page.id,
+            name: data.page.name,
+            content: data.page.content || "",
+            folderId: data.page.folderId,
+            folder: data.page.folder,
+          },
+          role: data.role,
+          isLoading: false,
+          hasFetched: true,
+          error: null,
+        })
+      } catch (err) {
+        if (cancelled) return
+        console.error("Error fetching shared page:", err)
+        setSharedPageState({ page: null, role: null, isLoading: false, hasFetched: true, error: err instanceof Error ? err.message : "Failed to fetch" })
+      }
+    }
+
+    setSharedPageState(prev => ({ ...prev, isLoading: true, error: null }))
+    fetchSharedPage()
+
+    return () => { cancelled = true }
+  }, [pageInfo, isLoading, pageId, sharedPageState.hasFetched])
+
+  // Determine if this is a shared page or owned page
+  const isSharedPage = !pageInfo && sharedPageState.page
+  const userRole = pageInfo ? "owner" : sharedPageState.role
+  const canEditPage = userRole === "owner" || userRole === "admin" || userRole === "editor"
+
   // Get initial content synchronously (it's already in memory from context)
-  const initialContent = getPageContent(pageId)
+  const initialContent = isSharedPage ? sharedPageState.page!.content : getPageContent(pageId)
 
   // Debounce the save operation to prevent cursor jumping
   const debouncedSave = useDebounce((id: string, content: string) => {
     updatePageContent(id, content)
   }, 500)
 
+  // Save content for shared pages via API
+  const saveSharedPageContent = useCallback(async (id: string, content: string) => {
+    try {
+      await fetch(`/api/pages/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      })
+    } catch (err) {
+      console.error("Error saving shared page:", err)
+    }
+  }, [])
+
+  const debouncedSaveShared = useDebounce((id: string, content: string) => {
+    saveSharedPageContent(id, content)
+  }, 500)
+
   const editor = useEditor({
     immediatelyRender: false,
+    editable: canEditPage,
     editorProps: {
       attributes: {
         autocomplete: "off",
@@ -294,9 +410,20 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
     content: initialContent,
     onUpdate: ({ editor }) => {
       // Use debounced save to prevent cursor jumping
-      debouncedSave(pageId, editor.getHTML())
+      if (isSharedPage) {
+        debouncedSaveShared(pageId, editor.getHTML())
+      } else {
+        debouncedSave(pageId, editor.getHTML())
+      }
     },
-  }, [initialContent])
+  }, [initialContent, canEditPage])
+
+  // Update editor editable state when role changes
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(canEditPage)
+    }
+  }, [editor, canEditPage])
 
   // Store toolbar height in state to avoid ref access during render
   const [toolbarHeight, setToolbarHeight] = useState(0)
@@ -324,7 +451,11 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
   }, [pageId, editor, getPageContent])
 
   // Show loading spinner while data is being fetched
-  if (isLoading) {
+  // - Context is loading (checking owned pages)
+  // - Shared page fetch is in progress
+  // - Need to fetch shared page (not owned, context done loading, hasn't fetched yet)
+  const needsSharedFetch = !pageInfo && !isLoading && !sharedPageState.hasFetched && !sharedPageState.isLoading
+  if (isLoading || sharedPageState.isLoading || needsSharedFetch) {
     return (
       <div className="simple-editor-wrapper">
         <div className="flex items-center justify-center h-full">
@@ -337,7 +468,10 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
     )
   }
 
-  if (!pageInfo) {
+  // Check if we have either owned page or shared page
+  const hasPage = pageInfo || isSharedPage
+
+  if (!hasPage) {
     return (
       <div className="simple-editor-wrapper">
         <div className="flex items-center justify-center h-full">
@@ -347,35 +481,58 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
     )
   }
 
+  // Get page info (either from context or shared state)
+  const pageName = pageInfo ? pageInfo.page.name : sharedPageState.page!.name
+  const currentFolderId = pageInfo ? pageInfo.folderId : sharedPageState.page!.folderId
+
   return (
     <>
       <div className="simple-editor-wrapper">
         <div className="main-content">
           <EditorContext.Provider value={{ editor }}>
-            <Toolbar
-              ref={toolbarRef}
-              style={{
-                ...(isMobile
-                  ? {
-                      bottom: `calc(100% - ${height - rect.y}px)`,
-                    }
-                  : {}),
-              }}
-            >
-              {effectiveMobileView === "main" ? (
-                <MainToolbarContent
-                  onHighlighterClick={() => setMobileView("highlighter")}
-                  onLinkClick={() => setMobileView("link")}
-                  isMobile={isMobile}
-                  folderId={pageInfo.folderId}
-                />
-              ) : (
-                <MobileToolbarContent
-                  type={effectiveMobileView === "highlighter" ? "highlighter" : "link"}
-                  onBack={() => setMobileView("main")}
-                />
-              )}
-            </Toolbar>
+            {canEditPage ? (
+              <Toolbar
+                ref={toolbarRef}
+                style={{
+                  ...(isMobile
+                    ? {
+                        bottom: `calc(100% - ${height - rect.y}px)`,
+                      }
+                    : {}),
+                }}
+              >
+                {effectiveMobileView === "main" ? (
+                  <MainToolbarContent
+                    onHighlighterClick={() => setMobileView("highlighter")}
+                    onLinkClick={() => setMobileView("link")}
+                    onShareClick={() => setIsShareModalOpen(true)}
+                    isMobile={isMobile}
+                    folderId={currentFolderId}
+                  />
+                ) : (
+                  <MobileToolbarContent
+                    type={effectiveMobileView === "highlighter" ? "highlighter" : "link"}
+                    onBack={() => setMobileView("main")}
+                  />
+                )}
+              </Toolbar>
+            ) : (
+              <div className="sticky top-0 z-10 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800 px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Link href="/">
+                      <Button data-style="ghost">
+                        <ArrowLeftIcon className="tiptap-button-icon" />
+                      </Button>
+                    </Link>
+                    <span className="text-sm text-zinc-400">View only</span>
+                  </div>
+                  <span className="text-sm font-medium text-white truncate max-w-[200px]">
+                    {pageName}
+                  </span>
+                </div>
+              </div>
+            )}
 
             <EditorContent
               editor={editor}
@@ -385,6 +542,15 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
           </EditorContext.Provider>
         </div>
       </div>
+
+      {canEditPage && (
+        <ShareModal
+          pageId={pageId}
+          pageName={pageName}
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+        />
+      )}
     </>
   )
 }

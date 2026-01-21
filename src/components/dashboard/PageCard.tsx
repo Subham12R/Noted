@@ -7,6 +7,22 @@ import { TrashIcon } from "@/components/tiptap-icons/trash-icon"
 import { EditIcon } from "@/components/tiptap-icons/edit-icon"
 import type { Page } from "@/context/NotesContext"
 
+// Paper airplane icon for shared indicator
+function ShareIndicatorIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="none"
+    >
+      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+    </svg>
+  )
+}
+
 interface PageCardProps {
   page: Page
   folderId: string
@@ -58,6 +74,15 @@ export function PageCard({ page, folderId, onDelete, onRename }: PageCardProps) 
           <TrashIcon />
         </button>
       </div>
+
+      {/* Shared indicator */}
+      {page.isShared && (
+        <div className="absolute top-2 right-2 z-10" title="This note is shared">
+          <div className=" rounded-full bg-white p-1 rotate-[-45deg] flex items-center justify-center">
+            <ShareIndicatorIcon className="text-black w-3 h-3 shadow" />
+          </div>
+        </div>
+      )}
 
       <Link href={`/note/${page.id}`} className="flex flex-col items-center no-underline text-inherit">
         <div className="w-20 h-20 flex items-start justify-start transition-transform duration-200 group-hover:scale-105 [&_img]:w-full [&_img]:h-full [&_img]:object-contain [&_img]:drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)]">

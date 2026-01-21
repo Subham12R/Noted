@@ -166,6 +166,24 @@ export const pages = pgTable(
 // COLLABORATION
 // ============================================================================
 
+export const folderCollaborators = pgTable(
+  "folder_collaborators",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    folderId: uuid("folder_id")
+      .notNull()
+      .references(() => folders.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: varchar("role", { length: 20 }).notNull().default("editor"), // 'viewer' | 'editor' | 'admin'
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("folder_collaborators_folder_user_idx").on(table.folderId, table.userId),
+  ]
+)
+
 export const pageCollaborators = pgTable(
   "page_collaborators",
   {
@@ -299,6 +317,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   folders: many(folders),
   pages: many(pages),
   collaborations: many(pageCollaborators),
+  folderCollaborations: many(folderCollaborators),
   collaborationSessions: many(collaborationSessions),
   presence: many(presence),
 }))
@@ -329,6 +348,7 @@ export const foldersRelations = relations(folders, ({ one, many }) => ({
   }),
   children: many(folders, { relationName: "folderHierarchy" }),
   pages: many(pages),
+  collaborators: many(folderCollaborators),
 }))
 
 export const pagesRelations = relations(pages, ({ one, many }) => ({
@@ -388,6 +408,17 @@ export const shareLinksRelations = relations(shareLinks, ({ one }) => ({
   }),
 }))
 
+export const folderCollaboratorsRelations = relations(folderCollaborators, ({ one }) => ({
+  folder: one(folders, {
+    fields: [folderCollaborators.folderId],
+    references: [folders.id],
+  }),
+  user: one(users, {
+    fields: [folderCollaborators.userId],
+    references: [users.id],
+  }),
+}))
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -409,6 +440,9 @@ export type NewPage = typeof pages.$inferInsert
 
 export type PageCollaborator = typeof pageCollaborators.$inferSelect
 export type NewPageCollaborator = typeof pageCollaborators.$inferInsert
+
+export type FolderCollaborator = typeof folderCollaborators.$inferSelect
+export type NewFolderCollaborator = typeof folderCollaborators.$inferInsert
 
 export type CollaborationSession = typeof collaborationSessions.$inferSelect
 export type NewCollaborationSession = typeof collaborationSessions.$inferInsert

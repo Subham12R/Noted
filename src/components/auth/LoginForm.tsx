@@ -2,11 +2,13 @@
 
 import { useState, FormEvent } from "react"
 import { useAuth } from "@/context/AuthContext"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { OAuthButtons } from "./OAuthButtons"
 
 export function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get("redirect") || "/"
   const { signInWithEmail, isLoading } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -23,7 +25,7 @@ export function LoginForm() {
       if (result.error) {
         setError(result.error)
       } else {
-        router.push("/")
+        router.push(redirectTo)
         router.refresh()
       }
     } finally {
@@ -35,7 +37,7 @@ export function LoginForm() {
 
   return (
     <div className="w-full">
-      <OAuthButtons disabled={disabled} />
+      <OAuthButtons disabled={disabled} redirectTo={redirectTo} />
 
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">

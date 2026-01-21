@@ -15,6 +15,13 @@
       "when": 1768917278927,
       "tag": "0001_add-page-content",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1768919804437,
+      "tag": "0002_cynical_dreadnoughts",
+      "breakpoints": true
     }
   ]
 }

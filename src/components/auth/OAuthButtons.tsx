@@ -5,16 +5,17 @@ import { useState } from "react"
 
 interface OAuthButtonsProps {
   disabled?: boolean
+  redirectTo?: string
 }
 
-export function OAuthButtons({ disabled }: OAuthButtonsProps) {
+export function OAuthButtons({ disabled, redirectTo }: OAuthButtonsProps) {
   const { signInWithGoogle, signInWithGitHub } = useAuth()
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null)
 
   const handleGoogleSignIn = async () => {
     setLoadingProvider("google")
     try {
-      await signInWithGoogle()
+      await signInWithGoogle(redirectTo)
     } finally {
       setLoadingProvider(null)
     }
@@ -23,7 +24,7 @@ export function OAuthButtons({ disabled }: OAuthButtonsProps) {
   const handleGitHubSignIn = async () => {
     setLoadingProvider("github")
     try {
-      await signInWithGitHub()
+      await signInWithGitHub(redirectTo)
     } finally {
       setLoadingProvider(null)
     }

@@ -8,6 +8,7 @@ export interface Page {
   content?: string
   createdAt?: string
   updatedAt?: string
+  isShared?: boolean
 }
 
 export interface Folder {
@@ -46,6 +47,7 @@ interface ApiPage {
   ydocState?: string | null
   sortOrder: number
   isPublic?: boolean
+  isShared?: boolean
   version?: number
   createdAt: string
   updatedAt: string
@@ -115,6 +117,7 @@ function buildFolderTree(
         content: p.content || "",
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
+        isShared: p.isShared || false,
       })
     }
   })
