@@ -6,6 +6,7 @@ import "@/components/tiptap-ui-primitive/toolbar/toolbar.scss"
 import { cn } from "@/lib/tiptap-utils"
 import { useMenuNavigation } from "@/hooks/use-menu-navigation"
 import { useComposedRef } from "@/hooks/use-composed-ref"
+import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle"
 
 type BaseProps = React.HTMLAttributes<HTMLDivElement>
 
@@ -110,6 +111,7 @@ export const ToolbarGroup = forwardRef<HTMLDivElement, BaseProps>(
       {...props}
     >
       {children}
+      
     </div>
   )
 )
@@ -121,3 +123,4 @@ export const ToolbarSeparator = forwardRef<HTMLDivElement, BaseProps>(
   )
 )
 ToolbarSeparator.displayName = "ToolbarSeparator"
+

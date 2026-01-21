@@ -31,7 +31,7 @@ function SharedPageCard({ page }: { page: SharedPage }) {
       case "admin":
         return "bg-purple-500/20 text-purple-300 border-purple-500/30"
       case "editor":
-        return "bg-blue-500/20 text-blue-300 border-blue-500/30"
+        return "bg-blue-900 text-blue-300 border-blue-500/30"
       default:
         return "bg-zinc-500/20 text-zinc-300 border-zinc-500/30"
     }
@@ -40,7 +40,7 @@ function SharedPageCard({ page }: { page: SharedPage }) {
   return (
     <div className="relative rounded-2xl transition-all duration-200 hover:-translate-y-0.5 group">
       {/* Role badge */}
-      <div className="absolute -top-2 -right-2 z-10">
+      <div className="absolute -top-0 -right-0 z-10">
         <span className={`text-[10px] px-2 py-0.5 rounded-full border ${getRoleBadgeColor(page.role)}`}>
           {page.role}
         </span>
@@ -204,7 +204,7 @@ function ShareLinkInput() {
   return (
     <form onSubmit={handleSubmit} className="flex items-center gap-2">
       <div className="relative flex-1">
-        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4" />
+        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 w-4 h-4" />
         <input
           type="text"
           value={link}
@@ -213,18 +213,18 @@ function ShareLinkInput() {
             setError(null)
           }}
           placeholder="Paste share link here..."
-          className="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg pl-10 pr-4 py-2 text-sm text-foreground placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500 transition-colors"
+          className="w-full bg-white dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg pl-10 pr-4 py-2 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors"
         />
       </div>
       <button
         type="submit"
         disabled={isLoading || !link.trim()}
-        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-colors"
+        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition-colors"
       >
         {isLoading ? "Opening..." : "Open"}
       </button>
       {error && (
-        <span className="text-xs text-red-400">{error}</span>
+        <span className="text-xs text-red-500 dark:text-red-400">{error}</span>
       )}
     </form>
   )
@@ -270,11 +270,11 @@ export function SharedWithMe() {
   // Prevent hydration mismatch
   if (!hasMounted) {
     return (
-      <div className="bg-transparent relative border border-zinc-800 px-4 py-4 rounded-xl min-h-[200px]">
+      <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 px-4 py-4 rounded-2xl min-h-75 max-h-125">
         <div className="mb-4">
           <ShareLinkInput />
         </div>
-        <div className="flex items-center justify-center py-8 text-foreground/50">
+        <div className="flex items-center justify-center py-8 text-zinc-500 dark:text-zinc-400">
           <span className="animate-pulse">Loading...</span>
         </div>
       </div>
@@ -283,11 +283,11 @@ export function SharedWithMe() {
 
   if (error) {
     return (
-      <div className="bg-transparent relative border border-zinc-800 px-4 py-4 rounded-xl min-h-[200px]">
+      <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 px-4 py-4 rounded-2xl min-h-75 max-h-125">
         <div className="mb-4">
           <ShareLinkInput />
         </div>
-        <div className="flex flex-col items-center justify-center py-8 text-foreground/50">
+        <div className="flex flex-col items-center justify-center py-8 text-zinc-500 dark:text-zinc-400">
           <LinkIcon className="w-8 h-8 mb-2 opacity-50" />
           <p className="text-sm">No shared items yet</p>
           <p className="text-xs mt-1">Paste a share link above to access shared files</p>
@@ -299,18 +299,18 @@ export function SharedWithMe() {
   const hasSharedItems = sharedPages.length > 0 || sharedFolders.length > 0
 
   return (
-    <div className="bg-transparent relative border border-zinc-800 px-4 py-4 rounded-xl min-h-[200px]">
+    <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 px-4 py-4 rounded-2xl min-h-75 max-h-125 overflow-y-auto">
       {/* Share link input */}
       <div className="mb-4">
         <ShareLinkInput />
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-8 text-foreground/50">
+        <div className="flex items-center justify-center py-8 text-zinc-500 dark:text-zinc-400">
           <span className="animate-pulse">Loading shared items...</span>
         </div>
       ) : !hasSharedItems ? (
-        <div className="flex flex-col items-center justify-center py-8 text-foreground/50">
+        <div className="flex flex-col items-center justify-center py-8 text-zinc-500 dark:text-zinc-400">
           <LinkIcon className="w-8 h-8 mb-2 opacity-50" />
           <p className="text-sm">No shared items yet</p>
           <p className="text-xs mt-1">Paste a share link above to access shared files</p>

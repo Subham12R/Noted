@@ -323,6 +323,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
       if (!res.ok) {
         const data = await res.json()
+        // Handle limit reached error specially
+        if (data.code === "FOLDER_LIMIT_REACHED") {
+          throw new Error(data.message || "Folder limit reached. Please upgrade your plan.")
+        }
         throw new Error(data.error || "Failed to create folder")
       }
 
@@ -352,7 +356,9 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error("Error creating folder:", err)
-      setError(err instanceof Error ? err.message : "Failed to create folder")
+      const errorMessage = err instanceof Error ? err.message : "Failed to create folder"
+      setError(errorMessage)
+      throw err // Re-throw so caller can handle it
     }
   }, [])
 
@@ -369,6 +375,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
       if (!res.ok) {
         const data = await res.json()
+        // Handle limit reached error specially
+        if (data.code === "NOTE_LIMIT_REACHED") {
+          throw new Error(data.message || "Note limit reached. Please upgrade your plan.")
+        }
         throw new Error(data.error || "Failed to create page")
       }
 
@@ -391,7 +401,9 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       setActivePage(newPage.id)
     } catch (err) {
       console.error("Error creating page:", err)
-      setError(err instanceof Error ? err.message : "Failed to create page")
+      const errorMessage = err instanceof Error ? err.message : "Failed to create page"
+      setError(errorMessage)
+      throw err // Re-throw so caller can handle it
     }
   }, [])
 

@@ -61,7 +61,7 @@ export function AppLayout({ children, showInput = true, showToolbar = true }: Ap
       <div className="flex-1 min-w-0 relative h-screen flex flex-col overflow-hidden">
         {showToolbar && <DashboardToolbar />}
 
-        <main className="flex-1 overflow-y-auto pb-32">
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
 

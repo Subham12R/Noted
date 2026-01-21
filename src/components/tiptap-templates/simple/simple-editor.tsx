@@ -78,6 +78,7 @@ import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils"
 import "@/components/tiptap-templates/simple/simple-editor.scss"
 
 import content from "@/components/tiptap-templates/simple/data/content.json"
+import { ThemeToggle } from "./theme-toggle"
 
 
 const MainToolbarContent = ({
@@ -156,8 +157,8 @@ const MainToolbarContent = ({
 
       <ToolbarGroup>
         <ImageUploadButton text="Add" />
+        <ThemeToggle />
       </ToolbarGroup>
-
       <Spacer />
 
       {isMobile && <ToolbarSeparator />}

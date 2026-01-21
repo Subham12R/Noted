@@ -4,6 +4,7 @@ import { eq, desc, asc, and, or, sql } from "drizzle-orm"
 import { getServerSession } from "@/lib/auth-utils"
 import { createPageSchema, sanitizeBlocks } from "@/lib/validation"
 import { rateLimitMemory, RATE_LIMITS } from "@/lib/rate-limit"
+import { canCreatePage } from "@/lib/subscription"
 import type { Block } from "@/types/blocks"
 
 // GET /api/pages - List pages for the user
@@ -132,6 +133,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Rate limit exceeded", retryAfter: rateLimitResult.retryAfter },
         { status: 429 }
+      )
+    }
+
+    // Check subscription limits
+    const limitCheck = await canCreatePage(session.user.id)
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "Limit reached",
+          message: limitCheck.reason,
+          current: limitCheck.current,
+          limit: limitCheck.limit,
+          code: "NOTE_LIMIT_REACHED",
+        },
+        { status: 403 }
       )
     }
 

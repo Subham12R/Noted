@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import { EditorContent, EditorContext, useEditor } from "@tiptap/react"
 import { useNotes } from "@/context/NotesContext"
 import Link from "next/link"
+import { useHotkeys } from "react-hotkeys-hook"
 
 // Debounce hook
 function useDebounce<T extends (...args: Parameters<T>) => void>(
@@ -99,6 +100,9 @@ import { useRealtimeSync } from "@/hooks/use-realtime-sync"
 // --- Components ---
 import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle"
 import { ShareModal } from "@/components/collaboration/ShareModal"
+import { SlashCommandMenu } from "@/components/editor/SlashCommandMenu"
+import { ExportMenu } from "@/components/editor/ExportMenu"
+import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal"
 
 // --- Lib ---
 import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils"
@@ -129,18 +133,24 @@ const MainToolbarContent = ({
   onHighlighterClick,
   onLinkClick,
   onShareClick,
+  onKeyboardShortcutsClick,
   isMobile,
   folderId,
   isConnected,
   activeUsers,
+  editor,
+  pageName,
 }: {
   onHighlighterClick: () => void
   onLinkClick: () => void
   onShareClick: () => void
+  onKeyboardShortcutsClick: () => void
   isMobile: boolean
   folderId: string | null
   isConnected: boolean
   activeUsers: { id: string; name: string; avatar: string | null; color: string }[]
+  editor: ReturnType<typeof useEditor> | null
+  pageName: string
 }) => {
   return (
     <>
@@ -219,6 +229,11 @@ const MainToolbarContent = ({
         <Button data-style="ghost" onClick={onShareClick} title="Share">
           <ShareIcon className="tiptap-button-icon" />
         </Button>
+        <ExportMenu editor={editor} pageName={pageName} />
+        <Button data-style="ghost" onClick={onKeyboardShortcutsClick} title="Keyboard Shortcuts (Ctrl+K)">
+          <KeyboardIcon className="tiptap-button-icon" />
+        </Button>
+        <ThemeToggle />
       </ToolbarGroup>
 
       {/* Active users indicator */}
@@ -271,6 +286,15 @@ function ShareIcon({ className }: { className?: string }) {
   )
 }
 
+function KeyboardIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="20" height="16" x="2" y="4" rx="2" ry="2" />
+      <path d="M6 8h.001M10 8h.001M14 8h.001M18 8h.001M8 12h.001M12 12h.001M16 12h.001M7 16h10" />
+    </svg>
+  )
+}
+
 const MobileToolbarContent = ({
   type,
   onBack,
@@ -305,10 +329,17 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
   const { height } = useWindowSize()
   const [mobileView, setMobileView] = useState<"main" | "highlighter" | "link">("main")
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false)
+  const [slashMenuOpen, setSlashMenuOpen] = useState(false)
+  const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 })
   const toolbarRef = useRef<HTMLDivElement>(null)
 
   const { getPageById, updatePageContent } = useNotes()
   const pageInfo = getPageById(pageId)
+
+  // Keep pageInfo in a ref so we can use it in the fetch without triggering re-fetches
+  const pageInfoRef = useRef(pageInfo)
+  pageInfoRef.current = pageInfo
 
   // State for page data fetched from API (works for both owned and shared pages)
   const [pageState, setPageState] = useState<{
@@ -333,17 +364,22 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
       return
     }
 
-    const controller = new AbortController()
+    let cancelled = false
 
-    // Mark as loading immediately (synchronously)
-    fetchedPageIdRef.current = pageId
+    // Mark as loading immediately
     setPageState({ page: null, role: null, status: "loading", error: null })
 
     const fetchPageContent = async () => {
       try {
-        const res = await fetch(`/api/pages/${pageId}`, { signal: controller.signal })
+        const res = await fetch(`/api/pages/${pageId}`)
+        if (cancelled) return
+
         if (!res.ok) throw new Error("Failed to fetch page")
         const data = await res.json()
+
+        if (cancelled) return
+
+        fetchedPageIdRef.current = pageId
         setPageState({
           page: {
             id: data.page.id,
@@ -352,23 +388,23 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
             folderId: data.page.folderId,
             folder: data.page.folder,
           },
-          role: data.role || (pageInfo ? "owner" : null),
+          role: data.role || (pageInfoRef.current ? "owner" : null),
           status: "success",
           error: null,
         })
       } catch (err) {
-        // Ignore abort errors
-        if (err instanceof Error && err.name === "AbortError") return
+        if (cancelled) return
         console.error("Error fetching page:", err)
-        fetchedPageIdRef.current = null // Allow retry on error
         setPageState({ page: null, role: null, status: "error", error: err instanceof Error ? err.message : "Failed to fetch" })
       }
     }
 
     fetchPageContent()
 
-    return () => { controller.abort() }
-  }, [pageId, pageInfo])
+    return () => {
+      cancelled = true
+    }
+  }, [pageId])
 
   // Determine if this is a shared page or owned page
   const isSharedPage = !pageInfo && pageState.page
@@ -483,6 +519,70 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
   // Keep broadcast ref in sync
   broadcastContentRef.current = broadcastContent
 
+  // Keyboard shortcut to open shortcuts modal (Ctrl+K)
+  useHotkeys("mod+k", (e) => {
+    e.preventDefault()
+    setIsKeyboardShortcutsOpen(true)
+  }, { enableOnContentEditable: true, enableOnFormTags: true })
+
+  // Slash command detection
+  useEffect(() => {
+    if (!editor) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only trigger on "/" key at the start of a line or after whitespace
+      if (event.key === "/" && !slashMenuOpen) {
+        const { selection } = editor.state
+        const { $from } = selection
+        const textBefore = $from.parent.textContent.slice(0, $from.parentOffset)
+
+        // Check if we're at the start of a line or after a space
+        if (textBefore === "" || textBefore.endsWith(" ")) {
+          // Get cursor position for menu placement
+          const coords = editor.view.coordsAtPos(selection.from)
+          setSlashMenuPosition({
+            top: coords.bottom + 8,
+            left: coords.left,
+          })
+
+          // Delay opening to let the "/" be typed first
+          setTimeout(() => {
+            setSlashMenuOpen(true)
+          }, 10)
+        }
+      }
+    }
+
+    const dom = editor.view.dom
+    dom.addEventListener("keydown", handleKeyDown)
+
+    return () => {
+      dom.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [editor, slashMenuOpen])
+
+  // Close slash menu when editor loses focus or selection changes significantly
+  useEffect(() => {
+    if (!editor || !slashMenuOpen) return
+
+    const handleSelectionChange = () => {
+      // Check if the current line still starts with /
+      const { selection } = editor.state
+      const { $from } = selection
+      const textBefore = $from.parent.textContent.slice(0, $from.parentOffset)
+
+      if (!textBefore.includes("/")) {
+        setSlashMenuOpen(false)
+      }
+    }
+
+    editor.on("selectionUpdate", handleSelectionChange)
+
+    return () => {
+      editor.off("selectionUpdate", handleSelectionChange)
+    }
+  }, [editor, slashMenuOpen])
+
   // Update editor editable state when role changes
   useEffect(() => {
     if (editor) {
@@ -571,10 +671,13 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
                     onHighlighterClick={() => setMobileView("highlighter")}
                     onLinkClick={() => setMobileView("link")}
                     onShareClick={() => setIsShareModalOpen(true)}
+                    onKeyboardShortcutsClick={() => setIsKeyboardShortcutsOpen(true)}
                     isMobile={isMobile}
                     folderId={currentFolderId}
                     isConnected={isConnected}
                     activeUsers={activeUsers}
+                    editor={editor}
+                    pageName={pageName}
                   />
                 ) : (
                   <MobileToolbarContent
@@ -618,6 +721,22 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
           onClose={() => setIsShareModalOpen(false)}
         />
       )}
+
+      {/* Slash Command Menu */}
+      {editor && canEditPage && (
+        <SlashCommandMenu
+          editor={editor}
+          isOpen={slashMenuOpen}
+          position={slashMenuPosition}
+          onClose={() => setSlashMenuOpen(false)}
+        />
+      )}
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal
+        isOpen={isKeyboardShortcutsOpen}
+        onClose={() => setIsKeyboardShortcutsOpen(false)}
+      />
     </>
   )
 }

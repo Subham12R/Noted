@@ -287,6 +287,53 @@ export const shareLinks = pgTable(
 )
 
 // ============================================================================
+// SUBSCRIPTIONS
+// ============================================================================
+
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .unique()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tier: varchar("tier", { length: 20 }).notNull().default("free"), // 'free' | 'pro' | 'team'
+    status: varchar("status", { length: 20 }).notNull().default("active"), // 'active' | 'canceled' | 'past_due' | 'trialing'
+    billingInterval: varchar("billing_interval", { length: 10 }).default("month"), // 'month' | 'year'
+    currentPeriodStart: timestamp("current_period_start").defaultNow().notNull(),
+    currentPeriodEnd: timestamp("current_period_end"),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false).notNull(),
+    stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+    stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+    stripePriceId: varchar("stripe_price_id", { length: 255 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("subscriptions_user_id_idx").on(table.userId),
+    index("subscriptions_stripe_customer_idx").on(table.stripeCustomerId),
+  ]
+)
+
+export const aiUsage = pgTable(
+  "ai_usage",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    month: varchar("month", { length: 7 }).notNull(), // Format: YYYY-MM
+    requestCount: integer("request_count").default(0).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("ai_usage_user_month_idx").on(table.userId, table.month),
+  ]
+)
+
+// ============================================================================
 // SECURITY: RATE LIMITING
 // ============================================================================
 
@@ -309,7 +356,7 @@ export const rateLimits = pgTable(
 // RELATIONS
 // ============================================================================
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   accounts: many(accounts),
   sessions: many(sessions),
   folders: many(folders),
@@ -318,6 +365,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   folderCollaborations: many(folderCollaborators),
   collaborationSessions: many(collaborationSessions),
   presence: many(presence),
+  subscription: one(subscriptions),
+  aiUsage: many(aiUsage),
 }))
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -417,6 +466,20 @@ export const folderCollaboratorsRelations = relations(folderCollaborators, ({ on
   }),
 }))
 
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  user: one(users, {
+    fields: [subscriptions.userId],
+    references: [users.id],
+  }),
+}))
+
+export const aiUsageRelations = relations(aiUsage, ({ one }) => ({
+  user: one(users, {
+    fields: [aiUsage.userId],
+    references: [users.id],
+  }),
+}))
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -453,3 +516,9 @@ export type NewRateLimit = typeof rateLimits.$inferInsert
 
 export type ShareLink = typeof shareLinks.$inferSelect
 export type NewShareLink = typeof shareLinks.$inferInsert
+
+export type Subscription = typeof subscriptions.$inferSelect
+export type NewSubscription = typeof subscriptions.$inferInsert
+
+export type AiUsage = typeof aiUsage.$inferSelect
+export type NewAiUsage = typeof aiUsage.$inferInsert

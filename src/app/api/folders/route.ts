@@ -4,6 +4,7 @@ import { eq, asc, isNull } from "drizzle-orm"
 import { getServerSession } from "@/lib/auth-utils"
 import { createFolderSchema } from "@/lib/validation"
 import { rateLimitMemory, RATE_LIMITS } from "@/lib/rate-limit"
+import { canCreateFolder } from "@/lib/subscription"
 
 // GET /api/folders - List all folders for the user
 export async function GET(request: NextRequest) {
@@ -58,6 +59,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Rate limit exceeded", retryAfter: rateLimitResult.retryAfter },
         { status: 429 }
+      )
+    }
+
+    // Check subscription limits
+    const limitCheck = await canCreateFolder(session.user.id)
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "Limit reached",
+          message: limitCheck.reason,
+          current: limitCheck.current,
+          limit: limitCheck.limit,
+          code: "FOLDER_LIMIT_REACHED",
+        },
+        { status: 403 }
       )
     }
 

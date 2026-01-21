@@ -1,10 +1,26 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Shape, Point, WhiteboardState } from './types'
+import { useCallback, useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react'
+import { Shape, Point, WhiteboardState, Tool } from './types'
 import { WhiteboardToolbar } from './WhiteboardToolbar'
-import { SlashCommandMenu, SlashCommand } from './SlashCommandMenu'
 import { TextInput } from './TextInput'
+
+export interface WhiteboardRef {
+  getToolbarProps: () => {
+    activeTool: Tool
+    onToolChange: (tool: Tool) => void
+    strokeColor: string
+    fillColor: string
+    strokeWidth: number
+    eraserSize: number
+    onStrokeColorChange: (color: string) => void
+    onFillColorChange: (color: string) => void
+    onStrokeWidthChange: (width: number) => void
+    onEraserSizeChange: (size: number) => void
+    onDelete: () => void
+    hasSelection: boolean
+  }
+}
 
 interface WhiteboardProps {
   initialShapes?: Shape[]
@@ -12,6 +28,7 @@ interface WhiteboardProps {
   width?: number
   height?: number
   className?: string
+  hideToolbar?: boolean
 }
 
 function generateId(): string {
@@ -40,13 +57,14 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
   return lines
 }
 
-export function Whiteboard({
+export const Whiteboard = forwardRef<WhiteboardRef, WhiteboardProps>(function Whiteboard({
   initialShapes = [],
   onChange,
-  width = 800,
+  width = 500,
   height = 500,
-  className = '',
-}: WhiteboardProps) {
+  className = '' ,
+  hideToolbar = true,
+}, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [state, setState] = useState<WhiteboardState>({
     shapes: initialShapes,
@@ -66,12 +84,6 @@ export function Whiteboard({
   const [freehandPoints, setFreehandPoints] = useState<Point[]>([])
   const [editingTextId] = useState<string | null>(null)
 
-  // Slash command state
-  const [showSlashMenu, setShowSlashMenu] = useState(false)
-  const [slashMenuPosition, setSlashMenuPosition] = useState<Point>({ x: 0, y: 0 })
-  const [slashQuery, setSlashQuery] = useState('')
-  const [slashInsertPoint, setSlashInsertPoint] = useState<Point | null>(null)
-
   // Eraser state
   const [eraserSize, setEraserSize] = useState(30)
   const [eraserPosition, setEraserPosition] = useState<Point | null>(null)
@@ -79,8 +91,6 @@ export function Whiteboard({
   // Text input state
   const [showTextInput, setShowTextInput] = useState(false)
   const [textInputPosition, setTextInputPosition] = useState<Point>({ x: 0, y: 0 })
-  const [textInputType, setTextInputType] = useState<'text' | 'heading' | 'note' | 'sticky'>('text')
-  const [textInputHeadingLevel, setTextInputHeadingLevel] = useState<1 | 2 | 3>(1)
   const [pendingTextInsertPoint, setPendingTextInsertPoint] = useState<Point | null>(null)
 
   // Get shape bounds for selection (defined before draw so it can be used in the callback)
@@ -144,17 +154,7 @@ export function Whiteboard({
     ctx.save()
     ctx.translate(panOffset.x, panOffset.y)
 
-    // Draw subtle dot grid pattern
-    ctx.fillStyle = '#e5e5e5'
-    const gridSize = 24
-    const dotSize = 1.5
-    for (let x = -1000; x < canvas.width + 1000; x += gridSize) {
-      for (let y = -1000; y < canvas.height + 1000; y += gridSize) {
-        ctx.beginPath()
-        ctx.arc(x, y, dotSize, 0, Math.PI * 2)
-        ctx.fill()
-      }
-    }
+
 
     // Draw shapes
     state.shapes.forEach((shape) => {
@@ -446,45 +446,12 @@ export function Whiteboard({
       rotation: 0,
     }
 
-    switch (textInputType) {
-      case 'text':
-        newShape = {
-          ...baseProps,
-          type: 'text',
-          text,
-          fontSize: 16,
-        } as Shape
-        break
-      case 'heading':
-        newShape = {
-          ...baseProps,
-          type: 'heading',
-          text,
-          level: textInputHeadingLevel,
-        } as Shape
-        break
-      case 'note':
-        newShape = {
-          ...baseProps,
-          type: 'note',
-          text,
-          width: 200,
-          height: 120,
-        } as Shape
-        break
-      case 'sticky':
-        const colors = ['#fef3c7', '#fce7f3', '#dbeafe', '#d1fae5', '#fef9c3']
-        const randomColor = colors[Math.floor(Math.random() * colors.length)]
-        newShape = {
-          ...baseProps,
-          type: 'sticky',
-          text,
-          width: 150,
-          height: 150,
-          color: randomColor,
-        } as Shape
-        break
-    }
+    newShape = {
+      ...baseProps,
+      type: 'text',
+      text,
+      fontSize: 16,
+    } as Shape
 
     if (newShape) {
       const newShapes = [...state.shapes, newShape]
@@ -494,7 +461,7 @@ export function Whiteboard({
 
     setShowTextInput(false)
     setPendingTextInsertPoint(null)
-  }, [pendingTextInsertPoint, textInputType, textInputHeadingLevel, state.strokeColor, state.strokeWidth, state.fillColor, state.shapes, onChange])
+  }, [pendingTextInsertPoint, state.strokeColor, state.strokeWidth, state.fillColor, state.shapes, onChange])
 
   // Handle text input cancel
   const handleTextCancel = useCallback(() => {
@@ -539,10 +506,9 @@ export function Whiteboard({
     }
 
     if (state.tool === 'text') {
-      // Show inline text input instead of browser prompt
+      // Show inline text input
       setPendingTextInsertPoint(adjustedPoint)
       setTextInputPosition(point)
-      setTextInputType('text')
       setShowTextInput(true)
       return
     }
@@ -648,7 +614,11 @@ export function Whiteboard({
 
     if (state.tool === 'select') {
       setIsDrawing(false)
-      onChange?.(state.shapes)
+      // Use a callback to get the latest shapes after state updates
+      setState(prev => {
+        onChange?.(prev.shapes)
+        return prev
+      })
       return
     }
 
@@ -762,131 +732,9 @@ export function Whiteboard({
     onChange?.(newShapes)
   }, [state.selectedShapeId, state.shapes, onChange])
 
-  // Handle slash command selection
-  const handleSlashCommandSelect = useCallback((command: SlashCommand) => {
-    if (!slashInsertPoint) return
-
-    let newShape: Shape | null = null
-    const baseProps = {
-      id: generateId(),
-      x: slashInsertPoint.x,
-      y: slashInsertPoint.y,
-      strokeColor: state.strokeColor,
-      strokeWidth: state.strokeWidth,
-      fillColor: state.fillColor,
-      rotation: 0,
-    }
-
-    // For text-based commands, show the inline input
-    if (['h1', 'h2', 'h3', 'text', 'note', 'sticky'].includes(command.id)) {
-      const level = command.id === 'h1' ? 1 : command.id === 'h2' ? 2 : 3
-      const type = command.id.startsWith('h') ? 'heading' : command.id as 'text' | 'note' | 'sticky'
-
-      setPendingTextInsertPoint(slashInsertPoint)
-      setTextInputPosition({ x: slashInsertPoint.x + panOffset.x, y: slashInsertPoint.y + panOffset.y })
-      setTextInputType(type)
-      if (type === 'heading') setTextInputHeadingLevel(level as 1 | 2 | 3)
-      setShowSlashMenu(false)
-      setSlashQuery('')
-      setSlashInsertPoint(null)
-      setShowTextInput(true)
-      return
-    }
-
-    // For shape commands, create immediately
-    switch (command.id) {
-      case 'rectangle':
-        newShape = {
-          ...baseProps,
-          type: 'rectangle',
-          width: 150,
-          height: 100,
-        } as Shape
-        break
-      case 'circle':
-        newShape = {
-          ...baseProps,
-          type: 'circle',
-          radius: 50,
-        } as Shape
-        break
-      case 'line':
-        newShape = {
-          ...baseProps,
-          type: 'line',
-          endX: slashInsertPoint.x + 100,
-          endY: slashInsertPoint.y,
-        } as Shape
-        break
-      case 'arrow':
-        newShape = {
-          ...baseProps,
-          type: 'arrow',
-          endX: slashInsertPoint.x + 100,
-          endY: slashInsertPoint.y,
-        } as Shape
-        break
-    }
-
-    if (newShape) {
-      const newShapes = [...state.shapes, newShape]
-      setState(prev => ({ ...prev, shapes: newShapes }))
-      onChange?.(newShapes)
-    }
-
-    setShowSlashMenu(false)
-    setSlashQuery('')
-    setSlashInsertPoint(null)
-  }, [slashInsertPoint, state.strokeColor, state.strokeWidth, state.fillColor, state.shapes, onChange, panOffset])
-
-  // Close slash menu
-  const handleSlashMenuClose = useCallback(() => {
-    setShowSlashMenu(false)
-    setSlashQuery('')
-    setSlashInsertPoint(null)
-  }, [])
-
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Handle slash menu typing
-      if (showSlashMenu) {
-        if (e.key === 'Escape') {
-          handleSlashMenuClose()
-          return
-        }
-        if (e.key === 'Backspace') {
-          if (slashQuery.length <= 1) {
-            handleSlashMenuClose()
-          } else {
-            setSlashQuery(prev => prev.slice(0, -1))
-          }
-          return
-        }
-        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-          setSlashQuery(prev => prev + e.key)
-          return
-        }
-        return
-      }
-
-      // Open slash menu with / key
-      if (e.key === '/' && !editingTextId) {
-        e.preventDefault()
-        // Get center of canvas as default position
-        const canvas = canvasRef.current
-        if (canvas) {
-          const rect = canvas.getBoundingClientRect()
-          const centerX = rect.width / 2 - panOffset.x
-          const centerY = rect.height / 2 - panOffset.y
-          setSlashInsertPoint({ x: centerX, y: centerY })
-          setSlashMenuPosition({ x: rect.width / 2, y: rect.height / 2 })
-          setSlashQuery('/')
-          setShowSlashMenu(true)
-        }
-        return
-      }
-
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (editingTextId) return
         handleDelete()
@@ -898,12 +746,33 @@ export function Whiteboard({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleDelete, editingTextId, showSlashMenu, slashQuery, handleSlashMenuClose, panOffset])
+  }, [handleDelete, editingTextId])
 
   // Redraw on state change
   useEffect(() => {
     draw()
   }, [draw])
+
+  // Expose toolbar props via ref for external toolbar rendering
+  useImperativeHandle(ref, () => ({
+    getToolbarProps: () => ({
+      activeTool: state.tool,
+      onToolChange: (tool: Tool) => {
+        setState(prev => ({ ...prev, tool, selectedShapeId: null }))
+        if (tool !== 'eraser') setEraserPosition(null)
+      },
+      strokeColor: state.strokeColor,
+      fillColor: state.fillColor,
+      strokeWidth: state.strokeWidth,
+      eraserSize,
+      onStrokeColorChange: (color: string) => setState(prev => ({ ...prev, strokeColor: color })),
+      onFillColorChange: (color: string) => setState(prev => ({ ...prev, fillColor: color })),
+      onStrokeWidthChange: (width: number) => setState(prev => ({ ...prev, strokeWidth: width })),
+      onEraserSizeChange: setEraserSize,
+      onDelete: handleDelete,
+      hasSelection: !!state.selectedShapeId,
+    }),
+  }), [state.tool, state.strokeColor, state.fillColor, state.strokeWidth, state.selectedShapeId, eraserSize, handleDelete])
 
   return (
     <div
@@ -911,23 +780,26 @@ export function Whiteboard({
       style={{ width, height }}
       onDragStart={(e) => e.preventDefault()}
     >
-      <WhiteboardToolbar
-        activeTool={state.tool}
-        onToolChange={(tool) => {
-          setState(prev => ({ ...prev, tool, selectedShapeId: null }))
-          if (tool !== 'eraser') setEraserPosition(null)
-        }}
-        strokeColor={state.strokeColor}
-        fillColor={state.fillColor}
-        strokeWidth={state.strokeWidth}
-        eraserSize={eraserSize}
-        onStrokeColorChange={(color) => setState(prev => ({ ...prev, strokeColor: color }))}
-        onFillColorChange={(color) => setState(prev => ({ ...prev, fillColor: color }))}
-        onStrokeWidthChange={(width) => setState(prev => ({ ...prev, strokeWidth: width }))}
-        onEraserSizeChange={setEraserSize}
-        onDelete={handleDelete}
-        hasSelection={!!state.selectedShapeId}
-      />
+      {!hideToolbar && (
+        <WhiteboardToolbar
+          activeTool={state.tool}
+          onToolChange={(tool) => {
+            setState(prev => ({ ...prev, tool, selectedShapeId: null }))
+            if (tool !== 'eraser') setEraserPosition(null)
+          }}
+          strokeColor={state.strokeColor}
+          fillColor={state.fillColor}
+          strokeWidth={state.strokeWidth}
+          eraserSize={eraserSize}
+          onStrokeColorChange={(color) => setState(prev => ({ ...prev, strokeColor: color }))}
+          onFillColorChange={(color) => setState(prev => ({ ...prev, fillColor: color }))}
+          onStrokeWidthChange={(width) => setState(prev => ({ ...prev, strokeWidth: width }))}
+          onEraserSizeChange={setEraserSize}
+          onDelete={handleDelete}
+          hasSelection={!!state.selectedShapeId}
+          
+        />
+      )}
 
       <canvas
         ref={canvasRef}
@@ -940,15 +812,7 @@ export function Whiteboard({
           handleMouseUp(e)
           if (state.tool === 'eraser') setEraserPosition(null)
         }}
-        onContextMenu={(e) => {
-          e.preventDefault()
-          const point = getCanvasPoint(e)
-          const adjustedPoint = { x: point.x - panOffset.x, y: point.y - panOffset.y }
-          setSlashInsertPoint(adjustedPoint)
-          setSlashMenuPosition(point)
-          setSlashQuery('/')
-          setShowSlashMenu(true)
-        }}
+        onContextMenu={(e) => e.preventDefault()}
         onDragStart={(e) => e.preventDefault()}
         draggable={false}
         className="cursor-crosshair touch-none select-none"
@@ -959,31 +823,16 @@ export function Whiteboard({
         }}
       />
 
-      {/* Slash Command Menu */}
-      {showSlashMenu && (
-        <SlashCommandMenu
-          position={slashMenuPosition}
-          searchQuery={slashQuery}
-          onSelect={handleSlashCommandSelect}
-          onClose={handleSlashMenuClose}
-        />
-      )}
-
       {/* Inline Text Input */}
       {showTextInput && (
         <TextInput
           position={textInputPosition}
-          placeholder={
-            textInputType === 'heading' ? `Enter heading ${textInputHeadingLevel}...` :
-            textInputType === 'note' ? 'Enter note text...' :
-            textInputType === 'sticky' ? 'Enter sticky note...' :
-            'Enter text...'
-          }
-          fontSize={textInputType === 'heading' ? (textInputHeadingLevel === 1 ? 24 : textInputHeadingLevel === 2 ? 20 : 16) : 14}
+          placeholder="Enter text..."
+          fontSize={14}
           onSubmit={handleTextSubmit}
           onCancel={handleTextCancel}
         />
       )}
     </div>
   )
-}
+})

@@ -49,7 +49,7 @@ export function FolderCard({ folder, onDelete, onRename }: FolderCardProps) {
 
   return (
     <div className="relative rounded-2xl transition-all duration-200 hover:-translate-y-0.5 group">
-      <div className="absolute top-0 right-0 flex z-10 gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+      <div className="absolute top-0 right-6 flex z-10 gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <button
           className="w-7 h-7 rounded-md border-none bg-black/50 text-foreground cursor-pointer flex items-center justify-center transition-all duration-150 hover:bg-black/70 [&_svg]:w-3.5 [&_svg]:h-3.5"
           onClick={(e) => {

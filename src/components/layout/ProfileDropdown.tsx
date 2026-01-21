@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { signOut } from "@/lib/auth-client"
 import { useAuth } from "@/context/AuthContext"
+import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal"
 
 // Get initials from name
 function getInitials(name: string): string {
@@ -19,6 +20,7 @@ function getInitials(name: string): string {
 export function ProfileDropdown() {
   const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
+  const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const userName = user?.name || "User"
@@ -88,28 +90,23 @@ export function ProfileDropdown() {
             <Link href="/profile" className="flex items-center gap-3 w-full px-4 py-2.5 text-foreground text-sm no-underline transition-all duration-150 hover:bg-white/10 [&_svg]:opacity-60 hover:[&_svg]:opacity-100" onClick={() => setIsOpen(false)}>
               <UserIcon />
               <span>Profile</span>
-            </Link>
-            <Link href="/settings" className="flex items-center gap-3 w-full px-4 py-2.5 text-foreground text-sm no-underline transition-all duration-150 hover:bg-white/10 [&_svg]:opacity-60 hover:[&_svg]:opacity-100" onClick={() => setIsOpen(false)}>
-              <SettingsIcon />
-              <span>Settings</span>
-            </Link>
-            <Link href="/preferences" className="flex items-center gap-3 w-full px-4 py-2.5 text-foreground text-sm no-underline transition-all duration-150 hover:bg-white/10 [&_svg]:opacity-60 hover:[&_svg]:opacity-100" onClick={() => setIsOpen(false)}>
-              <PreferencesIcon />
-              <span>Preferences</span>
-            </Link>
+            </Link>      
           </div>
 
           <div className="h-px bg-white/10 my-1" />
 
           <div className="py-1">
-            <Link href="/help" className="flex items-center gap-3 w-full px-4 py-2.5 text-foreground text-sm no-underline transition-all duration-150 hover:bg-white/10 [&_svg]:opacity-60 hover:[&_svg]:opacity-100" onClick={() => setIsOpen(false)}>
-              <HelpIcon />
-              <span>Help & Support</span>
-            </Link>
-            <Link href="/keyboard-shortcuts" className="flex items-center gap-3 w-full px-4 py-2.5 text-foreground text-sm no-underline transition-all duration-150 hover:bg-white/10 [&_svg]:opacity-60 hover:[&_svg]:opacity-100" onClick={() => setIsOpen(false)}>
+            <button
+              className="flex items-center gap-3 w-full px-4 py-2.5 bg-transparent border-none text-foreground text-sm cursor-pointer transition-all duration-150 hover:bg-white/10 [&_svg]:opacity-60 hover:[&_svg]:opacity-100"
+              onClick={() => {
+                setIsOpen(false)
+                setIsKeyboardShortcutsOpen(true)
+              }}
+            >
               <KeyboardIcon />
               <span>Keyboard Shortcuts</span>
-            </Link>
+              <span className="ml-auto text-xs text-foreground/40 font-mono">Ctrl+K</span>
+            </button>
           </div>
 
           <div className="h-px bg-white/10 my-1" />
@@ -129,6 +126,11 @@ export function ProfileDropdown() {
           </div>
         </div>
       )}
+
+      <KeyboardShortcutsModal
+        isOpen={isKeyboardShortcutsOpen}
+        onClose={() => setIsKeyboardShortcutsOpen(false)}
+      />
     </div>
   )
 }

@@ -1,0 +1,449 @@
+"use client"
+
+import { useState, useEffect, useCallback, useRef } from "react"
+import { Editor } from "@tiptap/react"
+
+export interface SlashCommand {
+  id: string
+  label: string
+  description: string
+  icon: React.ReactNode
+  category: "basic" | "formatting" | "media" | "advanced"
+  action: (editor: Editor) => void
+}
+
+interface SlashCommandMenuProps {
+  editor: Editor
+  isOpen: boolean
+  position: { top: number; left: number }
+  onClose: () => void
+}
+
+// Icons
+const HeadingIcon = ({ level }: { level: number }) => (
+  <div className="w-5 h-5 flex items-center justify-center text-xs font-bold">
+    H{level}
+  </div>
+)
+
+const TextIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+  </svg>
+)
+
+const BulletListIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+    <circle cx="2" cy="6" r="1" fill="currentColor" />
+    <circle cx="2" cy="10" r="1" fill="currentColor" />
+    <circle cx="2" cy="14" r="1" fill="currentColor" />
+    <circle cx="2" cy="18" r="1" fill="currentColor" />
+  </svg>
+)
+
+const NumberedListIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6h13M8 12h13M8 18h13" />
+    <text x="2" y="8" fontSize="6" fill="currentColor">1</text>
+    <text x="2" y="14" fontSize="6" fill="currentColor">2</text>
+    <text x="2" y="20" fontSize="6" fill="currentColor">3</text>
+  </svg>
+)
+
+const TaskListIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <rect x="3" y="5" width="4" height="4" rx="1" strokeWidth={2} />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 7h11" />
+    <rect x="3" y="13" width="4" height="4" rx="1" strokeWidth={2} />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 15h11" />
+  </svg>
+)
+
+const QuoteIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+  </svg>
+)
+
+const CodeIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+  </svg>
+)
+
+const DividerIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12h16" />
+  </svg>
+)
+
+const ImageIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth={2} />
+    <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 15l-5-5L5 21" />
+  </svg>
+)
+
+const WhiteboardIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth={2} />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01" />
+  </svg>
+)
+
+const ColumnsIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <rect x="3" y="3" width="7" height="18" rx="1" strokeWidth={2} />
+    <rect x="14" y="3" width="7" height="18" rx="1" strokeWidth={2} />
+  </svg>
+)
+
+const TableIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth={2} />
+    <path strokeLinecap="round" strokeWidth={2} d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+  </svg>
+)
+
+export const slashCommands: SlashCommand[] = [
+  // Basic
+  {
+    id: "paragraph",
+    label: "Text",
+    description: "Plain text paragraph",
+    icon: <TextIcon />,
+    category: "basic",
+    action: (editor) => editor.chain().focus().setParagraph().run(),
+  },
+  {
+    id: "h1",
+    label: "Heading 1",
+    description: "Large section heading",
+    icon: <HeadingIcon level={1} />,
+    category: "basic",
+    action: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run(),
+  },
+  {
+    id: "h2",
+    label: "Heading 2",
+    description: "Medium section heading",
+    icon: <HeadingIcon level={2} />,
+    category: "basic",
+    action: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run(),
+  },
+  {
+    id: "h3",
+    label: "Heading 3",
+    description: "Small section heading",
+    icon: <HeadingIcon level={3} />,
+    category: "basic",
+    action: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run(),
+  },
+
+  // Formatting
+  {
+    id: "bulletList",
+    label: "Bullet List",
+    description: "Create a bulleted list",
+    icon: <BulletListIcon />,
+    category: "formatting",
+    action: (editor) => editor.chain().focus().toggleBulletList().run(),
+  },
+  {
+    id: "orderedList",
+    label: "Numbered List",
+    description: "Create a numbered list",
+    icon: <NumberedListIcon />,
+    category: "formatting",
+    action: (editor) => editor.chain().focus().toggleOrderedList().run(),
+  },
+  {
+    id: "taskList",
+    label: "Task List",
+    description: "Create a checklist",
+    icon: <TaskListIcon />,
+    category: "formatting",
+    action: (editor) => editor.chain().focus().toggleTaskList().run(),
+  },
+  {
+    id: "blockquote",
+    label: "Quote",
+    description: "Add a blockquote",
+    icon: <QuoteIcon />,
+    category: "formatting",
+    action: (editor) => editor.chain().focus().toggleBlockquote().run(),
+  },
+  {
+    id: "codeBlock",
+    label: "Code Block",
+    description: "Add a code snippet",
+    icon: <CodeIcon />,
+    category: "formatting",
+    action: (editor) => editor.chain().focus().toggleCodeBlock().run(),
+  },
+  {
+    id: "divider",
+    label: "Divider",
+    description: "Add a horizontal line",
+    icon: <DividerIcon />,
+    category: "formatting",
+    action: (editor) => editor.chain().focus().setHorizontalRule().run(),
+  },
+
+  // Media
+  {
+    id: "image",
+    label: "Image",
+    description: "Upload an image",
+    icon: <ImageIcon />,
+    category: "media",
+    action: (editor) => {
+      const input = document.createElement("input")
+      input.type = "file"
+      input.accept = "image/*"
+      input.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0]
+        if (file) {
+          const reader = new FileReader()
+          reader.onload = () => {
+            editor.chain().focus().setImage({ src: reader.result as string }).run()
+          }
+          reader.readAsDataURL(file)
+        }
+      }
+      input.click()
+    },
+  },
+
+  // Advanced
+  {
+    id: "whiteboard",
+    label: "Whiteboard",
+    description: "Add a drawing canvas",
+    icon: <WhiteboardIcon />,
+    category: "advanced",
+    action: (editor) => {
+      editor.chain().focus().insertContent({ type: "whiteboard" }).run()
+    },
+  },
+  {
+    id: "columns",
+    label: "Two Columns",
+    description: "Split into two columns",
+    icon: <ColumnsIcon />,
+    category: "advanced",
+    action: (editor) => {
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: "columns",
+          content: [
+            { type: "column", content: [{ type: "paragraph" }] },
+            { type: "column", content: [{ type: "paragraph" }] },
+          ],
+        })
+        .run()
+    },
+  },
+]
+
+const categoryLabels: Record<string, string> = {
+  basic: "Basic Blocks",
+  formatting: "Formatting",
+  media: "Media",
+  advanced: "Advanced",
+}
+
+const categoryOrder = ["basic", "formatting", "media", "advanced"]
+
+export function SlashCommandMenu({ editor, isOpen, position, onClose }: SlashCommandMenuProps) {
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Filter commands based on search
+  const filteredCommands = slashCommands.filter(
+    (cmd) =>
+      cmd.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      cmd.description.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  // Group commands by category
+  const groupedCommands = categoryOrder.reduce((acc, category) => {
+    const commands = filteredCommands.filter((cmd) => cmd.category === category)
+    if (commands.length > 0) {
+      acc[category] = commands
+    }
+    return acc
+  }, {} as Record<string, SlashCommand[]>)
+
+  // Flatten for index calculation
+  const flattenedCommands = categoryOrder.flatMap(
+    (category) => groupedCommands[category] || []
+  )
+
+  // Reset selection when search changes
+  useEffect(() => {
+    setSelectedIndex(0)
+  }, [searchQuery])
+
+  // Focus input when menu opens
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus()
+    }
+    if (!isOpen) {
+      setSearchQuery("")
+      setSelectedIndex(0)
+    }
+  }, [isOpen])
+
+  // Handle keyboard navigation
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault()
+          setSelectedIndex((prev) => (prev + 1) % flattenedCommands.length)
+          break
+        case "ArrowUp":
+          e.preventDefault()
+          setSelectedIndex((prev) => (prev - 1 + flattenedCommands.length) % flattenedCommands.length)
+          break
+        case "Enter":
+          e.preventDefault()
+          if (flattenedCommands[selectedIndex]) {
+            selectCommand(flattenedCommands[selectedIndex])
+          }
+          break
+        case "Escape":
+          e.preventDefault()
+          onClose()
+          break
+      }
+    },
+    [flattenedCommands, selectedIndex, onClose]
+  )
+
+  const selectCommand = (command: SlashCommand) => {
+    // Delete the slash and any search text
+    editor.chain().focus().deleteRange({
+      from: editor.state.selection.from - searchQuery.length - 1,
+      to: editor.state.selection.from,
+    }).run()
+
+    command.action(editor)
+    onClose()
+  }
+
+  // Click outside to close
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose()
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [isOpen, onClose])
+
+  if (!isOpen) return null
+
+  // Calculate which index each command is at for selection
+  let currentFlatIndex = 0
+
+  return (
+    <div
+      ref={menuRef}
+      className="fixed z-50 bg-zinc-900/95 backdrop-blur-xl rounded-xl border border-zinc-700/50 shadow-2xl overflow-hidden min-w-[280px] max-h-[400px] animate-in fade-in slide-in-from-top-2 duration-150"
+      style={{ top: position.top, left: position.left }}
+      onKeyDown={handleKeyDown}
+    >
+      {/* Search input */}
+      <div className="p-2 border-b border-zinc-700/50">
+        <input
+          ref={inputRef}
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search commands..."
+          className="w-full px-3 py-2 text-sm bg-zinc-800/50 rounded-lg border border-zinc-700/50 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+        />
+      </div>
+
+      {/* Commands list */}
+      <div className="py-1 max-h-[320px] overflow-y-auto">
+        {flattenedCommands.length === 0 ? (
+          <div className="px-4 py-6 text-center text-sm text-zinc-500">
+            No commands found
+          </div>
+        ) : (
+          categoryOrder.map((category) => {
+            const commands = groupedCommands[category]
+            if (!commands || commands.length === 0) return null
+
+            return (
+              <div key={category}>
+                <div className="px-3 py-1.5 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                  {categoryLabels[category]}
+                </div>
+                {commands.map((cmd) => {
+                  const flatIndex = currentFlatIndex++
+                  const isSelected = flatIndex === selectedIndex
+
+                  return (
+                    <button
+                      key={cmd.id}
+                      className={`w-full px-3 py-2 flex items-center gap-3 text-left transition-colors ${
+                        isSelected
+                          ? "bg-indigo-500/20 text-white"
+                          : "text-zinc-300 hover:bg-zinc-800/50"
+                      }`}
+                      onClick={() => selectCommand(cmd)}
+                      onMouseEnter={() => setSelectedIndex(flatIndex)}
+                    >
+                      <span className={`${isSelected ? "text-indigo-400" : "text-zinc-500"}`}>
+                        {cmd.icon}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm">{cmd.label}</div>
+                        <div className={`text-xs ${isSelected ? "text-indigo-300" : "text-zinc-500"}`}>
+                          {cmd.description}
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      {/* Footer hint */}
+      <div className="px-3 py-2 border-t border-zinc-700/50 bg-zinc-800/30">
+        <div className="flex items-center gap-4 text-xs text-zinc-500">
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-zinc-700 rounded text-zinc-300">↑↓</kbd>
+            Navigate
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-zinc-700 rounded text-zinc-300">↵</kbd>
+            Select
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-zinc-700 rounded text-zinc-300">Esc</kbd>
+            Close
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
