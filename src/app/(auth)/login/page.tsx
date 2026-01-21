@@ -1,10 +1,21 @@
 import { LoginForm } from "@/components/auth/LoginForm"
 import Link from "next/link"
 import Image from "next/image"
+import { Suspense } from "react"
 
 export const metadata = {
   title: "Sign In - Noted",
   description: "Sign in to your Noted account",
+}
+
+function LoginFormFallback() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+      <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+      <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+    </div>
+  )
 }
 
 export default function LoginPage() {
@@ -34,7 +45,9 @@ export default function LoginPage() {
           </div>
 
           {/* Login Form */}
-          <LoginForm />
+          <Suspense fallback={<LoginFormFallback />}>
+            <LoginForm />
+          </Suspense>
 
           {/* Sign up link */}
           <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">

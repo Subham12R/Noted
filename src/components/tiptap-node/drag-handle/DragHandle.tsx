@@ -2,6 +2,7 @@
 
 import { Extension } from "@tiptap/core"
 import { Plugin, PluginKey, NodeSelection } from "@tiptap/pm/state"
+import { DOMSerializer } from "@tiptap/pm/model"
 
 export interface DragHandleOptions {
   dragHandleWidth: number
@@ -172,12 +173,9 @@ export const DragHandle = Extension.create<DragHandleOptions>({
 
               // Create a temporary element to hold the serialized content
               const tempDiv = document.createElement("div")
-              const fragment = view.state.schema.nodes.doc.create(null, slice.content)
-              const serializer = view.domSerializer
-              if (serializer) {
-                const domFragment = serializer.serializeFragment(slice.content)
-                tempDiv.appendChild(domFragment)
-              }
+              const serializer = DOMSerializer.fromSchema(view.state.schema)
+              const domFragment = serializer.serializeFragment(slice.content)
+              tempDiv.appendChild(domFragment)
 
               event.dataTransfer?.clearData()
               event.dataTransfer?.setData("text/html", tempDiv.innerHTML)

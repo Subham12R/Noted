@@ -265,23 +265,42 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const savePending = () => {
       pendingSavesRef.current.forEach((content, pageId) => {
-        // Use sendBeacon for reliable save on page close
-        navigator.sendBeacon(
-          `/api/pages/${pageId}`,
-          new Blob([JSON.stringify({ content })], { type: "application/json" })
-        )
+        // Use fetch with keepalive for reliable save on page close
+        // This allows PUT requests unlike sendBeacon which only supports POST
+        fetch(`/api/pages/${pageId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+          keepalive: true, // Ensures request completes even if page closes
+        }).catch(() => {
+          // Silently fail - page is closing anyway
+        })
       })
       pendingSavesRef.current.clear()
     }
 
-    const handleBeforeUnload = () => {
-      savePending()
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (pendingSavesRef.current.size > 0) {
+        savePending()
+        // Some browsers require returnValue to be set
+        e.preventDefault()
+        e.returnValue = ""
+      }
+    }
+
+    // Also save when tab becomes hidden (user switches tabs)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden" && pendingSavesRef.current.size > 0) {
+        savePending()
+      }
     }
 
     window.addEventListener("beforeunload", handleBeforeUnload)
+    document.addEventListener("visibilitychange", handleVisibilityChange)
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
       // Save any pending changes on unmount
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current)

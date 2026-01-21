@@ -94,6 +94,7 @@ import { LinkIcon } from "@/components/tiptap-icons/link-icon"
 import { useIsBreakpoint } from "@/hooks/use-is-breakpoint"
 import { useWindowSize } from "@/hooks/use-window-size"
 import { useCursorVisibility } from "@/hooks/use-cursor-visibility"
+import { useRealtimeSync } from "@/hooks/use-realtime-sync"
 
 // --- Components ---
 import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle"
@@ -130,12 +131,16 @@ const MainToolbarContent = ({
   onShareClick,
   isMobile,
   folderId,
+  isConnected,
+  activeUsers,
 }: {
   onHighlighterClick: () => void
   onLinkClick: () => void
   onShareClick: () => void
   isMobile: boolean
   folderId: string | null
+  isConnected: boolean
+  activeUsers: { id: string; name: string; avatar: string | null; color: string }[]
 }) => {
   return (
     <>
@@ -216,6 +221,39 @@ const MainToolbarContent = ({
         </Button>
       </ToolbarGroup>
 
+      {/* Active users indicator */}
+      {activeUsers.length > 0 && (
+        <>
+          <ToolbarSeparator />
+          <ToolbarGroup>
+            <div className="flex items-center gap-1 px-2" title={`${activeUsers.length} other user(s) editing`}>
+              {activeUsers.slice(0, 3).map((user) => (
+                <div
+                  key={user.id}
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white border-2 border-zinc-800"
+                  style={{ backgroundColor: user.color }}
+                  title={user.name}
+                >
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+              ))}
+              {activeUsers.length > 3 && (
+                <div className="w-6 h-6 rounded-full bg-zinc-700 flex items-center justify-center text-xs text-zinc-300">
+                  +{activeUsers.length - 3}
+                </div>
+              )}
+            </div>
+          </ToolbarGroup>
+        </>
+      )}
+
+      {/* Connection status indicator */}
+      {isConnected && (
+        <div className="flex items-center gap-1 px-2" title="Real-time sync active">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+        </div>
+      )}
+
       <Spacer />
 
       {isMobile && <ToolbarSeparator />}
@@ -269,40 +307,44 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const toolbarRef = useRef<HTMLDivElement>(null)
 
-  const { getPageById, getPageContent, updatePageContent, isLoading } = useNotes()
+  const { getPageById, updatePageContent } = useNotes()
   const pageInfo = getPageById(pageId)
 
-  // State for shared pages (not in local context)
-  // Start with isLoading: true if we don't have pageInfo yet (need to check if it's shared)
-  const [sharedPageState, setSharedPageState] = useState<{
+  // State for page data fetched from API (works for both owned and shared pages)
+  const [pageState, setPageState] = useState<{
     page: SharedPageData | null
     role: string | null
-    isLoading: boolean
-    hasFetched: boolean
+    status: "idle" | "loading" | "success" | "error"
     error: string | null
-  }>({ page: null, role: null, isLoading: false, hasFetched: false, error: null })
+  }>({ page: null, role: null, status: "idle", error: null })
 
-  // Fetch shared page if not found in local context
+  // Track which pageId we've fetched to avoid re-fetching
+  const fetchedPageIdRef = useRef<string | null>(null)
+
+  // Always fetch page content from API to ensure fresh data on refresh
   useEffect(() => {
-    // Skip if we have the page locally (owned page) - no need to fetch
-    if (pageInfo) {
+    // Skip if no pageId
+    if (!pageId) {
       return
     }
 
-    // Skip if still loading context or already fetched
-    if (isLoading || !pageId || sharedPageState.hasFetched) {
+    // Skip if already fetched for this page
+    if (fetchedPageIdRef.current === pageId) {
       return
     }
 
-    let cancelled = false
+    const controller = new AbortController()
 
-    const fetchSharedPage = async () => {
+    // Mark as loading immediately (synchronously)
+    fetchedPageIdRef.current = pageId
+    setPageState({ page: null, role: null, status: "loading", error: null })
+
+    const fetchPageContent = async () => {
       try {
-        const res = await fetch(`/api/pages/${pageId}`)
+        const res = await fetch(`/api/pages/${pageId}`, { signal: controller.signal })
         if (!res.ok) throw new Error("Failed to fetch page")
         const data = await res.json()
-        if (cancelled) return
-        setSharedPageState({
+        setPageState({
           page: {
             id: data.page.id,
             name: data.page.name,
@@ -310,31 +352,31 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
             folderId: data.page.folderId,
             folder: data.page.folder,
           },
-          role: data.role,
-          isLoading: false,
-          hasFetched: true,
+          role: data.role || (pageInfo ? "owner" : null),
+          status: "success",
           error: null,
         })
       } catch (err) {
-        if (cancelled) return
-        console.error("Error fetching shared page:", err)
-        setSharedPageState({ page: null, role: null, isLoading: false, hasFetched: true, error: err instanceof Error ? err.message : "Failed to fetch" })
+        // Ignore abort errors
+        if (err instanceof Error && err.name === "AbortError") return
+        console.error("Error fetching page:", err)
+        fetchedPageIdRef.current = null // Allow retry on error
+        setPageState({ page: null, role: null, status: "error", error: err instanceof Error ? err.message : "Failed to fetch" })
       }
     }
 
-    setSharedPageState(prev => ({ ...prev, isLoading: true, error: null }))
-    fetchSharedPage()
+    fetchPageContent()
 
-    return () => { cancelled = true }
-  }, [pageInfo, isLoading, pageId, sharedPageState.hasFetched])
+    return () => { controller.abort() }
+  }, [pageId, pageInfo])
 
   // Determine if this is a shared page or owned page
-  const isSharedPage = !pageInfo && sharedPageState.page
-  const userRole = pageInfo ? "owner" : sharedPageState.role
+  const isSharedPage = !pageInfo && pageState.page
+  const userRole = pageInfo ? "owner" : pageState.role
   const canEditPage = userRole === "owner" || userRole === "admin" || userRole === "editor"
 
-  // Get initial content synchronously (it's already in memory from context)
-  const initialContent = isSharedPage ? sharedPageState.page!.content : getPageContent(pageId)
+  // Get initial content from API fetch (ensures fresh data on refresh)
+  const initialContent = pageState.page?.content || ""
 
   // Debounce the save operation to prevent cursor jumping
   const debouncedSave = useDebounce((id: string, content: string) => {
@@ -357,6 +399,11 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
   const debouncedSaveShared = useDebounce((id: string, content: string) => {
     saveSharedPageContent(id, content)
   }, 500)
+
+  // Track if we're currently receiving a remote update to prevent echo
+  const isRemoteUpdateRef = useRef(false)
+  // Ref to hold the broadcast function so it doesn't cause editor recreation
+  const broadcastContentRef = useRef<(content: string) => void>(() => {})
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -409,14 +456,32 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
     ],
     content: initialContent,
     onUpdate: ({ editor }) => {
-      // Use debounced save to prevent cursor jumping
+      // Skip if this update was triggered by a remote sync
+      if (isRemoteUpdateRef.current) return
+
+      const content = editor.getHTML()
+
+      // Broadcast to other users via WebSocket (use ref to avoid stale closure)
+      broadcastContentRef.current(content)
+
+      // Use debounced save to persist to database
       if (isSharedPage) {
-        debouncedSaveShared(pageId, editor.getHTML())
+        debouncedSaveShared(pageId, content)
       } else {
-        debouncedSave(pageId, editor.getHTML())
+        debouncedSave(pageId, content)
       }
     },
   }, [initialContent, canEditPage])
+
+  // Real-time sync with other users - use stable pageId only, not canEditPage which changes
+  const { broadcastContent, isConnected, activeUsers } = useRealtimeSync({
+    pageId,
+    editor,
+    enabled: true, // Always enable if we have a pageId, the hook handles auth internally
+  })
+
+  // Keep broadcast ref in sync
+  broadcastContentRef.current = broadcastContent
 
   // Update editor editable state when role changes
   useEffect(() => {
@@ -442,20 +507,20 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
   // Reset mobile view when switching to desktop
   const effectiveMobileView = !isMobile ? "main" : mobileView
 
-  // Load content when pageId changes
+  // Load content when pageState changes (fresh data from API)
   useEffect(() => {
-    if (editor && pageId) {
-      const content = getPageContent(pageId)
-      editor.commands.setContent(content)
+    if (editor && pageState.page && pageState.status === "success") {
+      const content = pageState.page.content || ""
+      // Only update if content is different to avoid unnecessary re-renders
+      if (editor.getHTML() !== content) {
+        editor.commands.setContent(content)
+      }
     }
-  }, [pageId, editor, getPageContent])
+  }, [editor, pageState.page, pageState.status])
 
   // Show loading spinner while data is being fetched
-  // - Context is loading (checking owned pages)
-  // - Shared page fetch is in progress
-  // - Need to fetch shared page (not owned, context done loading, hasn't fetched yet)
-  const needsSharedFetch = !pageInfo && !isLoading && !sharedPageState.hasFetched && !sharedPageState.isLoading
-  if (isLoading || sharedPageState.isLoading || needsSharedFetch) {
+  const isPageLoading = pageState.status === "idle" || pageState.status === "loading"
+  if (isPageLoading) {
     return (
       <div className="simple-editor-wrapper">
         <div className="flex items-center justify-center h-full">
@@ -468,8 +533,8 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
     )
   }
 
-  // Check if we have either owned page or shared page
-  const hasPage = pageInfo || isSharedPage
+  // Check if we have page data from API
+  const hasPage = pageState.page !== null
 
   if (!hasPage) {
     return (
@@ -481,9 +546,9 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
     )
   }
 
-  // Get page info (either from context or shared state)
-  const pageName = pageInfo ? pageInfo.page.name : sharedPageState.page!.name
-  const currentFolderId = pageInfo ? pageInfo.folderId : sharedPageState.page!.folderId
+  // Get page info from API state
+  const pageName = pageState.page!.name
+  const currentFolderId = pageState.page!.folderId
 
   return (
     <>
@@ -508,6 +573,8 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
                     onShareClick={() => setIsShareModalOpen(true)}
                     isMobile={isMobile}
                     folderId={currentFolderId}
+                    isConnected={isConnected}
+                    activeUsers={activeUsers}
                   />
                 ) : (
                   <MobileToolbarContent

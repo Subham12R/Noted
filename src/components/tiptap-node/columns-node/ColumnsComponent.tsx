@@ -1,6 +1,7 @@
 "use client"
 
 import { NodeViewWrapper, NodeViewContent, NodeViewProps } from "@tiptap/react"
+import { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import { useCallback, useState } from "react"
 
 export function ColumnsComponent({
@@ -22,19 +23,22 @@ export function ColumnsComponent({
         .focus()
         .command(({ tr, state }) => {
           // Find the columns node position
-          let columnsPos = null
-          let columnsNode = null
+          let foundPos: number | null = null
+          let foundNode: ProseMirrorNode | null = null
 
           state.doc.nodesBetween(0, state.doc.content.size, (n, p) => {
             if (n.type.name === "columns" && n === node) {
-              columnsPos = p
-              columnsNode = n
+              foundPos = p
+              foundNode = n
               return false
             }
             return true
           })
 
-          if (columnsPos === null || !columnsNode) return false
+          if (foundPos === null || !foundNode) return false
+
+          const columnsPos = foundPos as number
+          const columnsNode = foundNode as ProseMirrorNode
 
           // Create new column with empty paragraph
           const columnType = state.schema.nodes.column
@@ -64,19 +68,22 @@ export function ColumnsComponent({
         .focus()
         .command(({ tr, state }) => {
           // Find the columns node position
-          let columnsPos = null
-          let columnsNode = null
+          let foundPos: number | null = null
+          let foundNode: ProseMirrorNode | null = null
 
           state.doc.nodesBetween(0, state.doc.content.size, (n, p) => {
             if (n.type.name === "columns" && n === node) {
-              columnsPos = p
-              columnsNode = n
+              foundPos = p
+              foundNode = n
               return false
             }
             return true
           })
 
-          if (columnsPos === null || !columnsNode) return false
+          if (foundPos === null || !foundNode) return false
+
+          const columnsPos = foundPos as number
+          const columnsNode = foundNode as ProseMirrorNode
 
           // Remove the last column
           const lastColumnStart =

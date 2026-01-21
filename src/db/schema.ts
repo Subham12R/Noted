@@ -106,9 +106,7 @@ export const folders = pgTable(
     ownerId: text("owner_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    parentId: uuid("parent_id").references((): ReturnType<typeof uuid> => folders.id, {
-      onDelete: "cascade",
-    }),
+    parentId: uuid("parent_id"),
     color: varchar("color", { length: 7 }), // Hex color like #FF6B6B
     image: text("image"), // Folder cover image
     isExpanded: boolean("is_expanded").default(true).notNull(),
