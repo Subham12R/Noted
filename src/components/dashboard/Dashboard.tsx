@@ -39,7 +39,7 @@ function formatDate(): string {
 // Custom hook to handle hydration-safe values
 function useHydrated() {
   return useSyncExternalStore(
-    () => () => {},
+    () => () => { },
     () => true,
     () => false
   )
@@ -54,6 +54,8 @@ export function Dashboard() {
     renameFolder,
     deletePage,
     renamePage,
+    movePage,
+    moveFolder,
   } = useNotes()
 
   const isHydrated = useHydrated()
@@ -197,6 +199,9 @@ export function Dashboard() {
                       folder={folder}
                       onDelete={deleteFolder}
                       onRename={renameFolder}
+                      onMoveFolder={moveFolder}
+                      onMovePage={movePage}
+                      allFolders={folders}
                     />
                   ))}
                 </div>

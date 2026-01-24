@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, DragEvent } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { TrashIcon } from "@/components/tiptap-icons/trash-icon"
@@ -33,6 +33,7 @@ interface PageCardProps {
 export function PageCard({ page, folderId, onDelete, onRename }: PageCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState(page.name)
+  const [isDragging, setIsDragging] = useState(false)
 
   const handleSubmit = () => {
     if (editName.trim()) {
@@ -48,8 +49,29 @@ export function PageCard({ page, folderId, onDelete, onRename }: PageCardProps) 
     return stripped.slice(0, 60) || "Empty note"
   }
 
+  // Drag handlers - make page draggable
+  const handleDragStart = (e: DragEvent) => {
+    e.stopPropagation()
+    setIsDragging(true)
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("application/json", JSON.stringify({
+      type: "page",
+      id: page.id,
+      sourceFolderId: folderId,
+    }))
+  }
+
+  const handleDragEnd = () => {
+    setIsDragging(false)
+  }
+
   return (
-    <div className="relative rounded-2xl transition-all duration-200 hover:-translate-y-0.5 group">
+    <div
+      className={`relative rounded-2xl transition-all duration-200 hover:-translate-y-0.5 group ${isDragging ? 'opacity-50' : ''}`}
+      draggable={!isEditing}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       <div className="absolute top-0 right-0 flex z-10 gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <button
           className="w-7 h-7 rounded-md border-none bg-black/50 text-foreground cursor-pointer flex items-center justify-center transition-all duration-150 hover:bg-black/70 [&_svg]:w-3.5 [&_svg]:h-3.5"

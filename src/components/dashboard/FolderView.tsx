@@ -16,6 +16,7 @@ interface FolderViewProps {
 
 export function FolderView({ folderId }: FolderViewProps) {
   const {
+    folders,
     getFolderById,
     createFolder,
     createPage,
@@ -23,6 +24,8 @@ export function FolderView({ folderId }: FolderViewProps) {
     deletePage,
     renameFolder,
     renamePage,
+    movePage,
+    moveFolder,
   } = useNotes()
 
   const folder = getFolderById(folderId)
@@ -76,6 +79,9 @@ export function FolderView({ folderId }: FolderViewProps) {
                   folder={subFolder}
                   onDelete={deleteFolder}
                   onRename={renameFolder}
+                  onMoveFolder={moveFolder}
+                  onMovePage={movePage}
+                  allFolders={folders}
                 />
               ))}
             </div>

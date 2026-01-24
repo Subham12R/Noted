@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, DragEvent } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { TrashIcon } from "@/components/tiptap-icons/trash-icon"
@@ -23,11 +23,43 @@ interface FolderCardProps {
   folder: Folder
   onDelete: (folderId: string) => void
   onRename: (folderId: string, newName: string) => void
+  onMoveFolder?: (folderId: string, targetParentId: string | null) => Promise<void>
+  onMovePage?: (pageId: string, targetFolderId: string) => Promise<void>
+  allFolders?: Folder[] // For cycle detection
 }
 
-export function FolderCard({ folder, onDelete, onRename }: FolderCardProps) {
+// Helper to check if folder is descendant of another
+function isDescendant(folders: Folder[], folderId: string, potentialAncestorId: string): boolean {
+  const findFolder = (list: Folder[], id: string): Folder | null => {
+    for (const f of list) {
+      if (f.id === id) return f
+      if (f.folders) {
+        const found = findFolder(f.folders, id)
+        if (found) return found
+      }
+    }
+    return null
+  }
+
+  const ancestor = findFolder(folders, potentialAncestorId)
+  if (!ancestor) return false
+
+  const checkInChildren = (folder: Folder): boolean => {
+    if (folder.id === folderId) return true
+    if (folder.folders) {
+      return folder.folders.some(checkInChildren)
+    }
+    return false
+  }
+
+  return checkInChildren(ancestor)
+}
+
+export function FolderCard({ folder, onDelete, onRename, onMoveFolder, onMovePage, allFolders = [] }: FolderCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState(folder.name)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isDragOver, setIsDragOver] = useState(false)
 
   const handleSubmit = () => {
     if (editName.trim()) {
@@ -47,8 +79,68 @@ export function FolderCard({ folder, onDelete, onRename }: FolderCardProps) {
     return folderImages[hash % folderImages.length]
   }
 
+  // Drag handlers - make folder draggable
+  const handleDragStart = (e: DragEvent) => {
+    e.stopPropagation()
+    setIsDragging(true)
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("application/json", JSON.stringify({
+      type: "folder",
+      id: folder.id,
+    }))
+  }
+
+  const handleDragEnd = () => {
+    setIsDragging(false)
+  }
+
+  // Drop handlers - allow dropping pages and folders onto this folder
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = "move"
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: DragEvent) => {
+    e.stopPropagation()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = async (e: DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+
+    try {
+      const data = JSON.parse(e.dataTransfer.getData("application/json"))
+
+      if (data.type === "page" && onMovePage) {
+        // Don't move if already in this folder
+        if (data.sourceFolderId === folder.id) return
+        await onMovePage(data.id, folder.id)
+      } else if (data.type === "folder" && onMoveFolder) {
+        // Don't move folder into itself
+        if (data.id === folder.id) return
+        // Don't move folder into its own descendant
+        if (isDescendant(allFolders, folder.id, data.id)) return
+        await onMoveFolder(data.id, folder.id)
+      }
+    } catch (err) {
+      console.error("Drop error:", err)
+    }
+  }
+
   return (
-    <div className="relative rounded-2xl transition-all duration-200 hover:-translate-y-0.5 group">
+    <div
+      className={`relative rounded-2xl transition-all duration-200 hover:-translate-y-0.5 group ${isDragging ? 'opacity-50' : ''} ${isDragOver ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-background' : ''}`}
+      draggable={!isEditing}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <div className="absolute top-0 right-6 flex z-10 gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <button
           className="w-7 h-7 rounded-md border-none bg-black/50 text-foreground cursor-pointer flex items-center justify-center transition-all duration-150 hover:bg-black/70 [&_svg]:w-3.5 [&_svg]:h-3.5"
