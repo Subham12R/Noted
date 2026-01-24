@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, DragEvent } from "react"
 import { FolderIcon, FolderOpenIcon } from "@/components/tiptap-icons/folder-icon"
 import { FileIcon } from "@/components/tiptap-icons/file-icon"
 import { ChevronRightIcon } from "@/components/tiptap-icons/chevron-right-icon"
@@ -42,6 +42,14 @@ export interface SidebarProps {
   onDeletePage: (folderId: string, pageId: string) => void
   onRenameFolder: (folderId: string, newName: string) => void
   onRenamePage: (folderId: string, pageId: string, newName: string) => void
+  onMovePage?: (pageId: string, targetFolderId: string) => Promise<void>
+  onMoveFolder?: (folderId: string, targetParentId: string | null) => Promise<void>
+}
+
+interface DragData {
+  type: "page" | "folder"
+  id: string
+  sourceFolderId?: string
 }
 
 interface FolderItemProps {
@@ -50,6 +58,8 @@ interface FolderItemProps {
   activePage: string | null
   editingId: string | null
   editingName: string
+  dragOverFolderId: string | null
+  draggingId: string | null
   onToggle: (folderId: string) => void
   onPageSelect: (pageId: string, content?: string) => void
   onCreateFolder: (parentId?: string) => void
@@ -60,6 +70,39 @@ interface FolderItemProps {
   onEditChange: (name: string) => void
   onEditSubmit: (type: "folder" | "page", folderId: string, pageId?: string) => void
   onEditCancel: () => void
+  onDragStart: (e: DragEvent, data: DragData) => void
+  onDragEnd: () => void
+  onDragOver: (e: DragEvent, folderId: string) => void
+  onDragLeave: () => void
+  onDrop: (e: DragEvent, targetFolderId: string) => void
+  isDescendantOf: (folderId: string, potentialAncestorId: string) => boolean
+}
+
+// Helper to check if folder is descendant of another
+function checkIsDescendant(folders: Folder[], folderId: string, potentialAncestorId: string): boolean {
+  const findFolder = (list: Folder[], id: string): Folder | null => {
+    for (const f of list) {
+      if (f.id === id) return f
+      if (f.folders) {
+        const found = findFolder(f.folders, id)
+        if (found) return found
+      }
+    }
+    return null
+  }
+
+  const ancestor = findFolder(folders, potentialAncestorId)
+  if (!ancestor) return false
+
+  const checkInChildren = (folder: Folder): boolean => {
+    if (folder.id === folderId) return true
+    if (folder.folders) {
+      return folder.folders.some(checkInChildren)
+    }
+    return false
+  }
+
+  return checkInChildren(ancestor)
 }
 
 function FolderItem({
@@ -68,6 +111,8 @@ function FolderItem({
   activePage,
   editingId,
   editingName,
+  dragOverFolderId,
+  draggingId,
   onToggle,
   onPageSelect,
   onCreateFolder,
@@ -78,15 +123,32 @@ function FolderItem({
   onEditChange,
   onEditSubmit,
   onEditCancel,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  isDescendantOf,
 }: FolderItemProps) {
   const isEditingFolder = editingId === folder.id
+  const isDragOver = dragOverFolderId === folder.id
+  const isDragging = draggingId === folder.id
+
+  // Check if this folder would be an invalid drop target
+  const isInvalidDropTarget = draggingId !== null && isDescendantOf(folder.id, draggingId)
 
   return (
     <div className="sidebar-folder" style={{ marginLeft: depth > 0 ? `${depth * 0.75}rem` : 0 }}>
       <div
-        className="sidebar-folder-header"
+        className={`sidebar-folder-header ${isDragging ? 'dragging' : ''} ${isDragOver && !isInvalidDropTarget ? 'drag-over' : ''} ${isDragOver && isInvalidDropTarget ? 'drag-over-invalid' : ''}`}
         data-expanded={folder.isExpanded}
         onClick={() => !isEditingFolder && onToggle(folder.id)}
+        draggable={!isEditingFolder}
+        onDragStart={(e) => onDragStart(e, { type: "folder", id: folder.id })}
+        onDragEnd={onDragEnd}
+        onDragOver={(e) => onDragOver(e, folder.id)}
+        onDragLeave={onDragLeave}
+        onDrop={(e) => onDrop(e, folder.id)}
       >
         <ChevronRightIcon className="folder-chevron" />
         {folder.isExpanded ? (
@@ -168,6 +230,8 @@ function FolderItem({
               activePage={activePage}
               editingId={editingId}
               editingName={editingName}
+              dragOverFolderId={dragOverFolderId}
+              draggingId={draggingId}
               onToggle={onToggle}
               onPageSelect={onPageSelect}
               onCreateFolder={onCreateFolder}
@@ -178,16 +242,26 @@ function FolderItem({
               onEditChange={onEditChange}
               onEditSubmit={onEditSubmit}
               onEditCancel={onEditCancel}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+              isDescendantOf={isDescendantOf}
             />
           ))}
           {folder.pages.map((page) => {
             const isEditingPage = editingId === page.id
+            const isPageDragging = draggingId === page.id
             return (
               <div
                 key={page.id}
-                className="sidebar-page"
+                className={`sidebar-page ${isPageDragging ? 'dragging' : ''}`}
                 data-active={activePage === page.id}
                 onClick={() => !isEditingPage && onPageSelect(page.id, page.content)}
+                draggable={!isEditingPage}
+                onDragStart={(e) => onDragStart(e, { type: "page", id: page.id, sourceFolderId: folder.id })}
+                onDragEnd={onDragEnd}
               >
                 <FileIcon className="page-icon" />
                 {isEditingPage ? (
@@ -256,9 +330,14 @@ export function Sidebar({
   onDeletePage,
   onRenameFolder,
   onRenamePage,
+  onMovePage,
+  onMoveFolder,
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState("")
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [dragData, setDragData] = useState<DragData | null>(null)
 
   // Auto-expand folders containing the active page
   useEffect(() => {
@@ -313,7 +392,7 @@ export function Sidebar({
       }
       onFoldersChange(expandFoldersInPath(folders))
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePage])
 
   const toggleFolder = useCallback((folderId: string) => {
@@ -360,6 +439,69 @@ export function Sidebar({
   const toggleMode = useCallback(() => {
     onModeChange(mode === "floating" ? "sticky" : "floating")
   }, [mode, onModeChange])
+
+  // Drag and drop handlers
+  const handleDragStart = useCallback((e: DragEvent, data: DragData) => {
+    setDraggingId(data.id)
+    setDragData(data)
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("application/json", JSON.stringify(data))
+  }, [])
+
+  const handleDragEnd = useCallback(() => {
+    setDraggingId(null)
+    setDragOverFolderId(null)
+    setDragData(null)
+  }, [])
+
+  const handleDragOver = useCallback((e: DragEvent, folderId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = "move"
+    setDragOverFolderId(folderId)
+  }, [])
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverFolderId(null)
+  }, [])
+
+  const isDescendantOf = useCallback((folderId: string, potentialAncestorId: string): boolean => {
+    return checkIsDescendant(folders, folderId, potentialAncestorId)
+  }, [folders])
+
+  const handleDrop = useCallback(async (e: DragEvent, targetFolderId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverFolderId(null)
+    setDraggingId(null)
+
+    if (!dragData) return
+
+    try {
+      if (dragData.type === "page") {
+        // Don't move if dropping in the same folder
+        if (dragData.sourceFolderId === targetFolderId) return
+
+        if (onMovePage) {
+          await onMovePage(dragData.id, targetFolderId)
+        }
+      } else if (dragData.type === "folder") {
+        // Don't move folder into itself
+        if (dragData.id === targetFolderId) return
+
+        // Don't move folder into its own descendant
+        if (isDescendantOf(targetFolderId, dragData.id)) return
+
+        if (onMoveFolder) {
+          await onMoveFolder(dragData.id, targetFolderId)
+        }
+      }
+    } catch (err) {
+      console.error("Error during drop:", err)
+    }
+
+    setDragData(null)
+  }, [dragData, onMovePage, onMoveFolder, isDescendantOf])
 
   return (
     <>
@@ -415,6 +557,8 @@ export function Sidebar({
                 activePage={activePage}
                 editingId={editingId}
                 editingName={editingName}
+                dragOverFolderId={dragOverFolderId}
+                draggingId={draggingId}
                 onToggle={toggleFolder}
                 onPageSelect={onPageSelect}
                 onCreateFolder={onCreateFolder}
@@ -425,6 +569,12 @@ export function Sidebar({
                 onEditChange={handleEditChange}
                 onEditSubmit={handleEditSubmit}
                 onEditCancel={handleEditCancel}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                isDescendantOf={isDescendantOf}
               />
             ))}
 

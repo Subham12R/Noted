@@ -94,11 +94,28 @@
   padding: 0.5rem;
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, border 0.15s ease, opacity 0.15s ease;
   color: var(--sidebar-text);
+  border: 2px solid transparent;
 
   &:hover {
     background: var(--sidebar-hover);
+  }
+
+  // Drag-and-drop styles
+  &.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+  }
+
+  &.drag-over {
+    background: rgba(99, 102, 241, 0.15);
+    border: 2px dashed #6366f1;
+  }
+
+  &.drag-over-invalid {
+    background: rgba(239, 68, 68, 0.1);
+    border: 2px dashed #ef4444;
   }
 
   .folder-chevron {
@@ -141,11 +158,17 @@
   padding: 0.5rem;
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
   color: var(--sidebar-text);
 
   &:hover {
     background: var(--sidebar-hover);
+  }
+
+  // Drag-and-drop styles
+  &.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
   }
 
   &[data-active="true"] {

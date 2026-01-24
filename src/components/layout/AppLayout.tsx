@@ -29,6 +29,8 @@ export function AppLayout({ children, showInput = true, showToolbar = true }: Ap
     deletePage,
     renameFolder,
     renamePage,
+    movePage,
+    moveFolder,
   } = useNotes()
 
   const handlePageSelect = useCallback((pageId: string) => {
@@ -56,6 +58,8 @@ export function AppLayout({ children, showInput = true, showToolbar = true }: Ap
         onDeletePage={deletePage}
         onRenameFolder={renameFolder}
         onRenamePage={renamePage}
+        onMovePage={movePage}
+        onMoveFolder={moveFolder}
       />
 
       <div className="flex-1 min-w-0 relative h-screen flex flex-col overflow-hidden">

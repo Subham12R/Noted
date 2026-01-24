@@ -67,6 +67,8 @@ interface NotesContextType {
   deletePage: (folderId: string, pageId: string) => Promise<void>
   renameFolder: (folderId: string, newName: string) => Promise<void>
   renamePage: (folderId: string, pageId: string, newName: string) => Promise<void>
+  movePage: (pageId: string, targetFolderId: string) => Promise<void>
+  moveFolder: (folderId: string, targetParentId: string | null) => Promise<void>
   updatePageContent: (pageId: string, content: string) => void
   getPageContent: (pageId: string) => string
   getFolderById: (folderId: string) => Folder | null
@@ -560,6 +562,95 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     }, 1500)
   }, [saveContentToApi])
 
+  const movePage = useCallback(async (pageId: string, targetFolderId: string) => {
+    try {
+      const res = await fetch(`/api/pages/${pageId}/move`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetFolderId }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to move page")
+      }
+
+      // Update local state
+      setFolders((prev) => {
+        // Find and remove page from source folder
+        const pageInfo = findPageInFolders(prev, pageId)
+        if (!pageInfo) return prev
+
+        const { page, folderId: sourceFolderId } = pageInfo
+
+        // Remove from source folder
+        let updated = updateFoldersRecursive(prev, sourceFolderId, (folder) => ({
+          ...folder,
+          pages: folder.pages.filter((p) => p.id !== pageId),
+        }))
+
+        // Add to target folder
+        updated = updateFoldersRecursive(updated, targetFolderId, (folder) => ({
+          ...folder,
+          isExpanded: true,
+          pages: [...folder.pages, page],
+        }))
+
+        return updated
+      })
+    } catch (err) {
+      console.error("Error moving page:", err)
+      setError(err instanceof Error ? err.message : "Failed to move page")
+      throw err
+    }
+  }, [])
+
+  const moveFolder = useCallback(async (folderId: string, targetParentId: string | null) => {
+    try {
+      const res = await fetch(`/api/folders/${folderId}/move`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetParentId }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to move folder")
+      }
+
+      // Update local state
+      setFolders((prev) => {
+        // Find the folder to move
+        const folderToMove = findFolderById(prev, folderId)
+        if (!folderToMove) return prev
+
+        // Remove folder from its current location
+        let updated = deleteFolderRecursive(prev, folderId)
+
+        // Update the folder's parentId
+        const movedFolder = { ...folderToMove, parentId: targetParentId }
+
+        if (targetParentId === null) {
+          // Add to root level
+          updated = [...updated, movedFolder]
+        } else {
+          // Add to target parent folder
+          updated = updateFoldersRecursive(updated, targetParentId, (folder) => ({
+            ...folder,
+            isExpanded: true,
+            folders: [...(folder.folders || []), movedFolder],
+          }))
+        }
+
+        return updated
+      })
+    } catch (err) {
+      console.error("Error moving folder:", err)
+      setError(err instanceof Error ? err.message : "Failed to move folder")
+      throw err
+    }
+  }, [])
+
   const getPageContent = useCallback((pageId: string): string => {
     const result = findPageInFolders(folders, pageId)
     return result?.page.content || ""
@@ -588,6 +679,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         deletePage,
         renameFolder,
         renamePage,
+        movePage,
+        moveFolder,
         updatePageContent,
         getPageContent,
         getFolderById,
