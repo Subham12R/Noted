@@ -2,7 +2,7 @@
 
 export type AIProvider = 'groq' | 'ollama' | 'openai' | 'anthropic'
 
-export type AIMode = 'answer' | 'expand' | 'summarize' | 'translate' | 'explain' | 'improve' | 'flowchart'
+export type AIMode = 'answer' | 'expand' | 'summarize' | 'translate' | 'explain' | 'improve' | 'flowchart' | 'quiz' | 'flashcard'
 
 export interface AIModel {
   id: string
@@ -213,5 +213,15 @@ export const AI_MODE_CONFIG: Record<AIMode, { label: string; description: string
     label: 'Flowchart',
     description: 'Generate a visual flowchart',
     icon: 'Flowchart',
+  },
+  quiz: {
+    label: 'Quiz',
+    description: 'Generate quiz questions from your notes',
+    icon: 'HelpCircle',
+  },
+  flashcard: {
+    label: 'Flashcard',
+    description: 'Create flashcards from your notes',
+    icon: 'Layers',
   },
 }

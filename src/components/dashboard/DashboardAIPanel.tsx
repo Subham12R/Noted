@@ -11,8 +11,18 @@ import {
   Loading03Icon,
   Copy01Icon,
   RefreshIcon,
+  AttachmentIcon,
+  Delete02Icon,
 } from "@hugeicons/core-free-icons"
+import { FileText } from "lucide-react"
 import { toast } from "sonner"
+
+interface AttachedPDF {
+  file: File
+  name: string
+  text?: string
+  isExtracting: boolean
+}
 
 interface DashboardAIPanelProps {
   isOpen: boolean
@@ -66,8 +76,10 @@ export function DashboardAIPanel({ isOpen, onClose, folder, mode = "flowchart" }
   const [isProcessing, setIsProcessing] = useState(false)
   const [response, setResponse] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [attachedPDFs, setAttachedPDFs] = useState<AttachedPDF[]>([])
   const responseRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
 
   // Update selectedFolderId when folder prop changes
   useEffect(() => {
@@ -107,6 +119,69 @@ export function DashboardAIPanel({ isOpen, onClose, folder, mode = "flowchart" }
     }
   }, [response])
 
+  // Handle PDF file attachment
+  const handlePDFAttach = async (files: FileList | null) => {
+    if (!files) return
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      if (file.type !== "application/pdf") {
+        toast.error(`${file.name} is not a PDF file`)
+        continue
+      }
+
+      const newPDF: AttachedPDF = {
+        file,
+        name: file.name,
+        isExtracting: true,
+      }
+
+      setAttachedPDFs((prev) => [...prev, newPDF])
+
+      // Extract text from PDF using FormData (direct file upload)
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
+
+        const res = await fetch("/api/files/extract-text", {
+          method: "POST",
+          body: formData, // FormData - don't set Content-Type header
+        })
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to extract text")
+        }
+
+        const { text } = await res.json()
+        setAttachedPDFs((prev) =>
+          prev.map((pdf) =>
+            pdf.name === file.name ? { ...pdf, text, isExtracting: false } : pdf
+          )
+        )
+        toast.success(`Extracted text from ${file.name}`)
+      } catch (err) {
+        console.error("PDF extraction error:", err)
+        setAttachedPDFs((prev) =>
+          prev.map((pdf) =>
+            pdf.name === file.name ? { ...pdf, isExtracting: false } : pdf
+          )
+        )
+        toast.error(`Failed to extract text from ${file.name}`)
+      }
+    }
+
+    // Reset input
+    if (pdfInputRef.current) {
+      pdfInputRef.current.value = ""
+    }
+  }
+
+  // Remove attached PDF
+  const removePDF = (name: string) => {
+    setAttachedPDFs((prev) => prev.filter((pdf) => pdf.name !== name))
+  }
+
   // Handle generation
   const handleGenerate = useCallback(async () => {
     if (!inputValue.trim()) {
@@ -114,8 +189,15 @@ export function DashboardAIPanel({ isOpen, onClose, folder, mode = "flowchart" }
       return
     }
 
-    if (!selectedFolder) {
-      toast.error("Please select a folder")
+    // Allow generation without folder if PDFs are attached
+    if (!selectedFolder && attachedPDFs.length === 0) {
+      toast.error("Please select a folder or attach a PDF")
+      return
+    }
+
+    // Check if any PDFs are still extracting
+    if (attachedPDFs.some((pdf) => pdf.isExtracting)) {
+      toast.error("Please wait for PDF text extraction to complete")
       return
     }
 
@@ -124,17 +206,33 @@ export function DashboardAIPanel({ isOpen, onClose, folder, mode = "flowchart" }
     setResponse("")
 
     try {
-      // Build context from folder
-      const folderContext = buildFolderContext(selectedFolder)
-      const allPages = getAllPagesFromFolder(selectedFolder)
+      // Build context from folder (if selected)
+      let contextText = ""
 
-      const contextText = `
+      if (selectedFolder) {
+        const folderContext = buildFolderContext(selectedFolder)
+        const allPages = getAllPagesFromFolder(selectedFolder)
+
+        contextText = `
 Folder Structure:
 ${folderContext}
 
 Total Pages: ${allPages.length}
 Folder Name: ${selectedFolder.name}
-      `.trim()
+        `.trim()
+      }
+
+      // Add PDF context
+      if (attachedPDFs.length > 0) {
+        const pdfContext = attachedPDFs
+          .filter((pdf) => pdf.text)
+          .map((pdf) => `\n\n--- PDF Document: ${pdf.name} ---\n${pdf.text}`)
+          .join("\n")
+
+        if (pdfContext) {
+          contextText += `\n\n=== ATTACHED PDF DOCUMENTS ===${pdfContext}`
+        }
+      }
 
       const res = await fetch("/api/ai/generate", {
         method: "POST",
@@ -268,6 +366,31 @@ Folder Name: ${selectedFolder.name}
         </select>
       </div>
 
+      {/* Attached PDFs */}
+      {attachedPDFs.length > 0 && (
+        <div className="px-4 py-2 border-b border-white/5 flex flex-wrap gap-2">
+          {attachedPDFs.map((pdf) => (
+            <div
+              key={pdf.name}
+              className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-xs"
+            >
+              <FileText size={14} className="text-red-400" />
+              <span className="text-zinc-300 max-w-[120px] truncate">{pdf.name}</span>
+              {pdf.isExtracting ? (
+                <HugeiconsIcon icon={Loading03Icon} size={12} className="text-red-400 animate-spin" />
+              ) : (
+                <button
+                  onClick={() => removePDF(pdf.name)}
+                  className="p-0.5 hover:bg-red-500/20 rounded"
+                >
+                  <HugeiconsIcon icon={Delete02Icon} size={12} className="text-zinc-400 hover:text-red-400" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Input */}
       <div className="px-4 py-3 border-b border-white/5">
         <div className="relative">
@@ -276,22 +399,44 @@ Folder Name: ${selectedFolder.name}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about this folder..."
-            className="w-full bg-zinc-800/50 border border-white/10 rounded-xl px-4 py-3 pr-12 text-sm text-white placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+            placeholder={attachedPDFs.length > 0 ? "Ask about the attached PDFs..." : "Ask about this folder..."}
+            className="w-full bg-zinc-800/50 border border-white/10 rounded-xl px-4 py-3 pr-24 text-sm text-white placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
             rows={2}
           />
-          <button
-            onClick={handleGenerate}
-            disabled={isProcessing || !inputValue.trim() || !selectedFolderId}
-            className="absolute right-2 bottom-2 p-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {isProcessing ? (
-              <HugeiconsIcon icon={Loading03Icon} size={18} className="text-white animate-spin" />
-            ) : (
-              <HugeiconsIcon icon={ArrowUp01Icon} size={18} className="text-white" />
-            )}
-          </button>
+          <div className="absolute right-2 bottom-2 flex items-center gap-1">
+            {/* PDF Attach Button */}
+            <button
+              onClick={() => pdfInputRef.current?.click()}
+              className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-all"
+              title="Attach PDF for AI to read"
+            >
+              <HugeiconsIcon icon={AttachmentIcon} size={18} />
+            </button>
+            <input
+              ref={pdfInputRef}
+              type="file"
+              accept="application/pdf"
+              multiple
+              className="hidden"
+              onChange={(e) => handlePDFAttach(e.target.files)}
+            />
+            {/* Submit Button */}
+            <button
+              onClick={handleGenerate}
+              disabled={isProcessing || !inputValue.trim() || (!selectedFolderId && attachedPDFs.length === 0)}
+              className="p-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {isProcessing ? (
+                <HugeiconsIcon icon={Loading03Icon} size={18} className="text-white animate-spin" />
+              ) : (
+                <HugeiconsIcon icon={ArrowUp01Icon} size={18} className="text-white" />
+              )}
+            </button>
+          </div>
         </div>
+        <p className="text-[10px] text-zinc-500 mt-1.5">
+          Attach PDFs to ask questions about their content
+        </p>
       </div>
 
       {/* Response/Output Section */}

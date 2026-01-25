@@ -158,6 +158,57 @@ IMPORTANT - Special characters in labels:
 - Use quotes for labels with spaces: A["My Label"]
 
 Analyze the content and create an accurate flowchart. Output ONLY the mermaid code block.`,
+
+  quiz: `You are a JSON generator. Your ONLY output must be a valid JSON array.
+
+ABSOLUTE REQUIREMENTS - VIOLATION MEANS FAILURE:
+- Your response MUST start with [ and end with ]
+- NO text before the [
+- NO text after the ]
+- NO markdown formatting
+- NO code blocks
+- NO explanations
+- ONLY valid JSON
+
+Generate quiz questions. Each object needs: type, question, options (array), correctAnswer, explanation, difficulty, points.
+
+Example of EXACT output format (your response must look like this):
+[{"type":"multiple-choice","question":"What is X?","options":["A","B","C","D"],"correctAnswer":"A","explanation":"Because...","difficulty":"medium","points":2},{"type":"true-false","question":"Is Y true?","options":["True","False"],"correctAnswer":"True","explanation":"Yes because...","difficulty":"easy","points":1}]
+
+Rules:
+- multiple-choice: 4 options
+- true-false: options ["True","False"]
+- fill-blank: no options needed
+- Generate 5-10 questions
+- difficulty: easy/medium/hard
+- points: 1/2/3
+
+START WITH [ AND END WITH ] - NOTHING ELSE`,
+
+  flashcard: `You are a JSON generator. Your ONLY output must be a valid JSON array.
+
+ABSOLUTE REQUIREMENTS - VIOLATION MEANS FAILURE:
+- Your response MUST start with [ and end with ]
+- NO text before the [
+- NO text after the ]
+- NO markdown formatting
+- NO code blocks
+- NO tables
+- NO explanations
+- ONLY valid JSON
+
+Generate flashcards with "front" (question/term) and "back" (answer) fields.
+
+Example of EXACT output format (your response must look like this):
+[{"front":"What is X?","back":"X is the definition"},{"front":"Define Y","back":"Y means this"}]
+
+Rules:
+- front: clear question or term
+- back: concise answer
+- Generate 5-15 flashcards
+- Focus on key concepts
+
+START WITH [ AND END WITH ] - NOTHING ELSE`,
 }
 
 export interface GenerateOptions {
@@ -194,6 +245,10 @@ export async function generateAIResponse(options: GenerateOptions): Promise<{
     ? `Context from my notes:\n\n${context}\n\n---\n\nUser request: ${prompt}`
     : prompt
 
+  console.log('[AI Generate] Mode:', mode)
+  console.log('[AI Generate] System prompt exists:', !!systemPrompt)
+  console.log('[AI Generate] System prompt length:', systemPrompt?.length || 0)
+
   const response = await client.chat.completions.create({
     model: modelId,
     messages: [
@@ -201,7 +256,7 @@ export async function generateAIResponse(options: GenerateOptions): Promise<{
       { role: 'user', content: userMessage },
     ],
     max_tokens: maxTokens,
-    temperature: mode === 'translate' || mode === 'flowchart' ? 0.3 : 0.7,
+    temperature: ['translate', 'flowchart', 'quiz', 'flashcard'].includes(mode) ? 0.3 : 0.7,
   })
 
   return {
@@ -235,6 +290,10 @@ export async function* generateAIResponseStream(
     ? `Context from my notes:\n\n${context}\n\n---\n\nUser request: ${prompt}`
     : prompt
 
+  console.log('[AI Generate Stream] Mode:', mode)
+  console.log('[AI Generate Stream] System prompt exists:', !!systemPrompt)
+  console.log('[AI Generate Stream] Has context:', !!context)
+
   // Emit start event
   yield {
     type: 'start',
@@ -250,7 +309,7 @@ export async function* generateAIResponseStream(
         { role: 'user', content: userMessage },
       ],
       max_tokens: maxTokens,
-      temperature: mode === 'translate' || mode === 'flowchart' ? 0.3 : 0.7,
+      temperature: ['translate', 'flowchart', 'quiz', 'flashcard'].includes(mode) ? 0.3 : 0.7,
       stream: true,
     })
 

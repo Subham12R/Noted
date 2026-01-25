@@ -357,6 +357,128 @@ export const todos = pgTable(
 )
 
 // ============================================================================
+// FILES & STORAGE
+// ============================================================================
+
+export const files = pgTable(
+  "files",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    pageId: uuid("page_id").references(() => pages.id, { onDelete: "set null" }), // Optional link to page
+
+    // File info
+    name: varchar("name", { length: 255 }).notNull(),
+    originalName: varchar("original_name", { length: 255 }).notNull(),
+    mimeType: varchar("mime_type", { length: 100 }).notNull(),
+    size: integer("size").notNull(), // bytes
+
+    // Storage
+    storageKey: varchar("storage_key", { length: 500 }).notNull(), // S3/R2 key or local path
+    url: text("url").notNull(), // Public URL
+    thumbnailUrl: text("thumbnail_url"), // For images/videos
+
+    // Metadata
+    type: varchar("type", { length: 20 }).notNull().default("file"), // 'image' | 'pdf' | 'video' | 'audio' | 'document' | 'file'
+    folderId: uuid("folder_id").references(() => fileFolders.id, { onDelete: "set null" }),
+    isStarred: boolean("is_starred").default(false).notNull(),
+
+    // Timestamps
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    accessedAt: timestamp("accessed_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("files_user_id_idx").on(table.userId),
+    index("files_page_id_idx").on(table.pageId),
+    index("files_type_idx").on(table.userId, table.type),
+    index("files_starred_idx").on(table.userId, table.isStarred),
+    index("files_created_at_idx").on(table.userId, table.createdAt),
+  ]
+)
+
+export const fileFolders = pgTable(
+  "file_folders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    parentId: uuid("parent_id"),
+    color: varchar("color", { length: 7 }), // Hex color
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("file_folders_user_id_idx").on(table.userId),
+    index("file_folders_parent_id_idx").on(table.parentId),
+  ]
+)
+
+// ============================================================================
+// TAGS
+// ============================================================================
+
+export const tags = pgTable(
+  "tags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 50 }).notNull(),
+    color: varchar("color", { length: 7 }).notNull().default("#6366f1"), // Hex color
+    parentId: uuid("parent_id"), // For hierarchical tags
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("tags_user_id_idx").on(table.userId),
+    uniqueIndex("tags_user_name_idx").on(table.userId, table.name),
+    index("tags_parent_id_idx").on(table.parentId),
+  ]
+)
+
+export const pageTags = pgTable(
+  "page_tags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    pageId: uuid("page_id")
+      .notNull()
+      .references(() => pages.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("page_tags_page_tag_idx").on(table.pageId, table.tagId),
+    index("page_tags_tag_id_idx").on(table.tagId),
+  ]
+)
+
+export const folderTags = pgTable(
+  "folder_tags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    folderId: uuid("folder_id")
+      .notNull()
+      .references(() => folders.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("folder_tags_folder_tag_idx").on(table.folderId, table.tagId),
+    index("folder_tags_tag_id_idx").on(table.tagId),
+  ]
+)
+
+// ============================================================================
 // SECURITY: RATE LIMITING
 // ============================================================================
 
@@ -391,6 +513,9 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   subscription: one(subscriptions),
   aiUsage: many(aiUsage),
   todos: many(todos),
+  files: many(files),
+  fileFolders: many(fileFolders),
+  tags: many(tags),
 }))
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -511,6 +636,72 @@ export const todosRelations = relations(todos, ({ one }) => ({
   }),
 }))
 
+export const filesRelations = relations(files, ({ one }) => ({
+  user: one(users, {
+    fields: [files.userId],
+    references: [users.id],
+  }),
+  page: one(pages, {
+    fields: [files.pageId],
+    references: [pages.id],
+  }),
+  folder: one(fileFolders, {
+    fields: [files.folderId],
+    references: [fileFolders.id],
+  }),
+}))
+
+export const fileFoldersRelations = relations(fileFolders, ({ one, many }) => ({
+  user: one(users, {
+    fields: [fileFolders.userId],
+    references: [users.id],
+  }),
+  parent: one(fileFolders, {
+    fields: [fileFolders.parentId],
+    references: [fileFolders.id],
+    relationName: "fileFolderHierarchy",
+  }),
+  children: many(fileFolders, { relationName: "fileFolderHierarchy" }),
+  files: many(files),
+}))
+
+export const tagsRelations = relations(tags, ({ one, many }) => ({
+  user: one(users, {
+    fields: [tags.userId],
+    references: [users.id],
+  }),
+  parent: one(tags, {
+    fields: [tags.parentId],
+    references: [tags.id],
+    relationName: "tagHierarchy",
+  }),
+  children: many(tags, { relationName: "tagHierarchy" }),
+  pageTags: many(pageTags),
+  folderTags: many(folderTags),
+}))
+
+export const pageTagsRelations = relations(pageTags, ({ one }) => ({
+  page: one(pages, {
+    fields: [pageTags.pageId],
+    references: [pages.id],
+  }),
+  tag: one(tags, {
+    fields: [pageTags.tagId],
+    references: [tags.id],
+  }),
+}))
+
+export const folderTagsRelations = relations(folderTags, ({ one }) => ({
+  folder: one(folders, {
+    fields: [folderTags.folderId],
+    references: [folders.id],
+  }),
+  tag: one(tags, {
+    fields: [folderTags.tagId],
+    references: [tags.id],
+  }),
+}))
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -556,3 +747,18 @@ export type NewAiUsage = typeof aiUsage.$inferInsert
 
 export type Todo = typeof todos.$inferSelect
 export type NewTodo = typeof todos.$inferInsert
+
+export type File = typeof files.$inferSelect
+export type NewFile = typeof files.$inferInsert
+
+export type FileFolder = typeof fileFolders.$inferSelect
+export type NewFileFolder = typeof fileFolders.$inferInsert
+
+export type Tag = typeof tags.$inferSelect
+export type NewTag = typeof tags.$inferInsert
+
+export type PageTag = typeof pageTags.$inferSelect
+export type NewPageTag = typeof pageTags.$inferInsert
+
+export type FolderTag = typeof folderTags.$inferSelect
+export type NewFolderTag = typeof folderTags.$inferInsert

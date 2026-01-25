@@ -16,8 +16,9 @@ export function ResizableImageComponent({
   const [isHovering, setIsHovering] = useState(false)
   const [aspectRatio, setAspectRatio] = useState(1)
 
-  const { src, alt, title, width, height, alignment } = node.attrs
+  const { src, alt, title, width, height, alignment, float: floatMode } = node.attrs
   const showControls = selected || isHovering
+  const isFloating = floatMode === "left" || floatMode === "right"
 
   // Calculate aspect ratio when image loads
   const handleImageLoad = useCallback(() => {
@@ -94,7 +95,12 @@ export function ResizableImageComponent({
 
   // Handle alignment change
   const handleAlignmentChange = (newAlignment: "left" | "center" | "right") => {
-    updateAttributes({ alignment: newAlignment })
+    updateAttributes({ alignment: newAlignment, float: "none" })
+  }
+
+  // Handle float change (for text wrapping)
+  const handleFloatChange = (newFloat: "none" | "left" | "right") => {
+    updateAttributes({ float: newFloat })
   }
 
   const alignmentStyles: Record<string, React.CSSProperties> = {
@@ -113,16 +119,27 @@ export function ResizableImageComponent({
 
   return (
     <NodeViewWrapper
-      className="resizable-image-wrapper"
+      className={`resizable-image-wrapper ${isFloating ? "floating" : ""}`}
       data-drag-handle
+      data-float={floatMode}
       style={{
-        display: "flex",
-        justifyContent:
-          alignment === "left"
-            ? "flex-start"
-            : alignment === "right"
-              ? "flex-end"
-              : "center",
+        ...(isFloating
+          ? {
+              float: floatMode as "left" | "right",
+              marginRight: floatMode === "left" ? "1rem" : "0",
+              marginLeft: floatMode === "right" ? "1rem" : "0",
+              width: width ? `${width}px` : "auto",
+              maxWidth: "50%",
+            }
+          : {
+              display: "flex",
+              justifyContent:
+                alignment === "left"
+                  ? "flex-start"
+                  : alignment === "right"
+                    ? "flex-end"
+                    : "center",
+            }),
         overflow: "visible",
       }}
     >
@@ -132,10 +149,10 @@ export function ResizableImageComponent({
         style={{
           position: "relative",
           display: "inline-block",
-          width: width ? `${width}px` : "auto",
+          width: isFloating ? "100%" : width ? `${width}px` : "auto",
           maxWidth: "100%",
           overflow: "visible",
-          ...alignmentStyles[alignment || "center"],
+          ...(isFloating ? {} : alignmentStyles[alignment || "center"]),
         }}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
@@ -302,8 +319,8 @@ export function ResizableImageComponent({
                   borderRadius: 4,
                   border: "none",
                   backgroundColor:
-                    alignment === "left" ? "#3b82f6" : "transparent",
-                  color: alignment === "left" ? "white" : "#6b7280",
+                    alignment === "left" && !isFloating ? "#3b82f6" : "transparent",
+                  color: alignment === "left" && !isFloating ? "white" : "#6b7280",
                   cursor: "pointer",
                 }}
                 title="Align left"
@@ -332,8 +349,8 @@ export function ResizableImageComponent({
                   borderRadius: 4,
                   border: "none",
                   backgroundColor:
-                    alignment === "center" ? "#3b82f6" : "transparent",
-                  color: alignment === "center" ? "white" : "#6b7280",
+                    alignment === "center" && !isFloating ? "#3b82f6" : "transparent",
+                  color: alignment === "center" && !isFloating ? "white" : "#6b7280",
                   cursor: "pointer",
                 }}
                 title="Align center"
@@ -362,8 +379,8 @@ export function ResizableImageComponent({
                   borderRadius: 4,
                   border: "none",
                   backgroundColor:
-                    alignment === "right" ? "#3b82f6" : "transparent",
-                  color: alignment === "right" ? "white" : "#6b7280",
+                    alignment === "right" && !isFloating ? "#3b82f6" : "transparent",
+                  color: alignment === "right" && !isFloating ? "white" : "#6b7280",
                   cursor: "pointer",
                 }}
                 title="Align right"
@@ -379,6 +396,108 @@ export function ResizableImageComponent({
                   <line x1="3" y1="6" x2="21" y2="6" />
                   <line x1="9" y1="12" x2="21" y2="12" />
                   <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </button>
+              {/* Separator */}
+              <div
+                style={{
+                  width: 1,
+                  height: 20,
+                  backgroundColor: "#e5e7eb",
+                  margin: "0 4px",
+                }}
+              />
+              {/* Float/Wrap text buttons */}
+              <button
+                onClick={() => handleFloatChange("left")}
+                style={{
+                  width: 28,
+                  height: 28,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 4,
+                  border: "none",
+                  backgroundColor:
+                    floatMode === "left" ? "#3b82f6" : "transparent",
+                  color: floatMode === "left" ? "white" : "#6b7280",
+                  cursor: "pointer",
+                }}
+                title="Float left (wrap text right)"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <rect x="3" y="3" width="8" height="8" rx="1" />
+                  <line x1="14" y1="5" x2="21" y2="5" />
+                  <line x1="14" y1="9" x2="21" y2="9" />
+                  <line x1="3" y1="15" x2="21" y2="15" />
+                  <line x1="3" y1="19" x2="21" y2="19" />
+                </svg>
+              </button>
+              <button
+                onClick={() => handleFloatChange("right")}
+                style={{
+                  width: 28,
+                  height: 28,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 4,
+                  border: "none",
+                  backgroundColor:
+                    floatMode === "right" ? "#3b82f6" : "transparent",
+                  color: floatMode === "right" ? "white" : "#6b7280",
+                  cursor: "pointer",
+                }}
+                title="Float right (wrap text left)"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <rect x="13" y="3" width="8" height="8" rx="1" />
+                  <line x1="3" y1="5" x2="10" y2="5" />
+                  <line x1="3" y1="9" x2="10" y2="9" />
+                  <line x1="3" y1="15" x2="21" y2="15" />
+                  <line x1="3" y1="19" x2="21" y2="19" />
+                </svg>
+              </button>
+              <button
+                onClick={() => handleFloatChange("none")}
+                style={{
+                  width: 28,
+                  height: 28,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 4,
+                  border: "none",
+                  backgroundColor:
+                    floatMode === "none" || !floatMode ? "#3b82f6" : "transparent",
+                  color: floatMode === "none" || !floatMode ? "white" : "#6b7280",
+                  cursor: "pointer",
+                }}
+                title="Inline (no wrap)"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <rect x="6" y="6" width="12" height="12" rx="1" />
                 </svg>
               </button>
             </div>

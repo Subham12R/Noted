@@ -14,7 +14,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 // Validate mode
-const VALID_MODES: AIMode[] = ['answer', 'expand', 'summarize', 'translate', 'explain', 'improve', 'flowchart']
+const VALID_MODES: AIMode[] = ['answer', 'expand', 'summarize', 'translate', 'explain', 'improve', 'flowchart', 'quiz', 'flashcard']
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,6 +50,10 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const body = await request.json()
     const { pageId, prompt, mode, model, stream = true, context: providedContext } = body
+
+    console.log('[API AI Generate] Received mode:', mode)
+    console.log('[API AI Generate] Valid modes:', VALID_MODES)
+    console.log('[API AI Generate] Mode is valid:', VALID_MODES.includes(mode))
 
     // Validate required fields
     if (!prompt || typeof prompt !== 'string') {

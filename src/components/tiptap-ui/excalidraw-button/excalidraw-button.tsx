@@ -5,13 +5,13 @@ import { useTiptapEditor } from "@/hooks/use-tiptap-editor"
 import type { Editor } from "@tiptap/react"
 import { Button } from "@/components/tiptap-ui-primitive/button"
 
-export interface WhiteboardButtonProps
+export interface ExcalidrawButtonProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "type"> {
   editor?: Editor | null
   text?: string
 }
 
-export const WhiteboardButton = forwardRef<HTMLButtonElement, WhiteboardButtonProps>(
+export const ExcalidrawButton = forwardRef<HTMLButtonElement, ExcalidrawButtonProps>(
   ({ editor: providedEditor, text, onClick, children, ...buttonProps }, ref) => {
     const { editor } = useTiptapEditor(providedEditor)
 
@@ -24,20 +24,10 @@ export const WhiteboardButton = forwardRef<HTMLButtonElement, WhiteboardButtonPr
 
         if (editor && !editor.isDestroyed && editor.view?.dom) {
           try {
-            editor
-              .chain()
-              .focus()
-              .insertContent({
-                type: 'whiteboard',
-                attrs: {
-                  shapes: '[]',
-                  width: 800,
-                  height: 400,
-                },
-              })
-              .run()
+            // @ts-ignore - custom command
+            editor.chain().focus().insertExcalidraw().run()
           } catch (e) {
-            console.warn("Failed to insert whiteboard:", e)
+            console.warn("Failed to insert Excalidraw:", e)
           }
         }
       },
@@ -56,15 +46,15 @@ export const WhiteboardButton = forwardRef<HTMLButtonElement, WhiteboardButtonPr
         tabIndex={-1}
         disabled={!canInsert}
         data-disabled={!canInsert}
-        aria-label="Insert whiteboard"
-        tooltip="Whiteboard"
+        aria-label="Insert Excalidraw"
+        tooltip="Excalidraw"
         onClick={handleClick}
         {...buttonProps}
         ref={ref}
       >
         {children ?? (
           <>
-            <WhiteboardIcon className="tiptap-button-icon" />
+            <ExcalidrawIcon className="tiptap-button-icon" />
             {text && <span className="tiptap-button-text">{text}</span>}
           </>
         )}
@@ -73,9 +63,9 @@ export const WhiteboardButton = forwardRef<HTMLButtonElement, WhiteboardButtonPr
   }
 )
 
-WhiteboardButton.displayName = "WhiteboardButton"
+ExcalidrawButton.displayName = "ExcalidrawButton"
 
-function WhiteboardIcon({ className }: { className?: string }) {
+function ExcalidrawIcon({ className }: { className?: string }) {
   return (
     <svg
       className={className}
@@ -88,12 +78,9 @@ function WhiteboardIcon({ className }: { className?: string }) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <rect x="7" y="7" width="4" height="4" />
-      <circle cx="16" cy="16" r="2" />
-      <line x1="7" y1="16" x2="12" y2="11" />
+      <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
     </svg>
   )
 }
 
-export default WhiteboardButton
+export default ExcalidrawButton

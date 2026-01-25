@@ -4,6 +4,7 @@ import { useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
 import { Input } from "@/components/Input"
+import { StudyToolbar } from "@/components/study-toolbar"
 import { useNotes } from "@/context/NotesContext"
 import { useSidebarContext } from "@/context/SidebarContext"
 import { DashboardToolbar } from "./DashboardToolbar"
@@ -12,9 +13,10 @@ interface AppLayoutProps {
   children: React.ReactNode
   showInput?: boolean
   showToolbar?: boolean
+  showStudyToolbar?: boolean
 }
 
-export function AppLayout({ children, showInput = true, showToolbar = true }: AppLayoutProps) {
+export function AppLayout({ children, showInput = true, showToolbar = true, showStudyToolbar = true }: AppLayoutProps) {
   const router = useRouter()
   const { isOpen, mode, closeSidebar, setMode } = useSidebarContext()
 
@@ -43,6 +45,9 @@ export function AppLayout({ children, showInput = true, showToolbar = true }: Ap
 
   return (
     <div className={`min-h-screen w-full ${mode === "sticky" && isOpen ? "flex" : ""}`}>
+      {/* Study Toolbar - Fixed left side */}
+      {showStudyToolbar && <StudyToolbar />}
+
       <Sidebar
         isOpen={isOpen}
         onClose={closeSidebar}

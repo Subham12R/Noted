@@ -3,6 +3,8 @@
 import { useState, useRef, KeyboardEvent, ChangeEvent, useEffect, useCallback } from "react";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { useNotes, Page, Folder } from "@/context/NotesContext";
+import { useFlashcards } from "@/context/FlashcardContext";
+import { useQuiz } from "@/context/QuizContext";
 import { Editor } from "@tiptap/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -51,7 +53,45 @@ const MODE_DEFAULT_PROMPTS: Record<AIMode, string> = {
   explain: "Explain this content in simpler terms",
   improve: "Improve the writing quality of this content",
   flowchart: "Create a flowchart visualizing the concepts and relationships in this content",
+  quiz: "Generate quiz questions from this content to test understanding",
+  flashcard: "Create flashcards from this content for study and review",
 };
+
+// Natural language patterns for detecting quiz/flashcard commands
+const QUIZ_PATTERNS = [
+  /create\s+(?:a\s+|me\s+(?:a\s+)?)?quiz/i,
+  /make\s+(?:a\s+|me\s+(?:a\s+)?)?quiz/i,
+  /generate\s+(?:a\s+)?quiz/i,
+  /quiz\s+(?:me|from|on|about|this)/i,
+  /test\s+(?:me|my\s+knowledge)/i,
+  /\bquiz\b/i, // Match any message containing "quiz" as a word
+];
+
+const FLASHCARD_PATTERNS = [
+  /create\s+(?:some\s+|me\s+(?:some\s+)?)?flashcards?/i,
+  /make\s+(?:some\s+|me\s+(?:some\s+)?)?flashcards?/i,
+  /generate\s+(?:some\s+)?flashcards?/i,
+  /flashcards?\s+(?:from|for|about|this)/i,
+  /\bflashcards?\b/i, // Match any message containing "flashcard(s)" as a word
+];
+
+// Detect if input is a quiz or flashcard command
+function detectAICommand(input: string): AIMode | null {
+  // Test against the input directly (patterns have 'i' flag for case insensitivity)
+  for (const pattern of QUIZ_PATTERNS) {
+    if (pattern.test(input)) {
+      return 'quiz';
+    }
+  }
+
+  for (const pattern of FLASHCARD_PATTERNS) {
+    if (pattern.test(input)) {
+      return 'flashcard';
+    }
+  }
+
+  return null;
+}
 
 interface InputProps {
   isOpen: boolean;
@@ -63,6 +103,8 @@ interface InputProps {
 
 export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputProps) => {
   const { folders, activePage, getPageById } = useNotes();
+  const { createDeck, createCard, openModal: openFlashcardModal, setCurrentDeck } = useFlashcards();
+  const { createQuiz, openModal: openQuizModal } = useQuiz();
   const [activeMode, setActiveMode] = useState<AIMode | null>(null);
 
   const [inputValue, setInputValue] = useState("");
@@ -342,6 +384,120 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
     return editor.state.doc.textBetween(from, to, ' ');
   }, [editor]);
 
+  // Parse and create flashcards from AI response
+  const handleFlashcardResponse = useCallback(async (responseText: string) => {
+    try {
+      let flashcards: { front: string; back: string }[] = [];
+
+      // Try to extract JSON array from response
+      const jsonMatch = responseText.match(/\[[\s\S]*?\]/);
+      if (jsonMatch) {
+        try {
+          flashcards = JSON.parse(jsonMatch[0]);
+        } catch {
+          console.log('[Flashcard] JSON parse failed, trying table extraction');
+        }
+      }
+
+      // Fallback: Try to parse markdown table format
+      if (flashcards.length === 0) {
+        const tableRows = responseText.match(/\|([^|]+)\|([^|]+)\|/g);
+        if (tableRows && tableRows.length > 1) {
+          // Skip header row(s)
+          const dataRows = tableRows.filter(row => !row.includes('---') && !row.toLowerCase().includes('front'));
+          flashcards = dataRows.map(row => {
+            const cells = row.split('|').filter(c => c.trim());
+            return {
+              front: cells[0]?.trim() || '',
+              back: cells[1]?.trim() || ''
+            };
+          }).filter(card => card.front && card.back);
+        }
+      }
+
+      if (flashcards.length === 0) {
+        throw new Error('Could not parse flashcard data. The AI response was not in the expected format.');
+      }
+
+      console.log('[Flashcard] Parsed flashcards:', flashcards.length);
+
+      // Create a new deck
+      const currentPageInfo = activePage ? getPageById(activePage) : null;
+      const deckTitle = currentPageInfo?.page.name
+        ? `Flashcards: ${currentPageInfo.page.name}`
+        : `Flashcards ${new Date().toLocaleDateString()}`;
+
+      const deck = await createDeck(deckTitle, 'AI-generated flashcards', activePage || undefined);
+
+      if (deck) {
+        // Create cards in the deck
+        for (const card of flashcards) {
+          await createCard(deck.id, card.front, card.back);
+        }
+
+        setCurrentDeck(deck);
+        openFlashcardModal('list');
+        setResponse(`Created ${flashcards.length} flashcards in "${deckTitle}"! Opening flashcard deck...`);
+
+        // Close input after a delay
+        setTimeout(() => {
+          onClose();
+          setResponse('');
+          setInputValue('');
+        }, 1500);
+      }
+    } catch (err) {
+      console.error('Failed to create flashcards:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create flashcards');
+    }
+  }, [activePage, getPageById, createDeck, createCard, setCurrentDeck, openFlashcardModal, onClose]);
+
+  // Parse and create quiz from AI response
+  const handleQuizResponse = useCallback(async (responseText: string) => {
+    try {
+      let questions: { type: string; question: string; options?: string[]; correctAnswer: string; explanation?: string; difficulty: string; points: number }[] = [];
+
+      // Try to extract JSON array from response
+      const jsonMatch = responseText.match(/\[[\s\S]*?\]/);
+      if (jsonMatch) {
+        try {
+          questions = JSON.parse(jsonMatch[0]);
+        } catch (parseErr) {
+          console.log('[Quiz] JSON parse failed:', parseErr);
+        }
+      }
+
+      if (questions.length === 0) {
+        throw new Error('Could not parse quiz data. The AI response was not in JSON format. Please try again.');
+      }
+
+      console.log('[Quiz] Parsed questions:', questions.length);
+
+      // Create a new quiz
+      const currentPageInfo = activePage ? getPageById(activePage) : null;
+      const quizTitle = currentPageInfo?.page.name
+        ? `Quiz: ${currentPageInfo.page.name}`
+        : `Quiz ${new Date().toLocaleDateString()}`;
+
+      const quiz = await createQuiz(quizTitle, questions);
+
+      if (quiz) {
+        openQuizModal('list');
+        setResponse(`Created quiz with ${questions.length} questions! Opening quiz...`);
+
+        // Close input after a delay
+        setTimeout(() => {
+          onClose();
+          setResponse('');
+          setInputValue('');
+        }, 1500);
+      }
+    } catch (err) {
+      console.error('Failed to create quiz:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create quiz');
+    }
+  }, [activePage, getPageById, createQuiz, openQuizModal, onClose]);
+
   const handleSubmit = async () => {
     if (!inputValue.trim() && attachedFiles.length === 0) return;
 
@@ -366,13 +522,31 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
         }
       }
 
+      // Detect natural language commands for quiz/flashcard
+      const detectedMode = detectAICommand(inputValue.trim());
+      const modeToUse = activeMode || detectedMode || 'answer';
+
+      console.log('[AI Input] Input:', inputValue.trim());
+      console.log('[AI Input] Detected mode:', detectedMode);
+      console.log('[AI Input] Active mode:', activeMode);
+      console.log('[AI Input] Using mode:', modeToUse);
+
+      // If quiz/flashcard mode but no context, add current page
+      if ((modeToUse === 'quiz' || modeToUse === 'flashcard') && !contextText) {
+        const currentPageInfo = activePage ? getPageById(activePage) : null;
+        if (currentPageInfo?.page.content) {
+          const pageContent = currentPageInfo.page.content.replace(/<[^>]*>/g, ' ').trim();
+          contextText = `Page content:\n${pageContent}\n\n`;
+        }
+      }
+
       const res = await fetch('/api/ai/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pageId,
           prompt: inputValue.trim(),
-          mode: activeMode || 'answer',
+          mode: modeToUse,
           model: selectedModel,
           context: contextText,
           stream: true,
@@ -420,6 +594,13 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
             // Skip invalid JSON
           }
         }
+      }
+
+      // Handle quiz/flashcard responses after streaming completes
+      if (modeToUse === 'flashcard' && fullResponse) {
+        await handleFlashcardResponse(fullResponse);
+      } else if (modeToUse === 'quiz' && fullResponse) {
+        await handleQuizResponse(fullResponse);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');

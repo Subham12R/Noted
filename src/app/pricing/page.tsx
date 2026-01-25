@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
 import {
@@ -12,16 +12,11 @@ import {
 } from "@/types/subscription"
 import { createCheckoutSession } from "@/lib/stripe-client"
 
-export default function PricingPage() {
-  const { isLoading, isAuthenticated } = useAuth()
+// Component that handles search params (needs Suspense boundary)
+function PricingSearchParamsHandler() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [billingPeriod, setBillingPeriod] = useState<"month" | "year">("month")
-  const [currentTier, setCurrentTier] = useState<SubscriptionTier>("free")
-  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true)
-  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false)
 
-  // Handle success/cancel from Stripe checkout
   useEffect(() => {
     const success = searchParams.get("success")
     const canceled = searchParams.get("canceled")
@@ -30,13 +25,23 @@ export default function PricingPage() {
       toast.success("Payment successful! Your subscription is now active.", {
         duration: 5000,
       })
-      // Refresh subscription status
       router.replace("/pricing")
     } else if (canceled === "true") {
       toast.info("Checkout was canceled. You can try again anytime.")
       router.replace("/pricing")
     }
   }, [searchParams, router])
+
+  return null
+}
+
+export default function PricingPage() {
+  const { isLoading, isAuthenticated } = useAuth()
+  const router = useRouter()
+  const [billingPeriod, setBillingPeriod] = useState<"month" | "year">("month")
+  const [currentTier, setCurrentTier] = useState<SubscriptionTier>("free")
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true)
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false)
 
   useEffect(() => {
     async function fetchSubscription() {
@@ -94,6 +99,11 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Handle search params from Stripe redirect */}
+      <Suspense fallback={null}>
+        <PricingSearchParamsHandler />
+      </Suspense>
+
       {/* Header - Glassmorphism */}
       <header className="sticky top-0 z-50 backdrop-blur-2xl bg-background/60 border-b border-foreground/5">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">

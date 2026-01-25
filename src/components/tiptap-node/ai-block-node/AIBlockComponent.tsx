@@ -42,6 +42,9 @@ const MODE_LABELS: Record<AIMode, string> = {
   translate: 'Translation',
   explain: 'Explanation',
   improve: 'Improved',
+  flowchart: 'Flowchart',
+  quiz: 'Quiz',
+  flashcard: 'Flashcard',
 }
 
 export function AIBlockComponent({

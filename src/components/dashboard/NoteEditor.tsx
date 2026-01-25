@@ -59,6 +59,7 @@ import { ResizableImage } from "@/components/tiptap-node/image-node"
 import { DragHandle } from "@/components/tiptap-node/drag-handle"
 import { Columns, Column } from "@/components/tiptap-node/columns-node"
 import { GridDropZone } from "@/components/tiptap-node/grid-drop-zone"
+import { ExcalidrawNode } from "@/components/tiptap-node/excalidraw-node/excalidraw-node-extension"
 
 import "@/components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "@/components/tiptap-node/code-block-node/code-block-node.scss"
@@ -90,6 +91,7 @@ import { TextAlignButton } from "@/components/tiptap-ui/text-align-button"
 import { UndoRedoButton } from "@/components/tiptap-ui/undo-redo-button"
 import { WhiteboardButton } from "@/components/tiptap-ui/whiteboard-button"
 import { ColumnsButton } from "@/components/tiptap-ui/columns-button"
+import { ExcalidrawButton } from "@/components/tiptap-ui/excalidraw-button/excalidraw-button"
 
 // --- Icons ---
 import { ArrowLeftIcon } from "@/components/tiptap-icons/arrow-left-icon"
@@ -304,6 +306,7 @@ const MainToolbarContent = ({
       <ToolbarGroup>
         <ImageUploadButton text="Add" />
         <WhiteboardButton />
+        <ExcalidrawButton />
         <ColumnsButton />
       </ToolbarGroup>
 
@@ -592,6 +595,7 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
       }),
       WhiteboardNode,
       MermaidNode,
+      ExcalidrawNode,
       Table.configure({
         resizable: true,
         HTMLAttributes: {
@@ -651,6 +655,162 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
       window.removeEventListener("openAIPanel", handleOpenAIPanel)
     }
   }, [])
+
+  // Listen for PDF text insertion events from FileLibrary
+  useEffect(() => {
+    if (!editor) return
+
+    const handleInsertPDFText = (event: Event) => {
+      const customEvent = event as CustomEvent<{ text: string }>
+      const text = customEvent.detail?.text
+      if (text && editor) {
+        // Format inline markdown (bold, italic, code)
+        const formatInline = (str: string): string => {
+          return str
+            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+            .replace(/\*(.+?)\*/g, "<em>$1</em>")
+            .replace(/`([^`]+)`/g, "<code>$1</code>")
+        }
+
+        // Check if line is a table separator (|---|---|)
+        const isTableSeparator = (line: string): boolean => {
+          return /^\|?[\s\-:|]+\|[\s\-:|]+\|?$/.test(line.trim())
+        }
+
+        // Check if line is a table row
+        const isTableRow = (line: string): boolean => {
+          const trimmed = line.trim()
+          return trimmed.startsWith("|") && trimmed.endsWith("|") && trimmed.includes("|")
+        }
+
+        // Parse table row into cells
+        const parseTableRow = (line: string): string[] => {
+          return line.trim().split("|").filter((_, i, arr) => i > 0 && i < arr.length - 1).map(cell => cell.trim())
+        }
+
+        // Convert markdown to proper TipTap HTML blocks
+        const lines = text.split("\n")
+        let html = ""
+        let inCodeBlock = false
+        let codeContent = ""
+        let codeLanguage = ""
+        let inList = false
+        let inTable = false
+        let tableHeaders: string[] = []
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i]
+
+          // Handle code blocks
+          if (line.startsWith("```")) {
+            if (inList) { html += "</ul>"; inList = false }
+            if (inTable) { html += "</tbody></table>"; inTable = false }
+            if (!inCodeBlock) {
+              inCodeBlock = true
+              codeLanguage = line.slice(3).trim() || "plaintext"
+              codeContent = ""
+            } else {
+              inCodeBlock = false
+              html += `<pre><code class="language-${codeLanguage}">${codeContent.trim()}</code></pre>`
+            }
+            continue
+          }
+
+          if (inCodeBlock) {
+            codeContent += line + "\n"
+            continue
+          }
+
+          // Handle tables
+          if (isTableRow(line)) {
+            if (inList) { html += "</ul>"; inList = false }
+
+            // Check if next line is separator (this is header row)
+            const nextLine = lines[i + 1]
+            if (!inTable && nextLine && isTableSeparator(nextLine)) {
+              tableHeaders = parseTableRow(line)
+              html += "<table><thead><tr>"
+              tableHeaders.forEach(header => {
+                html += `<th>${formatInline(header)}</th>`
+              })
+              html += "</tr></thead><tbody>"
+              inTable = true
+              i++ // Skip separator line
+              continue
+            } else if (inTable) {
+              // Regular table row
+              const cells = parseTableRow(line)
+              html += "<tr>"
+              cells.forEach(cell => {
+                html += `<td>${formatInline(cell)}</td>`
+              })
+              html += "</tr>"
+              continue
+            }
+          } else if (inTable) {
+            // End of table
+            html += "</tbody></table>"
+            inTable = false
+          }
+
+          // Skip table separator lines that weren't caught
+          if (isTableSeparator(line)) {
+            continue
+          }
+
+          // Handle headers (####, ###, ##, #)
+          if (line.startsWith("#### ")) {
+            if (inList) { html += "</ul>"; inList = false }
+            html += `<h4>${formatInline(line.slice(5))}</h4>`
+          } else if (line.startsWith("### ")) {
+            if (inList) { html += "</ul>"; inList = false }
+            html += `<h3>${formatInline(line.slice(4))}</h3>`
+          } else if (line.startsWith("## ")) {
+            if (inList) { html += "</ul>"; inList = false }
+            html += `<h2>${formatInline(line.slice(3))}</h2>`
+          } else if (line.startsWith("# ")) {
+            if (inList) { html += "</ul>"; inList = false }
+            html += `<h1>${formatInline(line.slice(2))}</h1>`
+          }
+          // Handle bullet points
+          else if (line.match(/^[\-\*]\s/) && !isTableSeparator(line)) {
+            if (!inList) { html += "<ul>"; inList = true }
+            html += `<li>${formatInline(line.slice(2))}</li>`
+          }
+          // Handle numbered lists
+          else if (line.match(/^\d+\.\s/)) {
+            if (inList) { html += "</ul>"; inList = false }
+            const content = line.replace(/^\d+\.\s/, "")
+            html += `<p>${formatInline(content)}</p>`
+          }
+          // Handle blockquotes
+          else if (line.startsWith("> ")) {
+            if (inList) { html += "</ul>"; inList = false }
+            html += `<blockquote><p>${formatInline(line.slice(2))}</p></blockquote>`
+          }
+          // Handle empty lines
+          else if (line.trim() === "") {
+            if (inList) { html += "</ul>"; inList = false }
+          }
+          // Regular paragraph
+          else {
+            if (inList) { html += "</ul>"; inList = false }
+            html += `<p>${formatInline(line)}</p>`
+          }
+        }
+
+        if (inList) html += "</ul>"
+        if (inTable) html += "</tbody></table>"
+
+        editor.chain().focus().insertContent(html).run()
+      }
+    }
+
+    window.addEventListener("insertPDFText", handleInsertPDFText)
+    return () => {
+      window.removeEventListener("insertPDFText", handleInsertPDFText)
+    }
+  }, [editor])
 
   // Slash command detection
   useEffect(() => {
