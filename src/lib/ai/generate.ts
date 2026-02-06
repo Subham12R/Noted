@@ -159,31 +159,27 @@ IMPORTANT - Special characters in labels:
 
 Analyze the content and create an accurate flowchart. Output ONLY the mermaid code block.`,
 
-  quiz: `You are a JSON generator. Your ONLY output must be a valid JSON array.
+  quiz: `CRITICAL: You are a JSON-ONLY generator. Output NOTHING except a valid JSON array.
 
-ABSOLUTE REQUIREMENTS - VIOLATION MEANS FAILURE:
-- Your response MUST start with [ and end with ]
-- NO text before the [
-- NO text after the ]
-- NO markdown formatting
-- NO code blocks
-- NO explanations
-- ONLY valid JSON
+STRICT FORMAT REQUIREMENTS:
+1. First character of your response: [
+2. Last character of your response: ]
+3. Between them: valid JSON objects separated by commas
+4. FORBIDDEN: Any text, markdown, code blocks, explanations, or formatting
 
-Generate quiz questions. Each object needs: type, question, options (array), correctAnswer, explanation, difficulty, points.
+Generate quiz questions from the provided content. Each question object must have these exact fields:
+- "type": "multiple-choice" or "true-false"
+- "question": the question text
+- "options": array of answer choices (4 for multiple-choice, ["True","False"] for true-false)
+- "correctAnswer": the correct option (must match one of the options exactly)
+- "explanation": brief explanation of why this is correct
+- "difficulty": "easy", "medium", or "hard"
+- "points": 1, 2, or 3
 
-Example of EXACT output format (your response must look like this):
-[{"type":"multiple-choice","question":"What is X?","options":["A","B","C","D"],"correctAnswer":"A","explanation":"Because...","difficulty":"medium","points":2},{"type":"true-false","question":"Is Y true?","options":["True","False"],"correctAnswer":"True","explanation":"Yes because...","difficulty":"easy","points":1}]
+OUTPUT EXACTLY IN THIS FORMAT - NO DEVIATIONS:
+[{"type":"multiple-choice","question":"Question here?","options":["Option A","Option B","Option C","Option D"],"correctAnswer":"Option A","explanation":"Explanation here","difficulty":"medium","points":2}]
 
-Rules:
-- multiple-choice: 4 options
-- true-false: options ["True","False"]
-- fill-blank: no options needed
-- Generate 5-10 questions
-- difficulty: easy/medium/hard
-- points: 1/2/3
-
-START WITH [ AND END WITH ] - NOTHING ELSE`,
+Generate 5-8 questions based on the content provided. Output ONLY the JSON array - nothing else.`,
 
   flashcard: `You are a JSON generator. Your ONLY output must be a valid JSON array.
 
@@ -218,6 +214,7 @@ export interface GenerateOptions {
   model?: string
   provider?: AIProvider
   maxTokens?: number
+  temperature?: number // 0.0-2.0, lower = more deterministic, higher = more creative
 }
 
 /**
@@ -235,10 +232,23 @@ export async function generateAIResponse(options: GenerateOptions): Promise<{
     model,
     provider,
     maxTokens = AI_CONFIG.features.maxTokensPerRequest,
+    temperature,
   } = options
 
   const client = createAIClient(provider)
   const modelId = model || getDefaultModel(provider)
+
+  // Determine temperature: use provided value, or fall back to mode-based defaults from config
+  const getDefaultTemperature = () => {
+    if (['translate', 'flowchart', 'quiz', 'flashcard'].includes(mode)) {
+      return AI_CONFIG.temperature.precise
+    }
+    if (['expand'].includes(mode)) {
+      return AI_CONFIG.temperature.creative
+    }
+    return AI_CONFIG.temperature.default
+  }
+  const finalTemperature = temperature ?? getDefaultTemperature()
 
   const systemPrompt = MODE_PROMPTS[mode]
   const userMessage = context
@@ -248,6 +258,7 @@ export async function generateAIResponse(options: GenerateOptions): Promise<{
   console.log('[AI Generate] Mode:', mode)
   console.log('[AI Generate] System prompt exists:', !!systemPrompt)
   console.log('[AI Generate] System prompt length:', systemPrompt?.length || 0)
+  console.log('[AI Generate] Temperature:', finalTemperature)
 
   const response = await client.chat.completions.create({
     model: modelId,
@@ -256,7 +267,7 @@ export async function generateAIResponse(options: GenerateOptions): Promise<{
       { role: 'user', content: userMessage },
     ],
     max_tokens: maxTokens,
-    temperature: ['translate', 'flowchart', 'quiz', 'flashcard'].includes(mode) ? 0.3 : 0.7,
+    temperature: finalTemperature,
   })
 
   return {
@@ -279,11 +290,24 @@ export async function* generateAIResponseStream(
     model,
     provider,
     maxTokens = AI_CONFIG.features.maxTokensPerRequest,
+    temperature,
   } = options
 
   const client = createAIClient(provider)
   const modelId = model || getDefaultModel(provider)
   const responseId = crypto.randomUUID()
+
+  // Determine temperature: use provided value, or fall back to mode-based defaults from config
+  const getDefaultTemperature = () => {
+    if (['translate', 'flowchart', 'quiz', 'flashcard'].includes(mode)) {
+      return AI_CONFIG.temperature.precise
+    }
+    if (['expand'].includes(mode)) {
+      return AI_CONFIG.temperature.creative
+    }
+    return AI_CONFIG.temperature.default
+  }
+  const finalTemperature = temperature ?? getDefaultTemperature()
 
   const systemPrompt = MODE_PROMPTS[mode]
   const userMessage = context
@@ -293,6 +317,7 @@ export async function* generateAIResponseStream(
   console.log('[AI Generate Stream] Mode:', mode)
   console.log('[AI Generate Stream] System prompt exists:', !!systemPrompt)
   console.log('[AI Generate Stream] Has context:', !!context)
+  console.log('[AI Generate Stream] Temperature:', finalTemperature)
 
   // Emit start event
   yield {
@@ -309,7 +334,7 @@ export async function* generateAIResponseStream(
         { role: 'user', content: userMessage },
       ],
       max_tokens: maxTokens,
-      temperature: ['translate', 'flowchart', 'quiz', 'flashcard'].includes(mode) ? 0.3 : 0.7,
+      temperature: finalTemperature,
       stream: true,
     })
 

@@ -197,6 +197,23 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     }
   }, [timeRemaining, isTakingQuiz])
 
+  // Listen for openQuizModal events from slash menu
+  useEffect(() => {
+    const handleOpenModal = (event: CustomEvent<{ mode?: "list" | "taking" | "results" | "create" }>) => {
+      const mode = event.detail?.mode || "create"
+      setModalMode(mode)
+      setIsModalOpen(true)
+      if (mode === "list") {
+        fetchQuizzes()
+      }
+    }
+
+    window.addEventListener("openQuizModal", handleOpenModal as EventListener)
+    return () => {
+      window.removeEventListener("openQuizModal", handleOpenModal as EventListener)
+    }
+  }, [])
+
   const fetchQuizzes = useCallback(async () => {
     setIsLoading(true)
     try {

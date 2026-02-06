@@ -2,12 +2,12 @@
   --tt-toolbar-height: 2.75rem;
   --tt-header-height: 41px;
   --tt-safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --tt-toolbar-bg-color: #ffffff;
+  --tt-toolbar-bg-color: rgba(255, 255, 255, 0.85);
   --tt-toolbar-border-color: rgba(0, 0, 0, 0.1);
 }
 
 .dark {
-  --tt-toolbar-bg-color: rgb(24 24 27); /* zinc-900 */
+  --tt-toolbar-bg-color: rgba(24, 24, 27, 0.85); /* zinc-900 with transparency */
   --tt-toolbar-border-color: rgba(255, 255, 255, 0.1);
 }
 

@@ -1,6 +1,11 @@
 "use client"
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react"
+import { useRouter, usePathname } from "next/navigation"
+import { useAuth } from "@/context/AuthContext"
+
+// Routes that don't require authentication
+const PUBLIC_ROUTES = ["/login", "/register", "/pricing", "/share"]
 
 export interface Page {
   id: string
@@ -217,12 +222,26 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const router = useRouter()
+  const pathname = usePathname()
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
+
+  // Check if current route is public (doesn't require auth)
+  const isPublicRoute = PUBLIC_ROUTES.some(route => pathname?.startsWith(route))
+
   // Debounce timer ref for saving content
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const pendingSavesRef = useRef<Map<string, string>>(new Map())
 
   // Fetch folders and pages from backend
   const fetchData = useCallback(async () => {
+    // Don't fetch if not authenticated or on public route
+    if (!isAuthenticated || isPublicRoute) {
+      setFolders([])
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
     try {
@@ -232,10 +251,11 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       ])
 
       if (!foldersRes.ok || !pagesRes.ok) {
-        // If unauthorized (401), just set empty state - user not logged in
+        // If unauthorized (401), redirect to login (only for protected routes)
         if (foldersRes.status === 401 || pagesRes.status === 401) {
           setFolders([])
           setIsLoading(false)
+          router.push("/login")
           return
         }
         throw new Error("Failed to fetch data")
@@ -256,12 +276,31 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [isAuthenticated, isPublicRoute, router])
 
-  // Fetch data on mount
+  // Fetch data when auth state is resolved
   useEffect(() => {
+    // Wait for auth to finish loading
+    if (authLoading) {
+      return
+    }
+
+    // Skip redirect and data fetch for public routes
+    if (isPublicRoute) {
+      setIsLoading(false)
+      return
+    }
+
+    // If not authenticated on protected route, redirect to login
+    if (!isAuthenticated) {
+      router.push("/login")
+      setIsLoading(false)
+      return
+    }
+
+    // Authenticated - fetch data
     fetchData()
-  }, [fetchData])
+  }, [authLoading, isAuthenticated, isPublicRoute, fetchData, router])
 
   // Cleanup: save pending content when component unmounts or page unloads
   useEffect(() => {

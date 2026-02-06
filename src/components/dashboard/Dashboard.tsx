@@ -109,20 +109,20 @@ export function Dashboard() {
   const firstName = user?.name?.split(" ")[0] || "there"
 
   return (
-    <div className="min-h-full pb-24 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white transition-colors duration-300">
+    <div className="min-h-full pb-20 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-6 py-8 lg:px-8">
         {/* Header Section */}
         <header className="mb-12">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-sm font-medium text-zinc-200 dark:text-zinc-200 mb-1 tracking-tighter">
+              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1 tracking-tighter">
                 {currentDate}
               </p>
               <h1 className="text-4xl lg:text-5xl font-bold tracking-tight mb-3">
-                <span className="text-zinc-200 dark:text-zinc-200">{greeting}, </span>
+                <span className="text-zinc-500 dark:text-zinc-400">{greeting}, </span>
                 <span className="text-zinc-900 dark:text-white font-grandhotel italic text-6xl">{firstName}!</span>
               </h1>
-              <p className="text-zinc-200 dark:text-zinc-200 max-w-lg">
+              <p className="text-zinc-500 dark:text-zinc-400 max-w-lg">
                 Ready to capture your ideas? Create, organize, and collaborate on your notes.
               </p>
             </div>
@@ -144,12 +144,12 @@ export function Dashboard() {
             <section className="lg:col-span-2 h-full">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <HugeiconsIcon icon={Clock01Icon} size={20} className="text-zinc-200 dark:text-zinc-200" />
+                  <HugeiconsIcon icon={Clock01Icon} size={20} className="text-zinc-500 dark:text-zinc-400" />
                   <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Recent Notes</h2>
                 </div>
               </div>
-              <div className="flex gap-4 justify-start overflow-x-auto px-4 outline-1 outline-white/10 rounded-2xl py-4">
-                {recentPages.slice(0, 4).map(({ page, folderId }) => (
+              <div className="flex gap-2 justify-start overflow-x-auto rounded-2xl py-2">
+                {recentPages.slice(0, 10).map(({ page, folderId }) => (
                   <PageCard
                     key={page.id}
                     page={page}
@@ -165,7 +165,7 @@ export function Dashboard() {
           {/* Todo List Section */}
           <section className={recentPages.length > 0 ? "lg:col-span-1" : "lg:col-span-3"}>
             <div className="flex items-center gap-3 mb-4 ">
-              <HugeiconsIcon icon={CheckListIcon} size={20} className="text-zinc-200 dark:text-zinc-200" />
+              <HugeiconsIcon icon={CheckListIcon} size={20} className="text-zinc-500 dark:text-zinc-400" />
               <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Todo List</h2>
             </div>
             <TodoList />
@@ -178,7 +178,7 @@ export function Dashboard() {
           <section className="lg:col-span-3">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <HugeiconsIcon icon={Folder01Icon} size={20} className="text-zinc-200 dark:text-zinc-200" />
+                <HugeiconsIcon icon={Folder01Icon} size={20} className="text-zinc-500 dark:text-zinc-400" />
                 <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">My Files</h2>
               </div>
               <button
@@ -190,9 +190,9 @@ export function Dashboard() {
               </button>
             </div>
 
-            <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 min-h-[300px]">
+            <div className="  min-h-[300px]">
               {folders.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6">
                   {folders.map((folder) => (
                     <FolderCard
                       key={folder.id}
@@ -228,7 +228,7 @@ export function Dashboard() {
           {/* Shared With Me Section */}
           <section className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-8">
-              <HugeiconsIcon icon={Share01Icon} size={20} className="text-zinc-200 dark:text-zinc-200" />
+              <HugeiconsIcon icon={Share01Icon} size={20} className="text-zinc-500 dark:text-zinc-400" />
               <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Shared With Me</h2>
             </div>
             <SharedWithMe />
@@ -273,7 +273,7 @@ function EmptyState({
         </div>
       )}
       <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">{title}</h3>
-      <p className="text-sm text-zinc-200 dark:text-zinc-200 mb-6 max-w-sm">{description}</p>
+      <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 max-w-sm">{description}</p>
       {action}
     </div>
   )

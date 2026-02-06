@@ -141,6 +141,10 @@ export const DragHandle = Extension.create<DragHandleOptions>({
 
     let hideTimeout: NodeJS.Timeout | null = null
 
+    // Track the position of the node being dragged
+    let draggedNodePos: number | null = null
+    let draggedNodeSize: number | null = null
+
     return [
       new Plugin({
         key: new PluginKey("dragHandle"),
@@ -169,6 +173,10 @@ export const DragHandle = Extension.create<DragHandleOptions>({
               const nodeSelection = NodeSelection.create(view.state.doc, nodePos)
               view.dispatch(view.state.tr.setSelection(nodeSelection))
 
+              // Store the position and size for deletion after drop
+              draggedNodePos = nodePos
+              draggedNodeSize = nodeSelection.node.nodeSize
+
               const slice = view.state.selection.content()
 
               // Create a temporary element to hold the serialized content
@@ -180,6 +188,11 @@ export const DragHandle = Extension.create<DragHandleOptions>({
               event.dataTransfer?.clearData()
               event.dataTransfer?.setData("text/html", tempDiv.innerHTML)
               event.dataTransfer?.setData("text/plain", tempDiv.textContent || "")
+              // Store position info in dataTransfer for drop handling
+              event.dataTransfer?.setData("application/x-prosemirror-drag", JSON.stringify({
+                pos: nodePos,
+                size: nodeSelection.node.nodeSize
+              }))
               event.dataTransfer!.effectAllowed = "move"
 
               if (dragHandleElement) {
@@ -194,6 +207,9 @@ export const DragHandle = Extension.create<DragHandleOptions>({
             if (dragHandleElement) {
               dragHandleElement.style.cursor = "grab"
             }
+            // Reset drag state
+            draggedNodePos = null
+            draggedNodeSize = null
           }
 
           // Keep handle visible when mouse is over it
@@ -267,6 +283,71 @@ export const DragHandle = Extension.create<DragHandleOptions>({
                 hideDragHandle()
               }, 100)
               return false
+            },
+            drop: (view, event) => {
+              // Check if this is our drag operation
+              const dragData = event.dataTransfer?.getData("application/x-prosemirror-drag")
+              if (!dragData || !draggedNodePos || !draggedNodeSize) return false
+
+              try {
+                const originalPos = draggedNodePos
+                const originalSize = draggedNodeSize
+
+                // Get drop position
+                const dropCoords = view.posAtCoords({ left: event.clientX, top: event.clientY })
+                if (!dropCoords) return false
+
+                const dropPos = dropCoords.pos
+
+                // Prevent dropping on itself
+                if (dropPos >= originalPos && dropPos <= originalPos + originalSize) {
+                  event.preventDefault()
+                  return true
+                }
+
+                // Create a transaction that moves the node
+                const { state } = view
+                const resolvedOriginal = state.doc.resolve(originalPos)
+                const nodeToMove = resolvedOriginal.nodeAfter
+
+                if (!nodeToMove) return false
+
+                // Calculate adjusted drop position
+                let adjustedDropPos = dropPos
+
+                // Create transaction
+                let tr = state.tr
+
+                // If dropping after the original position, we delete first then insert
+                // If dropping before, we insert first then delete (with adjusted position)
+                if (dropPos > originalPos) {
+                  // Delete original first
+                  tr = tr.delete(originalPos, originalPos + nodeToMove.nodeSize)
+                  // Adjust drop position since we deleted content before it
+                  adjustedDropPos = dropPos - nodeToMove.nodeSize
+                  // Insert at adjusted position
+                  tr = tr.insert(adjustedDropPos, nodeToMove)
+                } else {
+                  // Insert first
+                  tr = tr.insert(dropPos, nodeToMove)
+                  // Delete original (now shifted by the inserted content)
+                  tr = tr.delete(originalPos + nodeToMove.nodeSize, originalPos + nodeToMove.nodeSize + nodeToMove.nodeSize)
+                }
+
+                view.dispatch(tr)
+
+                // Prevent default to stop duplicate insertion
+                event.preventDefault()
+
+                // Reset drag state
+                draggedNodePos = null
+                draggedNodeSize = null
+
+                return true
+              } catch (e) {
+                console.warn("Error handling drop:", e)
+                return false
+              }
             },
           },
         },

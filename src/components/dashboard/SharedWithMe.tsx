@@ -4,66 +4,96 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
+import { X, Pencil, Eye } from "lucide-react"
+import { toast } from "sonner"
 import type { SharedPage, SharedFolder } from "@/app/api/shared-with-me/route"
 
-// Available folder images
-const folderImages = [
-  "/Folders/Folder-1.png",
-  "/Folders/Folder-2.png",
-  "/Folders/Folder-3.png",
-  "/Folders/Folder-4.png",
-  "/Folders/Folder-5.png",
-  "/Folders/Folder-6.png",
-  "/Folders/Folder-7.png",
-  "/Folders/Folder-8.png",
-]
-
-function SharedPageCard({ page }: { page: SharedPage }) {
-  // Get preview text from content (strip HTML)
-  const getPreview = (content?: string | null) => {
-    if (!content) return "Empty note"
-    const stripped = content.replace(/<[^>]*>/g, "").trim()
-    return stripped.slice(0, 60) || "Empty note"
-  }
+function SharedPageCard({ page, onRemove }: { page: SharedPage; onRemove: (id: string) => void }) {
+  const [isRemoving, setIsRemoving] = useState(false)
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "admin":
         return "bg-purple-500/20 text-purple-300 border-purple-500/30"
       case "editor":
-        return "bg-blue-900 text-blue-300 border-blue-500/30"
+        return "bg-blue-500/20 text-blue-300 border-blue-500/30"
       default:
         return "bg-zinc-500/20 text-zinc-300 border-zinc-500/30"
     }
   }
 
+  const handleRemove = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsRemoving(true)
+
+    try {
+      const res = await fetch(`/api/shared-with-me/${page.id}`, {
+        method: "DELETE",
+      })
+
+      if (!res.ok) throw new Error("Failed to remove access")
+
+      onRemove(page.id)
+      toast.success("Access removed")
+    } catch (err) {
+      toast.error("Failed to remove access")
+      setIsRemoving(false)
+    }
+  }
+
   return (
-    <div className="relative rounded-2xl transition-all duration-200 hover:-translate-y-0.5 group">
+    <div className="relative rounded-2xl transition-all duration-200 hover:-translate-y-1 group">
       {/* Role badge */}
-      <div className="absolute -top-0 -right-0 z-10">
+      <div className="absolute top-0 left-0 z-10">
         <span className={`text-[10px] px-2 py-0.5 rounded-full border ${getRoleBadgeColor(page.role)}`}>
           {page.role}
         </span>
       </div>
 
-      <Link href={`/note/${page.id}`} className="flex flex-col items-center no-underline text-inherit">
-        <div className="w-20 h-20 flex items-start justify-start transition-transform duration-200 group-hover:scale-105 [&_img]:w-full [&_img]:h-full [&_img]:object-contain [&_img]:drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
-          <Image
-            src="/note.png"
-            alt={page.name}
-            width={80}
-            height={80}
-            draggable={false}
-          />
+      {/* Remove button */}
+      <div className="absolute top-0 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <button
+          onClick={handleRemove}
+          disabled={isRemoving}
+          className="w-6 h-6 rounded-md text-white flex items-center justify-center transition-all duration-150 disabled:opacity-50"
+          title="Remove access"
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      <Link href={`/note/${page.id}`} className="flex flex-col items-center no-underline text-inherit p-3">
+        {/* Visual Page Icon */}
+        <div className="relative w-14 h-[72px] mb-3 transition-transform duration-200 group-hover:scale-105">
+          {/* Paper */}
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-700 dark:to-zinc-800 rounded-sm shadow-lg border border-zinc-200/50 dark:border-zinc-600/50">
+            {/* Corner Fold */}
+            <div className="absolute top-0 right-0 w-4 h-4 bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-600 dark:to-zinc-700 rounded-bl-md" />
+
+            {/* Text Lines */}
+            <div className="absolute top-5 left-2 right-2 space-y-1.5">
+              <div className="h-1 bg-zinc-300/60 dark:bg-zinc-500/60 rounded-full w-full" />
+              <div className="h-1 bg-zinc-300/60 dark:bg-zinc-500/60 rounded-full w-4/5" />
+              <div className="h-1 bg-zinc-300/60 dark:bg-zinc-500/60 rounded-full w-3/5" />
+              <div className="h-1 bg-zinc-300/60 dark:bg-zinc-500/60 rounded-full w-4/5" />
+              <div className="h-1 bg-zinc-300/60 dark:bg-zinc-500/60 rounded-full w-2/5" />
+            </div>
+          </div>
         </div>
 
+        {/* Page Name */}
         <div className="flex flex-col items-center text-center max-w-[120px]">
-          <span className="text-sm font-semibold text-foreground overflow-hidden text-ellipsis whitespace-nowrap max-w-full mb-1">
-            {page.name}
-          </span>
-          <span className="text-xs text-foreground/50 overflow-hidden text-ellipsis whitespace-nowrap max-w-full">
-            {getPreview(page.content)}
-          </span>
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-sm font-semibold text-foreground overflow-hidden text-ellipsis whitespace-nowrap max-w-[100px]">
+              {page.name}
+            </span>
+            {page.role === "editor" || page.role === "admin" ? (
+              <Pencil size={12} className="text-blue-400 flex-shrink-0" />
+            ) : (
+              <Eye size={12} className="text-zinc-400 flex-shrink-0" />
+            )}
+          </div>
           <div className="flex items-center gap-1 mt-1">
             {page.ownerImage ? (
               <Image
@@ -88,7 +118,9 @@ function SharedPageCard({ page }: { page: SharedPage }) {
   )
 }
 
-function SharedFolderCard({ folder }: { folder: SharedFolder }) {
+function SharedFolderCard({ folder, onRemove }: { folder: SharedFolder; onRemove: (id: string) => void }) {
+  const [isRemoving, setIsRemoving] = useState(false)
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "admin":
@@ -100,37 +132,68 @@ function SharedFolderCard({ folder }: { folder: SharedFolder }) {
     }
   }
 
-  // Get folder image based on folder's image property or use a consistent one based on id
-  const getFolderImage = () => {
-    if (folder.image) return folder.image
-    // Generate a consistent index based on folder id
-    const hash = folder.id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
-    return folderImages[hash % folderImages.length]
+  const handleRemove = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsRemoving(true)
+
+    try {
+      const res = await fetch(`/api/shared-with-me/${folder.id}?type=folder`, {
+        method: "DELETE",
+      })
+
+      if (!res.ok) throw new Error("Failed to remove access")
+
+      onRemove(folder.id)
+      toast.success("Access removed")
+    } catch (err) {
+      toast.error("Failed to remove access")
+      setIsRemoving(false)
+    }
   }
 
   return (
-    <div className="relative rounded-2xl transition-all duration-200 hover:-translate-y-0.5 group">
+    <div className="relative rounded-2xl transition-all duration-200 hover:-translate-y-1 group">
       {/* Role badge */}
-      <div className="absolute -top-2 -right-2 z-10">
+      <div className="absolute top-0 left-0 z-10">
         <span className={`text-[10px] px-2 py-0.5 rounded-full border ${getRoleBadgeColor(folder.role)}`}>
           {folder.role}
         </span>
       </div>
 
-      <Link href={`/folder/${folder.id}?shared=true`} className="flex flex-col items-center no-underline text-inherit">
-        <div className="w-20 h-20 flex items-start justify-start transition-transform duration-200 group-hover:scale-105 [&_img]:w-full [&_img]:h-full [&_img]:object-contain [&_img]:drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
-          <Image
-            src={getFolderImage()}
-            alt={folder.name}
-            width={80}
-            height={80}
-            draggable={false}
-          />
+      {/* Remove button */}
+      <div className="absolute top-0 right-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <button
+          onClick={handleRemove}
+          disabled={isRemoving}
+          className="w-6 h-6 rounded-md bg-red-500/80 hover:bg-red-500 text-white flex items-center justify-center transition-all duration-150 disabled:opacity-50"
+          title="Remove access"
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      <Link href={`/folder/${folder.id}?shared=true`} className="flex flex-col items-center no-underline text-inherit p-3">
+        {/* Visual Folder Icon */}
+        <div className="relative w-20 h-16 mb-3 transition-transform duration-200 group-hover:scale-105">
+          {/* Folder Back */}
+          <div className="absolute bottom-0 left-0 w-full h-14 bg-amber-400 dark:bg-zinc-800 rounded-md rounded-tl-none">
+            <div className="absolute -top-2.5 left-0 w-8 h-3 bg-amber-400 dark:bg-zinc-800 rounded-t-md" />
+          </div>
+          {/* Folder Front */}
+          <div className="absolute bottom-0 left-0 w-full h-10 bg-amber-300/80 dark:bg-white/20 backdrop-blur-sm rounded-md rounded-tl-sm shadow-lg" />
         </div>
 
-        <span className="text-sm font-semibold text-foreground text-center overflow-hidden text-ellipsis whitespace-nowrap max-w-full mb-1">
-          {folder.name}
-        </span>
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="text-sm font-semibold text-foreground text-center overflow-hidden text-ellipsis whitespace-nowrap max-w-[100px]">
+            {folder.name}
+          </span>
+          {folder.role === "editor" || folder.role === "admin" ? (
+            <Pencil size={12} className="text-zinc-400 flex-shrink-0" />
+          ) : (
+            <Eye size={12} className="text-zinc-400 flex-shrink-0" />
+          )}
+        </div>
 
         <span className="text-xs text-foreground/50">
           {folder.pageCount} {folder.pageCount === 1 ? "note" : "notes"}
@@ -219,7 +282,7 @@ function ShareLinkInput() {
       <button
         type="submit"
         disabled={isLoading || !link.trim()}
-        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition-colors"
+        className="px-4 py-3 bg-zinc-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition-colors"
       >
         {isLoading ? "Opening..." : "Open"}
       </button>
@@ -267,10 +330,18 @@ export function SharedWithMe() {
     fetchSharedItems()
   }, [])
 
+  const handleRemovePage = (pageId: string) => {
+    setSharedPages((prev) => prev.filter((p) => p.id !== pageId))
+  }
+
+  const handleRemoveFolder = (folderId: string) => {
+    setSharedFolders((prev) => prev.filter((f) => f.id !== folderId))
+  }
+
   // Prevent hydration mismatch
   if (!hasMounted) {
     return (
-      <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 px-4 py-4 rounded-2xl min-h-75 max-h-125">
+      <div className="px-4 py-4 min-h-75 max-h-125">
         <div className="mb-4">
           <ShareLinkInput />
         </div>
@@ -283,7 +354,7 @@ export function SharedWithMe() {
 
   if (error) {
     return (
-      <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 px-4 py-4 rounded-2xl min-h-75 max-h-125">
+      <div className="px-4 py-4 min-h-75 max-h-125">
         <div className="mb-4">
           <ShareLinkInput />
         </div>
@@ -299,7 +370,7 @@ export function SharedWithMe() {
   const hasSharedItems = sharedPages.length > 0 || sharedFolders.length > 0
 
   return (
-    <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 px-4 py-4 rounded-2xl min-h-75 max-h-125 overflow-y-auto">
+    <div className="px-4 py-4 min-h-75 max-h-125 overflow-y-auto">
       {/* Share link input */}
       <div className="mb-4">
         <ShareLinkInput />
@@ -320,9 +391,9 @@ export function SharedWithMe() {
           {sharedFolders.length > 0 && (
             <div className="mb-6">
               <h3 className="text-sm font-medium text-foreground/70 mb-3">Folders</h3>
-              <div className="flex gap-8 justify-start items-start flex-wrap">
+              <div className="flex gap-6 justify-start items-start flex-wrap">
                 {sharedFolders.map((folder) => (
-                  <SharedFolderCard key={folder.id} folder={folder} />
+                  <SharedFolderCard key={folder.id} folder={folder} onRemove={handleRemoveFolder} />
                 ))}
               </div>
             </div>
@@ -333,9 +404,9 @@ export function SharedWithMe() {
               {sharedFolders.length > 0 && (
                 <h3 className="text-sm font-medium text-foreground/70 mb-3">Notes</h3>
               )}
-              <div className="flex gap-8 justify-start items-start flex-wrap">
+              <div className="flex gap-6 justify-start items-start flex-wrap">
                 {sharedPages.map((page) => (
-                  <SharedPageCard key={page.id} page={page} />
+                  <SharedPageCard key={page.id} page={page} onRemove={handleRemovePage} />
                 ))}
               </div>
             </div>

@@ -10,6 +10,7 @@ import { FlashcardProvider } from "@/context/FlashcardContext";
 import { QuizProvider } from "@/context/QuizContext";
 import { FileLibraryProvider } from "@/context/FileLibraryContext";
 import { TagProvider } from "@/context/TagContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { Toaster } from "sonner";
 import { FloatingPomodoro } from "@/components/pomodoro";
 import { FlashcardModal } from "@/components/flashcards";
@@ -43,10 +44,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme');
+                  if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${grandstander.variable} antialiased`}
       >
+        <ThemeProvider>
         <AuthProvider>
           <AIProvider>
             <SidebarProvider>
@@ -93,6 +113,7 @@ export default function RootLayout({
             </SidebarProvider>
           </AIProvider>
         </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -35,6 +35,13 @@ export const AI_CONFIG = {
     maxTokensPerRequest: parseInt(process.env.AI_MAX_TOKENS_PER_REQUEST || '4096'),
     maxContextTokens: parseInt(process.env.AI_MAX_CONTEXT_TOKENS || '8192'),
   },
+
+  // Temperature settings (0.0 = deterministic, 1.0 = creative, 2.0 = max randomness)
+  temperature: {
+    default: parseFloat(process.env.AI_TEMPERATURE || '0.7'),
+    precise: parseFloat(process.env.AI_TEMPERATURE_PRECISE || '0.3'), // For structured outputs (quiz, flashcard, flowchart, translate)
+    creative: parseFloat(process.env.AI_TEMPERATURE_CREATIVE || '0.9'), // For creative writing tasks
+  },
 }
 
 // Validate configuration on startup

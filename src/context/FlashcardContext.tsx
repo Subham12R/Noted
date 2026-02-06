@@ -197,6 +197,23 @@ export function FlashcardProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("noted-flashcard-progress", JSON.stringify(data))
   }, [cardProgress])
 
+  // Listen for openFlashcardsModal events from slash menu
+  useEffect(() => {
+    const handleOpenModal = (event: CustomEvent<{ mode?: "list" | "review" | "create" | "edit" }>) => {
+      const mode = event.detail?.mode || "create"
+      setModalMode(mode)
+      setIsModalOpen(true)
+      if (mode === "list") {
+        fetchDecks()
+      }
+    }
+
+    window.addEventListener("openFlashcardsModal", handleOpenModal as EventListener)
+    return () => {
+      window.removeEventListener("openFlashcardsModal", handleOpenModal as EventListener)
+    }
+  }, [])
+
   const fetchDecks = useCallback(async () => {
     setIsLoading(true)
     setError(null)

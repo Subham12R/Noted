@@ -1,9 +1,35 @@
 "use client"
 
 import { NodeViewWrapper, NodeViewProps } from "@tiptap/react"
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef, useEffect, Component, ReactNode } from "react"
 import dynamic from "next/dynamic"
 import { Maximize2, Minimize2, Download, Trash2, GripVertical } from "lucide-react"
+
+// Error boundary for Excalidraw component
+class ExcalidrawErrorBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode; fallback: ReactNode }) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error) {
+    console.warn("Excalidraw error:", error.message)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback
+    }
+    return this.props.children
+  }
+}
 
 // Dynamically import Excalidraw to avoid SSR issues
 const Excalidraw = dynamic(
@@ -22,13 +48,21 @@ function ExcalidrawPlaceholder() {
   )
 }
 
-// Error boundary for Excalidraw
-function ExcalidrawErrorFallback() {
+// Error fallback for Excalidraw
+function ExcalidrawErrorFallback({ onRetry }: { onRetry?: () => void }) {
   return (
     <div className="w-full h-full flex items-center justify-center bg-zinc-800/50 rounded-lg min-h-[200px]">
       <div className="text-center">
-        <p className="text-sm text-zinc-400">Failed to load Excalidraw</p>
-        <p className="text-xs text-zinc-500 mt-1">Try refreshing the page</p>
+        <p className="text-sm text-zinc-400">Drawing canvas unavailable</p>
+        <p className="text-xs text-zinc-500 mt-1">Your browser may not support this canvas size</p>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="mt-3 px-3 py-1.5 text-xs bg-zinc-700 hover:bg-zinc-600 rounded-lg text-zinc-300 transition-colors"
+          >
+            Try Again
+          </button>
+        )}
       </div>
     </div>
   )
@@ -46,14 +80,38 @@ export function ExcalidrawNodeView({ node, updateAttributes, deleteNode, selecte
   const containerRef = useRef<HTMLDivElement>(null)
   const startPos = useRef({ x: 0, y: 0, width: 0, height: 0 })
 
+  // Check if canvas would exceed browser limits
+  const canRenderCanvas = useCallback(() => {
+    // Most browsers have a max canvas size around 16384x16384 or 268 million pixels
+    // With devicePixelRatio of 2-3, we need to be conservative
+    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1
+    const maxSafeSize = 8000 / dpr // Be conservative
+    return dimensions.width <= maxSafeSize && dimensions.height <= maxSafeSize
+  }, [dimensions])
+
   // Delay rendering to ensure container is ready
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (containerRef.current) {
+      if (containerRef.current && canRenderCanvas()) {
         setIsReady(true)
+      } else if (!canRenderCanvas()) {
+        setHasError(true)
       }
     }, 100)
     return () => clearTimeout(timer)
+  }, [canRenderCanvas])
+
+  // Catch canvas errors at runtime
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      if (event.message?.includes("Canvas exceeds max size") ||
+          event.message?.includes("canvas") && event.message?.includes("size")) {
+        event.preventDefault()
+        setHasError(true)
+      }
+    }
+    window.addEventListener("error", handleError)
+    return () => window.removeEventListener("error", handleError)
   }, [])
 
   // Parse initial data with safe defaults
@@ -68,7 +126,9 @@ export function ExcalidrawNodeView({ node, updateAttributes, deleteNode, selecte
     appState: {
       theme: "dark" as const,
       viewBackgroundColor: "#1e1e1e",
-      zoom: { value: 1 },
+      // Limit the zoom to prevent canvas size issues
+      zoom: { value: 1 as number & { _brand: "normalizedZoom" } },
+      // Constrain scroll to prevent large canvas
       scrollX: 0,
       scrollY: 0,
     },
@@ -79,18 +139,29 @@ export function ExcalidrawNodeView({ node, updateAttributes, deleteNode, selecte
         return {}
       }
     })(),
+    scrollToContent: true,
   }
 
+  // Debounce ref for saving changes
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   const handleChange = useCallback(
-    (elements: any[], appState: any, files: any) => {
-      const timeoutId = setTimeout(() => {
+    (elements: readonly unknown[], appState: unknown, files: unknown) => {
+      // Clear previous timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+
+      // Debounce save
+      saveTimeoutRef.current = setTimeout(() => {
         try {
+          const appStateObj = appState as Record<string, unknown>
           updateAttributes({
             elements: JSON.stringify(elements),
             appState: JSON.stringify({
-              viewBackgroundColor: appState.viewBackgroundColor,
-              currentItemFontFamily: appState.currentItemFontFamily,
-              gridSize: appState.gridSize,
+              viewBackgroundColor: appStateObj?.viewBackgroundColor,
+              currentItemFontFamily: appStateObj?.currentItemFontFamily,
+              gridSize: appStateObj?.gridSize,
             }),
             files: JSON.stringify(files || {}),
           })
@@ -98,8 +169,6 @@ export function ExcalidrawNodeView({ node, updateAttributes, deleteNode, selecte
           console.warn("Failed to save Excalidraw state:", e)
         }
       }, 500)
-
-      return () => clearTimeout(timeoutId)
     },
     [updateAttributes]
   )
@@ -205,17 +274,19 @@ export function ExcalidrawNodeView({ node, updateAttributes, deleteNode, selecte
 
           {/* Excalidraw */}
           <div style={{ width: "100vw", height: "100vh" }}>
-            <Excalidraw
-              initialData={initialData}
-              onChange={handleChange}
-              theme="dark"
-              UIOptions={{
-                canvasActions: {
-                  saveAsImage: true,
-                  export: { saveFileToDisk: true },
-                },
-              }}
-            />
+            <ExcalidrawErrorBoundary fallback={<ExcalidrawErrorFallback />}>
+              <Excalidraw
+                initialData={initialData}
+                onChange={handleChange}
+                theme="dark"
+                UIOptions={{
+                  canvasActions: {
+                    saveAsImage: true,
+                    export: { saveFileToDisk: true },
+                  },
+                }}
+              />
+            </ExcalidrawErrorBoundary>
           </div>
         </div>
       </NodeViewWrapper>
@@ -272,20 +343,23 @@ export function ExcalidrawNodeView({ node, updateAttributes, deleteNode, selecte
             position: "absolute",
             top: 0,
             left: 0,
+            overflow: "hidden",
           }}
         >
           {isReady ? (
-            <Excalidraw
-              initialData={initialData}
-              onChange={handleChange}
-              theme="dark"
-              UIOptions={{
-                canvasActions: {
-                  saveAsImage: false,
-                  export: false,
-                },
-              }}
-            />
+            <ExcalidrawErrorBoundary fallback={<ExcalidrawErrorFallback />}>
+              <Excalidraw
+                initialData={initialData}
+                onChange={handleChange}
+                theme="dark"
+                UIOptions={{
+                  canvasActions: {
+                    saveAsImage: false,
+                    export: false,
+                  },
+                }}
+              />
+            </ExcalidrawErrorBoundary>
           ) : (
             <ExcalidrawPlaceholder />
           )}

@@ -773,23 +773,11 @@ INSTRUCTIONS:
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 pt-6 pb-4 px-4">
-      {/* Backdrop blur gradient */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: 'linear-gradient(to top, rgba(24, 24, 27, 0.98) 0%, rgba(24, 24, 27, 0.9) 30%, rgba(24, 24, 27, 0.6) 60%, rgba(24, 24, 27, 0) 100%)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          maskImage: 'linear-gradient(to top, black 0%, black 50%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to top, black 0%, black 50%, transparent 100%)',
-        }}
-      />
-
       <div className="max-w-3xl mx-auto relative">
         {/* Chat Area */}
         {(messages.length > 0 || streamingContent || isProcessing || error) && (
           <div
-            className="mb-4 rounded-2xl overflow-hidden transition-all duration-300 border border-white/10"
+            className="mb-4  rounded-2xl overflow-hidden transition-all duration-300 border border-white/10"
             style={{
               background: 'rgba(255, 255, 255, 0.03)',
               backdropFilter: 'blur(24px)',
@@ -929,7 +917,7 @@ INSTRUCTIONS:
         )}
 
         {/* Main Input Container */}
-        <div className="relative flex items-end gap-2 backdrop-blur-2xl bg-zinc-900/10 dark:bg-zinc-100/5 rounded-xl dark:border-zinc-600/40 border border-zinc-200/60 shadow-lg">
+        <div className="relative flex items-end gap-2 backdrop-blur-3xl  rounded-xl dark:border-zinc-600/40 border border-zinc-200/60">
           {/* Folder Selector - Custom styled dropdown */}
           <div className="relative p-2 ml-1 group">
             <button

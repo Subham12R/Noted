@@ -9,6 +9,10 @@ import { CloseIcon } from "@/components/tiptap-icons/close-icon"
 import { TrashIcon } from "@/components/tiptap-icons/trash-icon"
 import { EditIcon } from "@/components/tiptap-icons/edit-icon"
 import { PinIcon, PinOffIcon } from "@/components/tiptap-icons/pin-icon"
+import { SidebarTabs, SidebarTab } from "./SidebarTabs"
+import { SidebarSearch } from "./SidebarSearch"
+import { SidebarTagsTab } from "./SidebarTagsTab"
+import { SidebarStudyTab } from "./SidebarStudyTab"
 import "./sidebar.scss"
 import Link from "next/link"
 
@@ -44,12 +48,23 @@ export interface SidebarProps {
   onRenamePage: (folderId: string, pageId: string, newName: string) => void
   onMovePage?: (pageId: string, targetFolderId: string) => Promise<void>
   onMoveFolder?: (folderId: string, targetParentId: string | null) => Promise<void>
+  onSearchClick?: () => void
 }
 
 interface DragData {
   type: "page" | "folder"
   id: string
   sourceFolderId?: string
+}
+
+// Helper to count all items in a folder (pages + subfolders recursively)
+function countFolderItems(folder: Folder): number {
+  const pageCount = folder.pages.length
+  const subfolderCount = folder.folders?.length || 0
+  const subfolderItems = folder.folders?.reduce(
+    (sum, f) => sum + countFolderItems(f), 0
+  ) || 0
+  return pageCount + subfolderCount + subfolderItems
 }
 
 interface FolderItemProps {
@@ -137,6 +152,9 @@ function FolderItem({
   // Check if this folder would be an invalid drop target
   const isInvalidDropTarget = draggingId !== null && isDescendantOf(folder.id, draggingId)
 
+  // Calculate item count
+  const itemCount = countFolderItems(folder)
+
   return (
     <div className="sidebar-folder" style={{ marginLeft: depth > 0 ? `${depth * 0.75}rem` : 0 }}>
       <div
@@ -175,6 +193,9 @@ function FolderItem({
           />
         ) : (
           <span className="folder-name">{folder.name}</span>
+        )}
+        {itemCount > 0 && !isEditingFolder && (
+          <span className="folder-count">{itemCount}</span>
         )}
         <div className="folder-actions">
           <button
@@ -332,12 +353,14 @@ export function Sidebar({
   onRenamePage,
   onMovePage,
   onMoveFolder,
+  onSearchClick,
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState("")
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragData, setDragData] = useState<DragData | null>(null)
+  const [activeTab, setActiveTab] = useState<SidebarTab>("folders")
 
   // Auto-expand folders containing the active page
   useEffect(() => {
@@ -547,43 +570,62 @@ export function Sidebar({
           </div>
         </div>
 
-        <div className="sidebar-content">
-          <div className="sidebar-section">
-            {folders.map((folder) => (
-              <FolderItem
-                key={folder.id}
-                folder={folder}
-                depth={0}
-                activePage={activePage}
-                editingId={editingId}
-                editingName={editingName}
-                dragOverFolderId={dragOverFolderId}
-                draggingId={draggingId}
-                onToggle={toggleFolder}
-                onPageSelect={onPageSelect}
-                onCreateFolder={onCreateFolder}
-                onCreatePage={onCreatePage}
-                onDeleteFolder={onDeleteFolder}
-                onDeletePage={onDeletePage}
-                onStartEdit={handleStartEdit}
-                onEditChange={handleEditChange}
-                onEditSubmit={handleEditSubmit}
-                onEditCancel={handleEditCancel}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                isDescendantOf={isDescendantOf}
-              />
-            ))}
+        {/* Search Bar */}
+        <SidebarSearch onSearchClick={onSearchClick} placeholder="Search" />
 
-            {folders.length === 0 && (
-              <div className="sidebar-page" style={{ opacity: 0.5 }}>
-                <span className="page-name">No folders yet</span>
-              </div>
-            )}
-          </div>
+        {/* Tab Switcher */}
+        <SidebarTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+        <div className="sidebar-content">
+          {/* Folders Tab */}
+          {activeTab === "folders" && (
+            <div className="sidebar-section">
+              {folders.map((folder) => (
+                <FolderItem
+                  key={folder.id}
+                  folder={folder}
+                  depth={0}
+                  activePage={activePage}
+                  editingId={editingId}
+                  editingName={editingName}
+                  dragOverFolderId={dragOverFolderId}
+                  draggingId={draggingId}
+                  onToggle={toggleFolder}
+                  onPageSelect={onPageSelect}
+                  onCreateFolder={onCreateFolder}
+                  onCreatePage={onCreatePage}
+                  onDeleteFolder={onDeleteFolder}
+                  onDeletePage={onDeletePage}
+                  onStartEdit={handleStartEdit}
+                  onEditChange={handleEditChange}
+                  onEditSubmit={handleEditSubmit}
+                  onEditCancel={handleEditCancel}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  isDescendantOf={isDescendantOf}
+                />
+              ))}
+
+              {folders.length === 0 && (
+                <div className="sidebar-page" style={{ opacity: 0.5 }}>
+                  <span className="page-name">No folders yet</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tags Tab */}
+          {activeTab === "tags" && (
+            <SidebarTagsTab />
+          )}
+
+          {/* Study Tab */}
+          {activeTab === "study" && (
+            <SidebarStudyTab onSearchClick={onSearchClick} />
+          )}
         </div>
       </aside>
     </>

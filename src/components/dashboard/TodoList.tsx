@@ -138,11 +138,11 @@ export function TodoList() {
   const totalCount = todos.length
 
   return (
-    <div className="bg-zinc-50 relative dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl h-full flex flex-col ">
+    <div className="bg-zinc-50 relative dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-950 rounded-2xl h-full flex flex-col ">
       {/* Header with Add Button */}
               <button
           onClick={() => setIsModalOpen(true)}
-          className="p-2 absolute top-[-10px] right-[-10px] z-10 bg-white/10 backdrop-blur-2xl border border-white/20 text-white rounded-lg hover:bg-zinc-600 transition-colors shadow-sm"
+          className="p-2 absolute top-[-45px] right-[-10px] z-10 bg-white/10 backdrop-blur-2xl border border-white/20 text-white rounded-lg hover:bg-zinc-600 transition-colors shadow-sm"
           title="Add task"
       >
             <HugeiconsIcon icon={Add01Icon} size={16} />
@@ -165,7 +165,7 @@ export function TodoList() {
         <div className="px-4 pt-3">
           <div className="h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
             <div
-              className="h-full bg-indigo-500 transition-all duration-300"
+              className="h-full bg-white/20 transition-all duration-300"
               style={{ width: `${(completedCount / totalCount) * 100}%` }}
             />
           </div>
@@ -176,7 +176,7 @@ export function TodoList() {
       <div className="flex-1 overflow-y-auto p-4 space-y-2 max-h-[180px]">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : todos.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center text-zinc-400">
@@ -191,15 +191,15 @@ export function TodoList() {
               className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
                 todo.completed
                   ? "bg-zinc-100/50 dark:bg-zinc-800/30 border-zinc-200/50 dark:border-zinc-700/50"
-                  : "bg-white dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/30"
+                  : "bg-white dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 hover:border-zinc-500/30"
               }`}
             >
               <button
                 onClick={() => toggleTodo(todo.id, todo.completed)}
                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
                   todo.completed
-                    ? "bg-indigo-500 border-indigo-500 text-white"
-                    : "border-zinc-300 dark:border-zinc-600 hover:border-indigo-500"
+                    ? "bg-zinc-500 border-zinc-500 text-white"
+                    : "border-zinc-300 dark:border-zinc-600 hover:border-zinc-500"
                 }`}
               >
                 {todo.completed && (
@@ -262,7 +262,7 @@ export function TodoList() {
               placeholder="What do you need to do?"
               autoFocus
               rows={3}
-              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none"
+              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-500/50 resize-none"
             />
 
             <div className="flex items-center justify-end gap-3 mt-4">
@@ -278,7 +278,7 @@ export function TodoList() {
               <button
                 onClick={addTodo}
                 disabled={!newTodoText.trim() || isSubmitting}
-                className="px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 bg-zinc-500 text-white text-sm font-medium rounded-lg hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isSubmitting ? "Adding..." : "Add Task"}
               </button>

@@ -2,7 +2,6 @@
 
 import { useState, DragEvent } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { TrashIcon } from "@/components/tiptap-icons/trash-icon"
 import { EditIcon } from "@/components/tiptap-icons/edit-icon"
 import type { Page } from "@/context/NotesContext"
@@ -42,14 +41,7 @@ export function PageCard({ page, folderId, onDelete, onRename }: PageCardProps) 
     setIsEditing(false)
   }
 
-  // Get preview text from content (strip HTML)
-  const getPreview = (content?: string) => {
-    if (!content) return "Empty note"
-    const stripped = content.replace(/<[^>]*>/g, "").trim()
-    return stripped.slice(0, 60) || "Empty note"
-  }
-
-  // Drag handlers - make page draggable
+  // Drag handlers
   const handleDragStart = (e: DragEvent) => {
     e.stopPropagation()
     setIsDragging(true)
@@ -67,14 +59,15 @@ export function PageCard({ page, folderId, onDelete, onRename }: PageCardProps) 
 
   return (
     <div
-      className={`relative rounded-2xl transition-all duration-200 hover:-translate-y-0.5 group ${isDragging ? 'opacity-50' : ''}`}
+      className={`relative rounded-2xl transition-all duration-200 hover:-translate-y-1 group ${isDragging ? 'opacity-50' : ''}`}
       draggable={!isEditing}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
+      {/* Action Buttons */}
       <div className="absolute top-0 right-0 flex z-10 gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <button
-          className="w-7 h-7 rounded-md border-none bg-black/50 text-foreground cursor-pointer flex items-center justify-center transition-all duration-150 hover:bg-black/70 [&_svg]:w-3.5 [&_svg]:h-3.5"
+          className="w-7 h-7 rounded-md border-none bg-black/60 text-white cursor-pointer flex items-center justify-center transition-all duration-150 hover:bg-black/80 [&_svg]:w-3.5 [&_svg]:h-3.5"
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
@@ -85,7 +78,7 @@ export function PageCard({ page, folderId, onDelete, onRename }: PageCardProps) 
           <EditIcon />
         </button>
         <button
-          className="w-7 h-7 rounded-md border-none bg-black/50 text-foreground cursor-pointer flex items-center justify-center transition-all duration-150 hover:bg-red-500/80 [&_svg]:w-3.5 [&_svg]:h-3.5"
+          className="w-7 h-7 rounded-md border-none bg-black/60 text-white cursor-pointer flex items-center justify-center transition-all duration-150 hover:bg-red-500/80 [&_svg]:w-3.5 [&_svg]:h-3.5"
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
@@ -99,24 +92,33 @@ export function PageCard({ page, folderId, onDelete, onRename }: PageCardProps) 
 
       {/* Shared indicator */}
       {page.isShared && (
-        <div className="absolute top-2 right-2 z-10" title="This note is shared">
-          <div className=" rounded-full bg-white p-1 rotate-[-45deg] flex items-center justify-center">
-            <ShareIndicatorIcon className="text-black w-3 h-3 shadow" />
+        <div className="absolute top-2 left-2 z-10" title="This note is shared">
+          <div className="rounded-full bg-white p-1 rotate-[-45deg] flex items-center justify-center shadow-sm">
+            <ShareIndicatorIcon className="text-black w-3 h-3" />
           </div>
         </div>
       )}
 
-      <Link href={`/note/${page.id}`} className="flex flex-col items-center no-underline text-inherit">
-        <div className="w-20 h-20 flex items-start justify-start transition-transform duration-200 group-hover:scale-105 [&_img]:w-full [&_img]:h-full [&_img]:object-contain [&_img]:drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
-          <Image
-            src="/note.png"
-            alt={page.name}
-            width={80}
-            height={80}
-            draggable={false}
-          />
+      <Link href={`/note/${page.id}`} className="flex flex-col items-center no-underline text-inherit p-3">
+        {/* Visual Page Icon */}
+        <div className="relative w-14 h-[72px] mb-3 transition-transform duration-200 group-hover:scale-105">
+          {/* Paper */}
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-50 to-zinc-100 rounded-sm shadow-lg border border-zinc-200/50">
+            {/* Corner Fold */}
+            <div className="absolute top-0 right-0 w-4 h-4 bg-gradient-to-br from-zinc-200 to-zinc-300 rounded-bl-md" />
+
+            {/* Text Lines */}
+            <div className="absolute top-5 left-2 right-2 space-y-1.5">
+              <div className="h-1 bg-zinc-300/60 rounded-full w-full" />
+              <div className="h-1 bg-zinc-300/60 rounded-full w-4/5" />
+              <div className="h-1 bg-zinc-300/60 rounded-full w-3/5" />
+              <div className="h-1 bg-zinc-300/60 rounded-full w-4/5" />
+              <div className="h-1 bg-zinc-300/60 rounded-full w-2/5" />
+            </div>
+          </div>
         </div>
 
+        {/* Page Name */}
         <div className="flex flex-col items-center text-center max-w-[120px]">
           {isEditing ? (
             <input
@@ -136,11 +138,14 @@ export function PageCard({ page, folderId, onDelete, onRename }: PageCardProps) 
               autoFocus
             />
           ) : (
-            <span className="text-sm font-semibold text-foreground overflow-hidden text-ellipsis whitespace-nowrap max-w-full mb-1">{page.name}</span>
+            <span className="text-sm font-semibold text-foreground overflow-hidden text-ellipsis whitespace-nowrap max-w-full mb-1">
+              {page.name}
+            </span>
           )}
-          <span className="text-xs text-foreground/50 overflow-hidden text-ellipsis whitespace-nowrap max-w-full">{getPreview(page.content)}</span>
         </div>
       </Link>
     </div>
   )
 }
+
+export default PageCard

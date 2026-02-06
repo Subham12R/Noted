@@ -457,18 +457,51 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
     try {
       let questions: { type: string; question: string; options?: string[]; correctAnswer: string; explanation?: string; difficulty: string; points: number }[] = [];
 
-      // Try to extract JSON array from response
-      const jsonMatch = responseText.match(/\[[\s\S]*?\]/);
+      console.log('[Quiz] Raw response length:', responseText.length);
+      console.log('[Quiz] Raw response preview:', responseText.substring(0, 300));
+
+      // Method 1: Try greedy JSON array extraction
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         try {
           questions = JSON.parse(jsonMatch[0]);
+          console.log('[Quiz] Method 1 success:', questions.length, 'questions');
         } catch (parseErr) {
-          console.log('[Quiz] JSON parse failed:', parseErr);
+          console.log('[Quiz] Method 1 failed:', parseErr);
+        }
+      }
+
+      // Method 2: Try to find JSON in code blocks
+      if (questions.length === 0) {
+        const codeBlockMatch = responseText.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+        if (codeBlockMatch) {
+          try {
+            questions = JSON.parse(codeBlockMatch[1]);
+            console.log('[Quiz] Method 2 success:', questions.length, 'questions');
+          } catch (parseErr) {
+            console.log('[Quiz] Method 2 failed:', parseErr);
+          }
+        }
+      }
+
+      // Method 3: Clean response and try parsing
+      if (questions.length === 0) {
+        try {
+          // Remove any text before [ and after ]
+          const startIdx = responseText.indexOf('[');
+          const endIdx = responseText.lastIndexOf(']');
+          if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+            const cleaned = responseText.substring(startIdx, endIdx + 1);
+            questions = JSON.parse(cleaned);
+            console.log('[Quiz] Method 3 success:', questions.length, 'questions');
+          }
+        } catch (parseErr) {
+          console.log('[Quiz] Method 3 failed:', parseErr);
         }
       }
 
       if (questions.length === 0) {
-        throw new Error('Could not parse quiz data. The AI response was not in JSON format. Please try again.');
+        throw new Error('Could not parse quiz data. The AI did not return valid JSON. Please try again.');
       }
 
       console.log('[Quiz] Parsed questions:', questions.length);

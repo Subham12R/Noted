@@ -153,6 +153,18 @@ const ExcalidrawIcon = () => (
   </svg>
 )
 
+const QuizIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+)
+
+const FlashcardsIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+  </svg>
+)
+
 export const slashCommands: SlashCommand[] = [
   // Basic
   {
@@ -305,6 +317,26 @@ export const slashCommands: SlashCommand[] = [
       editor.chain().focus().insertExcalidraw().run()
     },
   },
+  {
+    id: "quiz",
+    label: "Quiz",
+    description: "Create a quiz from your notes",
+    icon: <QuizIcon />,
+    category: "advanced",
+    action: () => {
+      window.dispatchEvent(new CustomEvent('openQuizModal', { detail: { mode: 'create' } }))
+    },
+  },
+  {
+    id: "flashcards",
+    label: "Flashcards",
+    description: "Generate flashcards from your notes",
+    icon: <FlashcardsIcon />,
+    category: "advanced",
+    action: () => {
+      window.dispatchEvent(new CustomEvent('openFlashcardsModal', { detail: { mode: 'create' } }))
+    },
+  },
 
   // AI Commands
   {
@@ -426,14 +458,17 @@ export function SlashCommandMenu({ editor, isOpen, position, onClose }: SlashCom
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      const len = flattenedCommands.length
+      if (len === 0 && e.key !== "Escape") return
+
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault()
-          setSelectedIndex((prev) => (prev + 1) % flattenedCommands.length)
+          setSelectedIndex((prev) => (prev + 1) % len)
           break
         case "ArrowUp":
           e.preventDefault()
-          setSelectedIndex((prev) => (prev - 1 + flattenedCommands.length) % flattenedCommands.length)
+          setSelectedIndex((prev) => (prev - 1 + len) % len)
           break
         case "Enter":
           e.preventDefault()
@@ -452,9 +487,12 @@ export function SlashCommandMenu({ editor, isOpen, position, onClose }: SlashCom
 
   const selectCommand = (command: SlashCommand) => {
     // Delete the slash and any search text
+    const from = editor.state.selection.from
+    const deleteFrom = Math.max(0, from - searchQuery.length - 1)
+
     editor.chain().focus().deleteRange({
-      from: editor.state.selection.from - searchQuery.length - 1,
-      to: editor.state.selection.from,
+      from: deleteFrom,
+      to: from,
     }).run()
 
     command.action(editor)
@@ -475,6 +513,45 @@ export function SlashCommandMenu({ editor, isOpen, position, onClose }: SlashCom
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [isOpen, onClose])
 
+  // Calculate optimal position based on viewport
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; openUpward: boolean }>({
+    top: position.top,
+    left: position.left,
+    openUpward: false,
+  })
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const menuHeight = 400 // max-h-[400px]
+    const menuWidth = 280 // min-w-[280px]
+    const padding = 16 // margin from viewport edges
+    const viewportHeight = window.innerHeight
+    const viewportWidth = window.innerWidth
+
+    // Check if menu would overflow bottom
+    const spaceBelow = viewportHeight - position.top
+    const spaceAbove = position.top
+    const openUpward = spaceBelow < menuHeight && spaceAbove > spaceBelow
+
+    // Calculate top position
+    let top = position.top
+    if (openUpward) {
+      top = Math.max(padding, position.top - menuHeight)
+    } else {
+      top = Math.min(position.top, viewportHeight - menuHeight - padding)
+    }
+
+    // Calculate left position (ensure menu doesn't overflow right edge)
+    let left = position.left
+    if (left + menuWidth > viewportWidth - padding) {
+      left = viewportWidth - menuWidth - padding
+    }
+    left = Math.max(padding, left)
+
+    setMenuPosition({ top, left, openUpward })
+  }, [isOpen, position.top, position.left])
+
   if (!isOpen) return null
 
   // Calculate which index each command is at for selection
@@ -483,8 +560,10 @@ export function SlashCommandMenu({ editor, isOpen, position, onClose }: SlashCom
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-zinc-900/95 backdrop-blur-xl rounded-xl border border-zinc-700/50 shadow-2xl overflow-hidden min-w-[280px] max-h-[400px] animate-in fade-in slide-in-from-top-2 duration-150"
-      style={{ top: position.top, left: position.left }}
+      className={`fixed z-50 bg-zinc-900/95 backdrop-blur-xl rounded-xl border border-zinc-700/50 shadow-2xl overflow-hidden min-w-[280px] max-h-[400px] animate-in fade-in duration-150 ${
+        menuPosition.openUpward ? "slide-in-from-bottom-2" : "slide-in-from-top-2"
+      }`}
+      style={{ top: menuPosition.top, left: menuPosition.left }}
       onKeyDown={handleKeyDown}
     >
       {/* Search input */}
