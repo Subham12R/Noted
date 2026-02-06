@@ -25,7 +25,7 @@ process.on("uncaughtException", (error) => {
   process.exit(1)
 })
 
-const PORT = process.env.WS_PORT || 3001
+const PORT = process.env.PORT || process.env.WS_PORT || 3001
 const CLIENT_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 const REDIS_URL = process.env.REDIS_URL || ""
 
