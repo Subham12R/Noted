@@ -7,13 +7,6 @@ import Stripe from 'stripe'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// Disable body parsing - we need raw body for webhook verification
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
-
 async function getRawBody(request: NextRequest): Promise<Buffer> {
   const chunks: Uint8Array[] = []
   const reader = request.body?.getReader()

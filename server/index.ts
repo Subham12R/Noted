@@ -29,6 +29,13 @@ const PORT = process.env.PORT || process.env.WS_PORT || 3001
 const CLIENT_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 const REDIS_URL = process.env.REDIS_URL || ""
 
+// Build allowed origins list
+const allowedOrigins = [
+  CLIENT_URL,
+  "http://localhost:3000",
+  "https://noted-main.vercel.app",
+].filter(Boolean)
+
 // Create HTTP server
 const httpServer = createServer((req, res) => {
   // Health check endpoint
@@ -48,7 +55,7 @@ const httpServer = createServer((req, res) => {
 // Create Socket.io server
 const io = new Server(httpServer, {
   cors: {
-    origin: CLIENT_URL,
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true,
   },
