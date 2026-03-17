@@ -4,6 +4,13 @@
 import { createAIClient, getDefaultModel } from './providers'
 import { AI_CONFIG } from './config'
 import type { AIMode, AIProvider, AIStreamChunk } from '@/types/ai'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+
+// Helper to check if provider is Gemini
+function isGeminiProvider(provider?: AIProvider): boolean {
+  const targetProvider = provider || AI_CONFIG.provider
+  return targetProvider === 'gemini'
+}
 
 // System prompts for different modes
 const MODE_PROMPTS: Record<AIMode, string> = {
@@ -260,7 +267,32 @@ export async function generateAIResponse(options: GenerateOptions): Promise<{
   console.log('[AI Generate] System prompt length:', systemPrompt?.length || 0)
   console.log('[AI Generate] Temperature:', finalTemperature)
 
-  const response = await client.chat.completions.create({
+  // Handle Gemini provider separately
+  if (isGeminiProvider(provider)) {
+    const genAI = client as GoogleGenerativeAI
+    const geminiModel = genAI.getGenerativeModel({ model: modelId })
+
+    const fullPrompt = `System: ${systemPrompt}\n\nUser: ${userMessage}`
+    
+    const result = await geminiModel.generateContent({
+      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+      generationConfig: {
+        maxOutputTokens: maxTokens,
+        temperature: finalTemperature,
+      },
+    })
+
+    const response = result.response
+    const content = response.text()
+
+    return {
+      content: content || '',
+      model: modelId,
+      tokensUsed: Math.ceil((content?.length || 0) / 4),
+    }
+  }
+
+  const response = await (client as any).chat.completions.create({
     model: modelId,
     messages: [
       { role: 'system', content: systemPrompt },
@@ -327,38 +359,77 @@ export async function* generateAIResponseStream(
   }
 
   try {
-    const stream = await client.chat.completions.create({
-      model: modelId,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage },
-      ],
-      max_tokens: maxTokens,
-      temperature: finalTemperature,
-      stream: true,
-    })
+    // Handle Gemini provider separately
+    if (isGeminiProvider(provider)) {
+      const genAI = client as GoogleGenerativeAI
+      const geminiModel = genAI.getGenerativeModel({ model: modelId })
 
-    let totalContent = ''
+      const fullPrompt = `System: ${systemPrompt}\n\nUser: ${userMessage}`
 
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content
-      if (content) {
-        totalContent += content
-        yield {
-          type: 'chunk',
-          content,
+      // Use streaming for Gemini
+      const result = await geminiModel.generateContentStream({
+        contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+        generationConfig: {
+          maxOutputTokens: maxTokens,
+          temperature: finalTemperature,
+        },
+      })
+
+      let totalContent = ''
+
+      for await (const chunk of result.stream) {
+        const content = chunk.text()
+        if (content) {
+          totalContent += content
+          yield {
+            type: 'chunk',
+            content,
+          }
         }
       }
-    }
 
-    // Emit done event
-    yield {
-      type: 'done',
-      content: totalContent,
-      id: responseId,
-      model: modelId,
-      // Groq doesn't return token count in stream, estimate it
-      tokensUsed: Math.ceil(totalContent.length / 4),
+      // Emit done event
+      yield {
+        type: 'done',
+        content: totalContent,
+        id: responseId,
+        model: modelId,
+        tokensUsed: Math.ceil(totalContent.length / 4),
+      }
+    } else {
+      const stream = await (client as any).chat.completions.create({
+        model: modelId,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+        max_tokens: maxTokens,
+        temperature: finalTemperature,
+        stream: true,
+      })
+
+      let totalContent = ''
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content
+        if (content) {
+          totalContent += content
+          yield {
+            type: 'chunk',
+            content,
+          }
+        }
+      }
+
+      // Emit done event
+      yield {
+        type: 'done',
+        content: totalContent,
+        id: responseId,
+        model: modelId,
+        // Groq doesn't return token count in stream, estimate it
+        tokensUsed: Math.ceil(totalContent.length / 4),
+      }
     }
   } catch (error) {
     yield {

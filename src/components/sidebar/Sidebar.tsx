@@ -13,6 +13,7 @@ import { SidebarTabs, SidebarTab } from "./SidebarTabs"
 import { SidebarSearch } from "./SidebarSearch"
 import { SidebarTagsTab } from "./SidebarTagsTab"
 import { SidebarStudyTab } from "./SidebarStudyTab"
+import { FileLibrary } from "@/components/file-library"
 import "./sidebar.scss"
 import Link from "next/link"
 
@@ -620,6 +621,13 @@ export function Sidebar({
           {/* Tags Tab */}
           {activeTab === "tags" && (
             <SidebarTagsTab />
+          )}
+
+          {/* Files Tab */}
+          {activeTab === "files" && (
+            <div className="flex-1 overflow-auto">
+              <FileLibrary />
+            </div>
           )}
 
           {/* Study Tab */}

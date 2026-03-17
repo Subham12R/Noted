@@ -3,7 +3,7 @@
 
 export const AI_CONFIG = {
   // Active provider
-  provider: (process.env.AI_PROVIDER || 'groq') as 'groq' | 'ollama' | 'openai',
+  provider: (process.env.AI_PROVIDER || 'groq') as 'groq' | 'ollama' | 'openai' | 'gemini',
 
   // Groq Configuration (Active)
   groq: {
@@ -26,6 +26,14 @@ export const AI_CONFIG = {
     baseUrl: 'https://api.openai.com/v1',
     defaultModel: 'gpt-4o-mini',
     enabled: !!process.env.OPENAI_API_KEY,
+  },
+
+  // Gemini Configuration (Google AI)
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || 'AIzaSyDKE1GnQVzsUwVPGJCYKF1HLQX5K27gETU',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    defaultModel: 'gemini-2.0-flash',
+    enabled: true,
   },
 
   // Feature flags
@@ -88,6 +96,11 @@ export function getActiveProviderConfig() {
         ...AI_CONFIG.openai,
         provider: 'openai' as const,
       }
+    case 'gemini':
+      return {
+        ...AI_CONFIG.gemini,
+        provider: 'gemini' as const,
+      }
     default:
       return AI_CONFIG.groq
   }
@@ -97,19 +110,18 @@ export function getActiveProviderConfig() {
 export function isAIAvailable(): boolean {
   if (!AI_CONFIG.features.aiEnabled) return false
 
-  const config = getActiveProviderConfig()
+  const provider = AI_CONFIG.provider
 
-  if (config.provider === 'groq') {
-    return !!AI_CONFIG.groq.apiKey
+  switch (provider) {
+    case 'groq':
+      return !!AI_CONFIG.groq.apiKey
+    case 'ollama':
+      return AI_CONFIG.ollama.enabled
+    case 'openai':
+      return !!AI_CONFIG.openai.apiKey
+    case 'gemini':
+      return !!AI_CONFIG.gemini.apiKey
+    default:
+      return false
   }
-
-  if (config.provider === 'ollama') {
-    return AI_CONFIG.ollama.enabled
-  }
-
-  if (config.provider === 'openai') {
-    return !!AI_CONFIG.openai.apiKey
-  }
-
-  return false
 }

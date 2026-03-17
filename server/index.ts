@@ -392,6 +392,64 @@ io.on("connection", (socket: Socket) => {
     console.log(`Content update from ${socket.data.userId} in room ${roomId}`)
   })
 
+  // Handle Excalidraw canvas element updates
+  socket.on("excalidraw-update", (data: { elements: string; appState: string }) => {
+    const pageId = socket.data.currentPage
+    if (!pageId) return
+
+    const roomId = `page:${pageId}`
+
+    // Update last activity
+    const users = roomUsers.get(roomId)
+    if (users?.has(socket.data.userId)) {
+      users.get(socket.data.userId)!.lastActivity = Date.now()
+    }
+
+    // Broadcast elements to other clients in the room
+    socket.to(roomId).emit("excalidraw-update", {
+      userId: socket.data.userId,
+      userName: socket.data.userName,
+      userColor: socket.data.userColor,
+      elements: data.elements,
+      appState: data.appState,
+    })
+
+    console.log(`Excalidraw update from ${socket.data.userId} in room ${roomId}`)
+  })
+
+  // Handle Excalidraw cursor/pointer updates
+  socket.on("excalidraw-pointer", (data: { x: number; y: number; tool: string }) => {
+    const pageId = socket.data.currentPage
+    if (!pageId) return
+
+    const roomId = `page:${pageId}`
+
+    // Broadcast pointer position to others
+    socket.to(roomId).emit("excalidraw-pointer", {
+      userId: socket.data.userId,
+      userName: socket.data.userName,
+      userColor: socket.data.userColor,
+      x: data.x,
+      y: data.y,
+      tool: data.tool,
+    })
+  })
+
+  // Handle Excalidraw initial sync request
+  socket.on("excalidraw-sync-request", () => {
+    const pageId = socket.data.currentPage
+    if (!pageId) return
+
+    // The client will handle sending their current state
+    // This is just to notify others that someone joined
+    const roomId = `page:${pageId}`
+    socket.to(roomId).emit("excalidraw-user-joined", {
+      userId: socket.data.userId,
+      userName: socket.data.userName,
+      userColor: socket.data.userColor,
+    })
+  })
+
   // Leave page
   socket.on("leave-page", () => {
     handleLeaveRoom(socket)

@@ -369,7 +369,7 @@ export function FlashcardProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: `Generate ${count} flashcards from the following content. Return a JSON array with objects containing "front" (question) and "back" (answer) fields. Make the questions test understanding, not just memorization. Content:\n\n${pageContent}`,
-          mode: "generate_flashcards",
+          mode: "flashcard",
         }),
       })
 
@@ -378,12 +378,37 @@ export function FlashcardProvider({ children }: { children: ReactNode }) {
       const data = await res.json()
       let cards: { front: string; back: string }[] = []
 
-      // Parse the response
+      // Parse the response - try multiple methods like in quiz
       try {
-        const content = data.response || data.content || ""
-        const jsonMatch = content.match(/\[[\s\S]*\]/)
+        const content = data.content || data.response || ""
+        
+        // Method 1: Try greedy JSON extraction
+        let jsonMatch = content.match(/\[[\s\S]*\]/)
         if (jsonMatch) {
-          cards = JSON.parse(jsonMatch[0])
+          try {
+            cards = JSON.parse(jsonMatch[0])
+          } catch {}
+        }
+
+        // Method 2: Try code blocks
+        if (cards.length === 0) {
+          jsonMatch = content.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/)
+          if (jsonMatch) {
+            try {
+              cards = JSON.parse(jsonMatch[1])
+            } catch {}
+          }
+        }
+
+        // Method 3: Try with index positions
+        if (cards.length === 0) {
+          const startIdx = content.indexOf('[')
+          const endIdx = content.lastIndexOf(']')
+          if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+            try {
+              cards = JSON.parse(content.substring(startIdx, endIdx + 1))
+            } catch {}
+          }
         }
       } catch (e) {
         console.error("Failed to parse AI response:", e)

@@ -107,6 +107,24 @@ const TableIcon = () => (
   </svg>
 )
 
+const CalloutIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+)
+
+const CheckSquareIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+)
+
+const MermaidIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+  </svg>
+)
+
 // AI Icons
 const SparklesIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,6 +353,28 @@ export const slashCommands: SlashCommand[] = [
     category: "advanced",
     action: () => {
       window.dispatchEvent(new CustomEvent('openFlashcardsModal', { detail: { mode: 'create' } }))
+    },
+  },
+  {
+    id: "callout",
+    label: "Callout",
+    description: "Add an info callout box",
+    icon: <CalloutIcon />,
+    category: "advanced",
+    action: (editor) => {
+      editor.chain().focus().insertContent({
+        type: 'paragraph',
+      }).run()
+    },
+  },
+  {
+    id: "mermaid",
+    label: "Mermaid Diagram",
+    description: "Create a flowchart or diagram",
+    icon: <MermaidIcon />,
+    category: "advanced",
+    action: (editor) => {
+      editor.chain().focus().insertContent({ type: 'mermaid', attrs: { chart: 'flowchart TD\n    A[Start] --> B[End]' } }).run()
     },
   },
 

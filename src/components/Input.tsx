@@ -4,7 +4,7 @@ import { useState, useRef, KeyboardEvent, ChangeEvent, useEffect, useCallback } 
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { useNotes, Page, Folder } from "@/context/NotesContext";
 import { useFlashcards } from "@/context/FlashcardContext";
-import { useQuiz } from "@/context/QuizContext";
+import { useQuiz, QuestionType } from "@/context/QuizContext";
 import { Editor } from "@tiptap/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -389,21 +389,58 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
     try {
       let flashcards: { front: string; back: string }[] = [];
 
-      // Try to extract JSON array from response
-      const jsonMatch = responseText.match(/\[[\s\S]*?\]/);
-      if (jsonMatch) {
+      // Helper function to try parsing JSON
+      const tryParseFlashcards = (text: string): { front: string; back: string }[] | null => {
         try {
-          flashcards = JSON.parse(jsonMatch[0]);
+          const parsed = JSON.parse(text);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Validate that it looks like flashcards
+            if (parsed[0]?.front && parsed[0]?.back) {
+              return parsed;
+            }
+          }
+          return null;
         } catch {
-          console.log('[Flashcard] JSON parse failed, trying table extraction');
+          return null;
+        }
+      };
+
+      // Helper to fix common JSON issues
+      const fixJSON = (text: string): string => {
+        let fixed = text.replace(/'([^']*)'/g, '"$1"');
+        fixed = fixed.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+        fixed = fixed.replace(/,\s*([\]}])/g, '$1');
+        fixed = fixed.replace(/```json?/g, '').replace(/```/g, '');
+        return fixed;
+      };
+
+      // Method 1: Try greedy JSON array extraction
+      let jsonMatch = responseText.match(/\[[\s\S]*?\]/);
+      if (jsonMatch) {
+        flashcards = tryParseFlashcards(jsonMatch[0]) || [];
+        if (flashcards.length > 0) console.log('[Flashcard] Method 1 success:', flashcards.length);
+      }
+
+      // Method 2: Try to find JSON in code blocks
+      if (flashcards.length === 0) {
+        const codeBlockMatch = responseText.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+        if (codeBlockMatch) {
+          flashcards = tryParseFlashcards(codeBlockMatch[1]) || [];
+          if (flashcards.length > 0) console.log('[Flashcard] Method 2 success:', flashcards.length);
         }
       }
 
-      // Fallback: Try to parse markdown table format
+      // Method 3: Try with fixed JSON
+      if (flashcards.length === 0) {
+        const fixed = fixJSON(responseText);
+        flashcards = tryParseFlashcards(fixed) || [];
+        if (flashcards.length > 0) console.log('[Flashcard] Method 3 success:', flashcards.length);
+      }
+
+      // Method 4: Try to parse markdown table format
       if (flashcards.length === 0) {
         const tableRows = responseText.match(/\|([^|]+)\|([^|]+)\|/g);
         if (tableRows && tableRows.length > 1) {
-          // Skip header row(s)
           const dataRows = tableRows.filter(row => !row.includes('---') && !row.toLowerCase().includes('front'));
           flashcards = dataRows.map(row => {
             const cells = row.split('|').filter(c => c.trim());
@@ -412,6 +449,17 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
               back: cells[1]?.trim() || ''
             };
           }).filter(card => card.front && card.back);
+          if (flashcards.length > 0) console.log('[Flashcard] Method 4 success:', flashcards.length);
+        }
+      }
+
+      // Method 5: Try extracting from "front": "back" patterns
+      if (flashcards.length === 0) {
+        const pairMatches = responseText.match(/"front"\s*:\s*"[^"]+"\s*,\s*"back"\s*:\s*"[^"]+"/g);
+        if (pairMatches) {
+          const fixed = fixJSON(`[${pairMatches.join(',')}]`);
+          flashcards = tryParseFlashcards(fixed) || [];
+          if (flashcards.length > 0) console.log('[Flashcard] Method 5 success:', flashcards.length);
         }
       }
 
@@ -460,43 +508,116 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
       console.log('[Quiz] Raw response length:', responseText.length);
       console.log('[Quiz] Raw response preview:', responseText.substring(0, 300));
 
-      // Method 1: Try greedy JSON array extraction
-      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
+      // Helper function to try parsing JSON
+      const tryParse = (text: string): { type: string; question: string; options?: string[]; correctAnswer: string; explanation?: string; difficulty: string; points: number }[] | null => {
         try {
-          questions = JSON.parse(jsonMatch[0]);
-          console.log('[Quiz] Method 1 success:', questions.length, 'questions');
-        } catch (parseErr) {
-          console.log('[Quiz] Method 1 failed:', parseErr);
+          const parsed = JSON.parse(text);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Validate that it looks like quiz questions
+            if (parsed[0]?.question && parsed[0]?.correctAnswer) {
+              return parsed;
+            }
+          }
+          return null;
+        } catch {
+          return null;
         }
+      };
+
+      // Helper to normalize type strings to valid QuestionType
+      const normalizeType = (type: string): string => {
+        const t = type.toLowerCase().replace(/[-_\s]/g, '-');
+        if (t.includes('multiple') && t.includes('select')) return 'multiple-select';
+        if (t.includes('multiple')) return 'multiple-choice';
+        if (t.includes('true-false') || t.includes('truefalse') || t === 'boolean') return 'true-false';
+        if (t.includes('fill') || t.includes('blank')) return 'fill-blank';
+        if (t.includes('short')) return 'short-answer';
+        return 'multiple-choice'; // default
+      };
+
+      // Helper to fix common JSON issues
+      const fixJSON = (text: string): string => {
+        // Fix single quotes to double quotes
+        let fixed = text.replace(/'([^']*)'/g, '"$1"');
+        // Fix missing quotes around keys
+        fixed = fixed.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+        // Fix trailing commas
+        fixed = fixed.replace(/,\s*([\]}])/g, '$1');
+        // Remove any markdown code block markers
+        fixed = fixed.replace(/```json?/g, '').replace(/```/g, '');
+        return fixed;
+      };
+
+      // Method 1: Try greedy JSON array extraction
+      let jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        questions = tryParse(jsonMatch[0]) || [];
+        if (questions.length > 0) console.log('[Quiz] Method 1 success:', questions.length, 'questions');
       }
 
-      // Method 2: Try to find JSON in code blocks
+      // Method 2: Try to find JSON in code blocks (markdown)
       if (questions.length === 0) {
         const codeBlockMatch = responseText.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
         if (codeBlockMatch) {
-          try {
-            questions = JSON.parse(codeBlockMatch[1]);
-            console.log('[Quiz] Method 2 success:', questions.length, 'questions');
-          } catch (parseErr) {
-            console.log('[Quiz] Method 2 failed:', parseErr);
-          }
+          questions = tryParse(codeBlockMatch[1]) || [];
+          if (questions.length > 0) console.log('[Quiz] Method 2 success:', questions.length, 'questions');
         }
       }
 
       // Method 3: Clean response and try parsing
       if (questions.length === 0) {
-        try {
-          // Remove any text before [ and after ]
-          const startIdx = responseText.indexOf('[');
-          const endIdx = responseText.lastIndexOf(']');
-          if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-            const cleaned = responseText.substring(startIdx, endIdx + 1);
-            questions = JSON.parse(cleaned);
-            console.log('[Quiz] Method 3 success:', questions.length, 'questions');
+        const startIdx = responseText.indexOf('[');
+        const endIdx = responseText.lastIndexOf(']');
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          const cleaned = responseText.substring(startIdx, endIdx + 1);
+          questions = tryParse(cleaned) || [];
+          if (questions.length > 0) console.log('[Quiz] Method 3 success:', questions.length, 'questions');
+        }
+      }
+
+      // Method 4: Try with fixed JSON (common AI mistakes)
+      if (questions.length === 0) {
+        const fixed = fixJSON(responseText);
+        questions = tryParse(fixed) || [];
+        if (questions.length > 0) console.log('[Quiz] Method 4 success:', questions.length, 'questions');
+      }
+
+      // Method 5: Try finding JSON array with more flexible regex
+      if (questions.length === 0) {
+        const flexibleMatch = responseText.match(/\[[\s\S]*?"[^"]+"\s*:[\s\S]*?\]/);
+        if (flexibleMatch) {
+          questions = tryParse(flexibleMatch[0]) || [];
+          if (questions.length > 0) console.log('[Quiz] Method 5 success:', questions.length, 'questions');
+        }
+      }
+
+      // Method 6: Try to extract and fix individual question objects
+      if (questions.length === 0) {
+        const questionMatches = responseText.match(/{[^}]*"question"[^}]*}/g);
+        if (questionMatches) {
+          const parsedQuestions = questionMatches.map(q => {
+            const fixed = fixJSON(q);
+            return tryParse(`[${fixed}]`)?.[0];
+          }).filter(Boolean);
+          if (parsedQuestions.length > 0) {
+            questions = parsedQuestions as any;
+            console.log('[Quiz] Method 6 success:', questions.length, 'questions');
           }
-        } catch (parseErr) {
-          console.log('[Quiz] Method 3 failed:', parseErr);
+        }
+      }
+
+      // Method 7: Last resort - try extracting from any curly brace arrays
+      if (questions.length === 0) {
+        const allArrays = responseText.match(/\[[\s\S]{20,500}\]/g);
+        if (allArrays) {
+          for (const arr of allArrays) {
+            const parsed = tryParse(arr);
+            if (parsed && parsed.length > 0) {
+              questions = parsed;
+              console.log('[Quiz] Method 7 success:', questions.length, 'questions');
+              break;
+            }
+          }
         }
       }
 
@@ -504,7 +625,18 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
         throw new Error('Could not parse quiz data. The AI did not return valid JSON. Please try again.');
       }
 
-      console.log('[Quiz] Parsed questions:', questions.length);
+      // Normalize question types to valid QuestionType
+      const normalizedQuestions = questions.map((q): Omit<import("@/context/QuizContext").QuizQuestion, "id"> => ({
+        question: q.question,
+        type: normalizeType(q.type) as QuestionType,
+        options: q.options || [],
+        correctAnswer: Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer,
+        explanation: q.explanation,
+        difficulty: (q.difficulty as "easy" | "medium" | "hard") || "medium",
+        points: q.points || 1,
+      }));
+
+      console.log('[Quiz] Parsed questions:', normalizedQuestions.length);
 
       // Create a new quiz
       const currentPageInfo = activePage ? getPageById(activePage) : null;
@@ -512,11 +644,11 @@ export const Input = ({ isOpen, onClose, editor, pageId, initialMode }: InputPro
         ? `Quiz: ${currentPageInfo.page.name}`
         : `Quiz ${new Date().toLocaleDateString()}`;
 
-      const quiz = await createQuiz(quizTitle, questions);
+      const quiz = await createQuiz(quizTitle, normalizedQuestions);
 
       if (quiz) {
         openQuizModal('list');
-        setResponse(`Created quiz with ${questions.length} questions! Opening quiz...`);
+        setResponse(`Created quiz with ${normalizedQuestions.length} questions! Opening quiz...`);
 
         // Close input after a delay
         setTimeout(() => {

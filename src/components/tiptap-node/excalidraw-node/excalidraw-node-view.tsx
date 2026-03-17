@@ -3,7 +3,13 @@
 import { NodeViewWrapper, NodeViewProps } from "@tiptap/react"
 import { useState, useCallback, useRef, useEffect, Component, ReactNode } from "react"
 import dynamic from "next/dynamic"
-import { Maximize2, Minimize2, Download, Trash2, GripVertical } from "lucide-react"
+import { Maximize2, Minimize2, Download, Trash2, GripVertical, Users } from "lucide-react"
+import { io, Socket } from "socket.io-client"
+import { useAuth } from "@/context/AuthContext"
+
+// Track if socket is initialized globally
+let socketInstance: Socket | null = null
+let socketPageId: string | null = null
 
 // Error boundary for Excalidraw component
 class ExcalidrawErrorBoundary extends Component<
@@ -69,16 +75,22 @@ function ExcalidrawErrorFallback({ onRetry }: { onRetry?: () => void }) {
 }
 
 export function ExcalidrawNodeView({ node, updateAttributes, deleteNode, selected }: NodeViewProps) {
+  const { user } = useAuth()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isResizing, setIsResizing] = useState(false)
   const [isReady, setIsReady] = useState(false)
   const [hasError, setHasError] = useState(false)
+  const [collaborators, setCollaborators] = useState<{ id: string; name: string; color: string }[]>([])
   const [dimensions, setDimensions] = useState({
     width: Math.min(node.attrs.width || 600, 900),
     height: Math.min(node.attrs.height || 400, 600),
   })
   const containerRef = useRef<HTMLDivElement>(null)
   const startPos = useRef({ x: 0, y: 0, width: 0, height: 0 })
+  const excalidrawRef = useRef<any>(null)
+  const localElementsRef = useRef<any[]>([])
+  const isRemoteUpdateRef = useRef(false)
+  const socketRef = useRef<Socket | null>(null)
 
   // Check if canvas would exceed browser limits
   const canRenderCanvas = useCallback(() => {
@@ -88,6 +100,90 @@ export function ExcalidrawNodeView({ node, updateAttributes, deleteNode, selecte
     const maxSafeSize = 8000 / dpr // Be conservative
     return dimensions.width <= maxSafeSize && dimensions.height <= maxSafeSize
   }, [dimensions])
+
+  // Initialize socket connection for collaboration
+  useEffect(() => {
+    if (!user?.id) return
+
+    // Get page ID - try to get from node attrs or fall back to a default
+    const pageId = node.attrs.pageId || 'default'
+    const roomId = `excalidraw:${pageId}`
+
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3001"
+
+    // Reuse existing socket if already connected to same room
+    if (socketInstance && socketPageId === roomId) {
+      socketRef.current = socketInstance
+    } else {
+      // Create new socket connection
+      socketInstance = io(wsUrl, {
+        auth: {
+          userId: user.id,
+          userName: user.name || "Anonymous",
+          userAvatar: user.image,
+        },
+        transports: ["websocket", "polling"],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+      })
+
+      socketRef.current = socketInstance
+      socketPageId = roomId
+
+      socketInstance.on("connect", () => {
+        console.log("Excalidraw: Connected to collaboration server")
+        socketInstance?.emit("join-page", roomId)
+      })
+
+      // Listen for excalidraw updates from other users
+      socketInstance.on("excalidraw-update", (data: {
+        userId: string
+        userName: string
+        userColor: string
+        elements: string
+        appState: string
+      }) => {
+        if (data.userId === user.id) return
+
+        try {
+          isRemoteUpdateRef.current = true
+          const remoteElements = JSON.parse(data.elements)
+          
+          // Merge remote elements with local
+          if (excalidrawRef.current) {
+            excalidrawRef.current.updateScene({
+              elements: remoteElements,
+              appState: JSON.parse(data.appState || "{}"),
+            })
+          }
+          isRemoteUpdateRef.current = false
+        } catch (e) {
+          console.error("Failed to apply remote excalidraw update:", e)
+          isRemoteUpdateRef.current = false
+        }
+      })
+
+      // Listen for collaborator join/leave
+      socketInstance.on("room-users", (users: { id: string; name: string; color: string }[]) => {
+        setCollaborators(users.filter(u => u.id !== user.id))
+      })
+
+      socketInstance.on("user-joined", (userInfo: { id: string; name: string; color: string }) => {
+        if (userInfo.id !== user.id) {
+          setCollaborators(prev => [...prev.filter(u => u.id !== userInfo.id), userInfo])
+        }
+      })
+
+      socketInstance.on("user-left", ({ userId }: { userId: string }) => {
+        setCollaborators(prev => prev.filter(u => u.id !== userId))
+      })
+    }
+
+    return () => {
+      // Don't disconnect on unmount - keep socket alive for other components
+    }
+  }, [user?.id, node.attrs.pageId])
 
   // Delay rendering to ensure container is ready
   useEffect(() => {
@@ -147,12 +243,30 @@ export function ExcalidrawNodeView({ node, updateAttributes, deleteNode, selecte
 
   const handleChange = useCallback(
     (elements: readonly unknown[], appState: unknown, files: unknown) => {
+      // Skip if this is a remote update
+      if (isRemoteUpdateRef.current) return
+
+      // Store local elements for reference
+      localElementsRef.current = elements as any[]
+
+      // Broadcast to other collaborators via socket
+      if (socketRef.current?.connected) {
+        socketRef.current.emit("excalidraw-update", {
+          elements: JSON.stringify(elements),
+          appState: JSON.stringify({
+            viewBackgroundColor: (appState as any)?.viewBackgroundColor,
+            currentItemFontFamily: (appState as any)?.currentItemFontFamily,
+            gridSize: (appState as any)?.gridSize,
+          }),
+        })
+      }
+
       // Clear previous timeout
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
       }
 
-      // Debounce save
+      // Debounce save to database
       saveTimeoutRef.current = setTimeout(() => {
         try {
           const appStateObj = appState as Record<string, unknown>
@@ -304,6 +418,13 @@ export function ExcalidrawNodeView({ node, updateAttributes, deleteNode, selecte
       >
         {/* Toolbar */}
         <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-zinc-800/90 backdrop-blur-sm rounded-lg p-1">
+          {/* Collaborators indicator */}
+          {collaborators.length > 0 && (
+            <div className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-400" title={`${collaborators.length} collaborator(s) viewing`}>
+              <Users size={14} />
+              <span>{collaborators.length}</span>
+            </div>
+          )}
           <button
             onClick={handleExport}
             className="p-1.5 hover:bg-zinc-700 rounded text-zinc-400 hover:text-white transition-colors"
@@ -349,6 +470,7 @@ export function ExcalidrawNodeView({ node, updateAttributes, deleteNode, selecte
           {isReady ? (
             <ExcalidrawErrorBoundary fallback={<ExcalidrawErrorFallback />}>
               <Excalidraw
+                ref={excalidrawRef}
                 initialData={initialData}
                 onChange={handleChange}
                 theme="dark"

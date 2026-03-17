@@ -1,6 +1,6 @@
 // AI Types and Configuration
 
-export type AIProvider = 'groq' | 'ollama' | 'openai' | 'anthropic'
+export type AIProvider = 'groq' | 'ollama' | 'openai' | 'anthropic' | 'gemini'
 
 export type AIMode = 'answer' | 'expand' | 'summarize' | 'translate' | 'explain' | 'improve' | 'flowchart' | 'quiz' | 'flashcard'
 
@@ -81,6 +81,39 @@ export const AI_MODELS: AIModel[] = [
     description: 'Fast local model - requires setup',
     enabled: false,
   },
+  // Gemini Models (Google AI)
+  {
+    id: 'gemini-2.0-flash',
+    name: 'Gemini 2.0 Flash',
+    provider: 'gemini',
+    contextWindow: 1000000,
+    description: 'Latest fast model - Free tier available',
+    enabled: true,
+  },
+  {
+    id: 'gemini-1.5-flash-8b',
+    name: 'Gemini 1.5 Flash 8B',
+    provider: 'gemini',
+    contextWindow: 1000000,
+    description: 'Fast and efficient - great for quick tasks',
+    enabled: true,
+  },
+  {
+    id: 'gemini-1.5-flash',
+    name: 'Gemini 1.5 Flash',
+    provider: 'gemini',
+    contextWindow: 1000000,
+    description: 'Balanced speed and quality',
+    enabled: true,
+  },
+  {
+    id: 'gemini-1.5-pro',
+    name: 'Gemini 1.5 Pro',
+    provider: 'gemini',
+    contextWindow: 2000000,
+    description: 'High quality for complex tasks',
+    enabled: true,
+  },
 ]
 
 // Provider configurations
@@ -108,6 +141,12 @@ export const AI_PROVIDERS: Record<AIProvider, AIProviderConfig> = {
     baseUrl: 'https://api.anthropic.com/v1',
     defaultModel: 'claude-3-haiku-20240307',
     enabled: false,
+  },
+  gemini: {
+    provider: 'gemini',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    defaultModel: 'gemini-2.0-flash',
+    enabled: true,
   },
 }
 

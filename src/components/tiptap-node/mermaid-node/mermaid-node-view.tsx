@@ -54,6 +54,32 @@ export function MermaidNodeView({ node, updateAttributes, selected }: NodeViewPr
 
   const chart = node.attrs.chart as string
 
+  // Helper to get helpful error message
+  const getErrorHelp = (errMessage: string): string => {
+    const lowerMsg = errMessage.toLowerCase();
+    
+    if (lowerMsg.includes('syntax') || lowerMsg.includes('parse')) {
+      return 'Check for: missing quotes, unmatched brackets, or invalid characters in node labels.';
+    }
+    if (lowerMsg.includes('node') && lowerMsg.includes('undefined')) {
+      return 'Make sure all referenced nodes are defined. Check for typos in node IDs.';
+    }
+    if (lowerMsg.includes('edge') || lowerMsg.includes('arrow')) {
+      return 'Check arrow syntax. Use --> for arrows, --- for lines.';
+    }
+    if (lowerMsg.includes('label')) {
+      return 'Labels with special characters should be in quotes: [Label with "quotes"].';
+    }
+    if (lowerMsg.includes('subgraph')) {
+      return 'Make sure subgraphs are properly closed with "end".';
+    }
+    if (lowerMsg.includes('class')) {
+      return 'Check class definitions. Class names should match node names.';
+    }
+    
+    return 'Click "Edit" to fix the diagram syntax.';
+  };
+
   useEffect(() => {
     initMermaid()
 
@@ -64,7 +90,7 @@ export function MermaidNodeView({ node, updateAttributes, selected }: NodeViewPr
 
       if (!trimmedChart) {
         setIsLoading(false)
-        setError('No chart content provided')
+        setError('No chart content provided. Click "Edit" to add your diagram.')
         return
       }
 
@@ -83,15 +109,28 @@ export function MermaidNodeView({ node, updateAttributes, selected }: NodeViewPr
 
       if (!isValidStart) {
         setIsLoading(false)
-        setError('Invalid mermaid syntax - chart must start with a diagram type (e.g., flowchart, graph, sequenceDiagram)')
+        setError(`Invalid diagram type "${firstWord}". Use: flowchart, graph, sequenceDiagram, classDiagram, etc.`)
         return
       }
 
       setIsLoading(true)
       setError(null)
 
+      // Pre-validate common syntax issues
+      const lines = trimmedChart.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        // Skip comments and directives
+        if (line.startsWith('%%') || line.startsWith('%%{') || line.startsWith('{')) continue;
+        
+        // Skip lines that are just arrows or node definitions
+        if (line.match(/^-->-?/) || line.match(/^A\[/) || line.match(/^A\(/) || line.match(/^A{/)) continue;
+      }
+
       try {
-        const id = `mermaid-editor-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        // Try rendering with a unique ID
+        const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
         const { svg: renderedSvg } = await mermaid.render(id, trimmedChart)
 
         if (currentAttempt === renderAttemptRef.current) {
@@ -101,13 +140,15 @@ export function MermaidNodeView({ node, updateAttributes, selected }: NodeViewPr
       } catch (err) {
         console.error('Mermaid rendering error:', err)
         if (currentAttempt === renderAttemptRef.current) {
-          setError(err instanceof Error ? err.message : 'Failed to render chart')
+          const errMsg = err instanceof Error ? err.message : 'Failed to render chart';
+          const helpText = getErrorHelp(errMsg);
+          setError(`${errMsg}\n\n${helpText}`);
           setIsLoading(false)
         }
       }
     }
 
-    const timer = setTimeout(renderChart, 50)
+    const timer = setTimeout(renderChart, 100)
     return () => clearTimeout(timer)
   }, [chart])
 

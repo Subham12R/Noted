@@ -1,10 +1,9 @@
 "use client"
 
 import { FolderIcon } from "@/components/tiptap-icons/folder-icon"
-import { TagIcon } from "lucide-react"
-import { GraduationCap } from "lucide-react"
+import { TagIcon, FileIcon, GraduationCap } from "lucide-react"
 
-export type SidebarTab = "folders" | "tags" | "study"
+export type SidebarTab = "folders" | "tags" | "files" | "study"
 
 interface SidebarTabsProps {
   activeTab: SidebarTab
@@ -19,21 +18,32 @@ export function SidebarTabs({ activeTab, onTabChange }: SidebarTabsProps) {
         data-active={activeTab === "folders"}
         onClick={() => onTabChange("folders")}
       >
-        Folders
+        <FolderIcon className="w-4 h-4" />
+        <span>Folders</span>
       </button>
       <button
         className="sidebar-tab"
         data-active={activeTab === "tags"}
         onClick={() => onTabChange("tags")}
       >
-        Tags
+        <TagIcon className="w-4 h-4" />
+        <span>Tags</span>
+      </button>
+      <button
+        className="sidebar-tab"
+        data-active={activeTab === "files"}
+        onClick={() => onTabChange("files")}
+      >
+        <FileIcon className="w-4 h-4" />
+        <span>Files</span>
       </button>
       <button
         className="sidebar-tab"
         data-active={activeTab === "study"}
         onClick={() => onTabChange("study")}
       >
-        Study
+        <GraduationCap className="w-4 h-4" />
+        <span>Study</span>
       </button>
     </div>
   )

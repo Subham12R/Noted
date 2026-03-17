@@ -53,6 +53,13 @@ export const ExcalidrawNode = Node.create({
           "data-height": attributes.height,
         }),
       },
+      pageId: {
+        default: null,
+        parseHTML: element => element.getAttribute("data-page-id"),
+        renderHTML: attributes => ({
+          "data-page-id": attributes.pageId,
+        }),
+      },
     }
   },
 
@@ -77,7 +84,7 @@ export const ExcalidrawNode = Node.create({
   addCommands() {
     return {
       insertExcalidraw:
-        () =>
+        (pageId?: string) =>
         ({ commands }) => {
           return commands.insertContent({
             type: this.name,
@@ -87,6 +94,7 @@ export const ExcalidrawNode = Node.create({
               files: "{}",
               width: 600,
               height: 400,
+              pageId: pageId || null,
             },
           })
         },
