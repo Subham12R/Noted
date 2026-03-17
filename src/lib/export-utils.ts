@@ -25,8 +25,13 @@ async function loadHtml2Pdf(): Promise<typeof html2pdf> {
   }
 
   // Dynamically import
-  const html2pdfModule = await import("html2pdf.js")
-  return html2pdfModule.default || html2pdfModule
+  try {
+    const html2pdfModule = await import("html2pdf.js")
+    return html2pdfModule.default || html2pdfModule
+  } catch (error) {
+    console.error("Failed to load html2pdf.js:", error)
+    throw new Error("Failed to load PDF library. Please try again.")
+  }
 }
 
 /**

@@ -31,8 +31,8 @@ export const AI_CONFIG = {
   // Gemini Configuration (Google AI)
   gemini: {
     apiKey: process.env.GEMINI_API_KEY,
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    defaultModel: 'gemini-2.0-flash',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1',
+    defaultModel: 'gemini-3.1-flash-preview',
     enabled: true,
   },
 

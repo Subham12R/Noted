@@ -9,6 +9,7 @@ interface ThemeContextType {
   resolvedTheme: "light" | "dark"
   setTheme: (theme: Theme) => void
   toggleTheme: () => void
+  isDark: boolean
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
@@ -35,10 +36,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Apply theme to document
   const applyTheme = useCallback((resolved: "light" | "dark") => {
     const root = document.documentElement
-    root.classList.remove("light", "dark")
-    root.classList.add(resolved)
-
-    // Also set color-scheme for native elements
+    
+    if (resolved === "dark") {
+      root.classList.add("dark")
+    } else {
+      root.classList.remove("dark")
+    }
+    
+    // Set color-scheme for native elements
     root.style.colorScheme = resolved
   }, [])
 
@@ -97,6 +102,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           resolvedTheme: "dark",
           setTheme: () => {},
           toggleTheme: () => {},
+          isDark: false,
         }}
       >
         {children}
@@ -111,6 +117,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         resolvedTheme,
         setTheme,
         toggleTheme,
+        isDark: resolvedTheme === "dark",
       }}
     >
       {children}

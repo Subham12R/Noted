@@ -1,183 +1,183 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState, useCallback } from "react"
-import { EditorContent, EditorContext, useEditor } from "@tiptap/react"
-import { useNotes } from "@/context/NotesContext"
-import Link from "next/link"
-import { useHotkeys } from "react-hotkeys-hook"
+import { useEffect, useRef, useState, useCallback } from "react";
+import { EditorContent, EditorContext, useEditor } from "@tiptap/react";
+import { useNotes } from "@/context/NotesContext";
+import Link from "next/link";
+import { useHotkeys } from "react-hotkeys-hook";
 
 // Debounce hook
 function useDebounce<T extends (...args: Parameters<T>) => void>(
   callback: T,
-  delay: number
+  delay: number,
 ): T {
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   return useCallback(
     ((...args: Parameters<T>) => {
       if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
+        clearTimeout(timeoutRef.current);
       }
       timeoutRef.current = setTimeout(() => {
-        callback(...args)
-      }, delay)
+        callback(...args);
+      }, delay);
     }) as T,
-    [callback, delay]
-  )
+    [callback, delay],
+  );
 }
 
 // --- Tiptap Core Extensions ---
-import { StarterKit } from "@tiptap/starter-kit"
-import { TaskItem, TaskList } from "@tiptap/extension-list"
-import { TextAlign } from "@tiptap/extension-text-align"
-import { Typography } from "@tiptap/extension-typography"
-import { Highlight } from "@tiptap/extension-highlight"
-import { Subscript } from "@tiptap/extension-subscript"
-import { Superscript } from "@tiptap/extension-superscript"
-import { Selection, Dropcursor } from "@tiptap/extensions"
-import { Table } from "@tiptap/extension-table"
-import { TableRow } from "@tiptap/extension-table-row"
-import { TableCell } from "@tiptap/extension-table-cell"
-import { TableHeader } from "@tiptap/extension-table-header"
+import { StarterKit } from "@tiptap/starter-kit";
+import { TaskItem, TaskList } from "@tiptap/extension-list";
+import { TextAlign } from "@tiptap/extension-text-align";
+import { Typography } from "@tiptap/extension-typography";
+import { Highlight } from "@tiptap/extension-highlight";
+import { Subscript } from "@tiptap/extension-subscript";
+import { Superscript } from "@tiptap/extension-superscript";
+import { Selection, Dropcursor } from "@tiptap/extensions";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
 
 // --- UI Primitives ---
-import { Button } from "@/components/tiptap-ui-primitive/button"
-import { Spacer } from "@/components/tiptap-ui-primitive/spacer"
+import { Button } from "@/components/tiptap-ui-primitive/button";
+import { Spacer } from "@/components/tiptap-ui-primitive/spacer";
 import {
   Toolbar,
   ToolbarGroup,
   ToolbarSeparator,
-} from "@/components/tiptap-ui-primitive/toolbar"
+} from "@/components/tiptap-ui-primitive/toolbar";
 
 // --- Tiptap Node ---
-import { ImageUploadNode } from "@/components/tiptap-node/image-upload-node/image-upload-node-extension"
-import { HorizontalRule } from "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
-import { EnhancedCodeBlock } from "@/components/tiptap-node/code-block-node/code-block-node-extension"
-import { WhiteboardNode } from "@/components/tiptap-node/whiteboard-node/whiteboard-node-extension"
-import { MermaidNode } from "@/components/tiptap-node/mermaid-node"
-import { ResizableImage } from "@/components/tiptap-node/image-node"
-import { DragHandle } from "@/components/tiptap-node/drag-handle"
-import { Columns, Column } from "@/components/tiptap-node/columns-node"
-import { GridDropZone } from "@/components/tiptap-node/grid-drop-zone"
-import { ExcalidrawNode } from "@/components/tiptap-node/excalidraw-node/excalidraw-node-extension"
+import { ImageUploadNode } from "@/components/tiptap-node/image-upload-node/image-upload-node-extension";
+import { HorizontalRule } from "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension";
+import { EnhancedCodeBlock } from "@/components/tiptap-node/code-block-node/code-block-node-extension";
+import { WhiteboardNode } from "@/components/tiptap-node/whiteboard-node/whiteboard-node-extension";
+import { MermaidNode } from "@/components/tiptap-node/mermaid-node";
+import { ResizableImage } from "@/components/tiptap-node/image-node";
+import { DragHandle } from "@/components/tiptap-node/drag-handle";
+import { Columns, Column } from "@/components/tiptap-node/columns-node";
+import { GridDropZone } from "@/components/tiptap-node/grid-drop-zone";
+import { ExcalidrawNode } from "@/components/tiptap-node/excalidraw-node/excalidraw-node-extension";
 
-import "@/components/tiptap-node/blockquote-node/blockquote-node.scss"
-import "@/components/tiptap-node/code-block-node/code-block-node.scss"
-import "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
-import "@/components/tiptap-node/list-node/list-node.scss"
-import "@/components/tiptap-node/image-node/image-node.scss"
-import "@/components/tiptap-node/heading-node/heading-node.scss"
-import "@/components/tiptap-node/paragraph-node/paragraph-node.scss"
-import "@/components/tiptap-node/columns-node/columns-node.scss"
+import "@/components/tiptap-node/blockquote-node/blockquote-node.scss";
+import "@/components/tiptap-node/code-block-node/code-block-node.scss";
+import "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss";
+import "@/components/tiptap-node/list-node/list-node.scss";
+import "@/components/tiptap-node/image-node/image-node.scss";
+import "@/components/tiptap-node/heading-node/heading-node.scss";
+import "@/components/tiptap-node/paragraph-node/paragraph-node.scss";
+import "@/components/tiptap-node/columns-node/columns-node.scss";
 
 // --- Tiptap UI ---
-import { HeadingDropdownMenu } from "@/components/tiptap-ui/heading-dropdown-menu"
-import { ImageUploadButton } from "@/components/tiptap-ui/image-upload-button"
-import { ListDropdownMenu } from "@/components/tiptap-ui/list-dropdown-menu"
-import { BlockquoteButton } from "@/components/tiptap-ui/blockquote-button"
-import { CodeBlockButton } from "@/components/tiptap-ui/code-block-button"
+import { HeadingDropdownMenu } from "@/components/tiptap-ui/heading-dropdown-menu";
+import { ImageUploadButton } from "@/components/tiptap-ui/image-upload-button";
+import { ListDropdownMenu } from "@/components/tiptap-ui/list-dropdown-menu";
+import { BlockquoteButton } from "@/components/tiptap-ui/blockquote-button";
+import { CodeBlockButton } from "@/components/tiptap-ui/code-block-button";
 import {
   ColorHighlightPopover,
   ColorHighlightPopoverContent,
   ColorHighlightPopoverButton,
-} from "@/components/tiptap-ui/color-highlight-popover"
+} from "@/components/tiptap-ui/color-highlight-popover";
 import {
   LinkPopover,
   LinkContent,
   LinkButton,
-} from "@/components/tiptap-ui/link-popover"
-import { MarkButton } from "@/components/tiptap-ui/mark-button"
-import { TextAlignButton } from "@/components/tiptap-ui/text-align-button"
-import { UndoRedoButton } from "@/components/tiptap-ui/undo-redo-button"
-import { WhiteboardButton } from "@/components/tiptap-ui/whiteboard-button"
-import { ColumnsButton } from "@/components/tiptap-ui/columns-button"
-import { ExcalidrawButton } from "@/components/tiptap-ui/excalidraw-button/excalidraw-button"
+} from "@/components/tiptap-ui/link-popover";
+import { MarkButton } from "@/components/tiptap-ui/mark-button";
+import { TextAlignButton } from "@/components/tiptap-ui/text-align-button";
+import { UndoRedoButton } from "@/components/tiptap-ui/undo-redo-button";
+import { WhiteboardButton } from "@/components/tiptap-ui/whiteboard-button";
+import { ColumnsButton } from "@/components/tiptap-ui/columns-button";
+import { ExcalidrawButton } from "@/components/tiptap-ui/excalidraw-button/excalidraw-button";
 
 // --- Icons ---
-import { ArrowLeftIcon } from "@/components/tiptap-icons/arrow-left-icon"
-import { HighlighterIcon } from "@/components/tiptap-icons/highlighter-icon"
-import { LinkIcon } from "@/components/tiptap-icons/link-icon"
+import { ArrowLeftIcon } from "@/components/tiptap-icons/arrow-left-icon";
+import { HighlighterIcon } from "@/components/tiptap-icons/highlighter-icon";
+import { LinkIcon } from "@/components/tiptap-icons/link-icon";
 
 // --- Hooks ---
-import { useIsBreakpoint } from "@/hooks/use-is-breakpoint"
-import { useWindowSize } from "@/hooks/use-window-size"
-import { useCursorVisibility } from "@/hooks/use-cursor-visibility"
-import { useRealtimeSync } from "@/hooks/use-realtime-sync"
+import { useIsBreakpoint } from "@/hooks/use-is-breakpoint";
+import { useWindowSize } from "@/hooks/use-window-size";
+import { useCursorVisibility } from "@/hooks/use-cursor-visibility";
+import { useRealtimeSync } from "@/hooks/use-realtime-sync";
 
 // --- Components ---
-import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle"
-import { ShareModal } from "@/components/collaboration/ShareModal"
-import { SlashCommandMenu } from "@/components/editor/SlashCommandMenu"
-import { ExportMenu } from "@/components/editor/ExportMenu"
-import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal"
-import { Input } from "@/components/Input"
+import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle";
+import { ShareModal } from "@/components/collaboration/ShareModal";
+import { SlashCommandMenu } from "@/components/editor/SlashCommandMenu";
+import { ExportMenu } from "@/components/editor/ExportMenu";
+import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
+import { Input } from "@/components/Input";
 
 // --- Lib ---
-import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils"
+import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils";
 
 // --- Styles ---
-import "@/components/tiptap-templates/simple/simple-editor.scss"
+import "@/components/tiptap-templates/simple/simple-editor.scss";
 
 interface NoteEditorProps {
-  pageId: string
+  pageId: string;
 }
 
 interface SharedPageData {
-  id: string
-  name: string
-  content: string
-  folderId: string
-  folder?: { id: string; name: string } | null
+  id: string;
+  name: string;
+  content: string;
+  folderId: string;
+  folder?: { id: string; name: string } | null;
 }
 
 interface SharedPageState {
-  page: SharedPageData | null
-  role: string | null
-  isLoading: boolean
-  error: string | null
+  page: SharedPageData | null;
+  role: string | null;
+  isLoading: boolean;
+  error: string | null;
 }
 
 const EditablePageName = ({
   pageName,
   onRename,
 }: {
-  pageName: string
-  onRename: (newName: string) => void
+  pageName: string;
+  onRename: (newName: string) => void;
 }) => {
-  const [isEditing, setIsEditing] = useState(false)
-  const [editValue, setEditValue] = useState(pageName)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(pageName);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
-      inputRef.current.focus()
-      inputRef.current.select()
+      inputRef.current.focus();
+      inputRef.current.select();
     }
-  }, [isEditing])
+  }, [isEditing]);
 
   useEffect(() => {
-    setEditValue(pageName)
-  }, [pageName])
+    setEditValue(pageName);
+  }, [pageName]);
 
   const handleSave = () => {
-    const trimmed = editValue.trim()
+    const trimmed = editValue.trim();
     if (trimmed && trimmed !== pageName) {
-      onRename(trimmed)
+      onRename(trimmed);
     } else {
-      setEditValue(pageName)
+      setEditValue(pageName);
     }
-    setIsEditing(false)
-  }
+    setIsEditing(false);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      e.preventDefault()
-      handleSave()
+      e.preventDefault();
+      handleSave();
     } else if (e.key === "Escape") {
-      setEditValue(pageName)
-      setIsEditing(false)
+      setEditValue(pageName);
+      setIsEditing(false);
     }
-  }
+  };
 
   if (isEditing) {
     return (
@@ -190,7 +190,7 @@ const EditablePageName = ({
         onKeyDown={handleKeyDown}
         className="bg-transparent border border-zinc-600 rounded px-2 py-1 text-sm font-medium text-white focus:outline-none focus:border-indigo-500 max-w-[200px]"
       />
-    )
+    );
   }
 
   return (
@@ -201,8 +201,8 @@ const EditablePageName = ({
     >
       {pageName}
     </button>
-  )
-}
+  );
+};
 
 const MainToolbarContent = ({
   onHighlighterClick,
@@ -218,18 +218,23 @@ const MainToolbarContent = ({
   pageId,
   onRenamePage,
 }: {
-  onHighlighterClick: () => void
-  onLinkClick: () => void
-  onShareClick: () => void
-  onKeyboardShortcutsClick: () => void
-  isMobile: boolean
-  folderId: string | null
-  isConnected: boolean
-  activeUsers: { id: string; name: string; avatar: string | null; color: string }[]
-  editor: ReturnType<typeof useEditor> | null
-  pageName: string
-  pageId: string
-  onRenamePage: (newName: string) => void
+  onHighlighterClick: () => void;
+  onLinkClick: () => void;
+  onShareClick: () => void;
+  onKeyboardShortcutsClick: () => void;
+  isMobile: boolean;
+  folderId: string | null;
+  isConnected: boolean;
+  activeUsers: {
+    id: string;
+    name: string;
+    avatar: string | null;
+    color: string;
+  }[];
+  editor: ReturnType<typeof useEditor> | null;
+  pageName: string;
+  pageId: string;
+  onRenamePage: (newName: string) => void;
 }) => {
   return (
     <>
@@ -244,10 +249,7 @@ const MainToolbarContent = ({
       <ToolbarSeparator />
 
       <ToolbarGroup>
-        <EditablePageName
-          pageName={pageName}
-          onRename={onRenamePage}
-        />
+        <EditablePageName pageName={pageName} onRename={onRenamePage} />
       </ToolbarGroup>
 
       <Spacer />
@@ -317,7 +319,11 @@ const MainToolbarContent = ({
           <ShareIcon className="tiptap-button-icon" />
         </Button>
         <ExportMenu editor={editor} pageName={pageName} />
-        <Button data-style="ghost" onClick={onKeyboardShortcutsClick} title="Keyboard Shortcuts (Ctrl+K)">
+        <Button
+          data-style="ghost"
+          onClick={onKeyboardShortcutsClick}
+          title="Keyboard Shortcuts (Ctrl+K)"
+        >
           <KeyboardIcon className="tiptap-button-icon" />
         </Button>
         <ThemeToggle />
@@ -328,7 +334,10 @@ const MainToolbarContent = ({
         <>
           <ToolbarSeparator />
           <ToolbarGroup>
-            <div className="flex items-center gap-1 px-2" title={`${activeUsers.length} other user(s) editing`}>
+            <div
+              className="flex items-center gap-1 px-2"
+              title={`${activeUsers.length} other user(s) editing`}
+            >
               {activeUsers.slice(0, 3).map((user) => (
                 <div
                   key={user.id}
@@ -351,7 +360,10 @@ const MainToolbarContent = ({
 
       {/* Connection status indicator */}
       {isConnected && (
-        <div className="flex items-center gap-1 px-2" title="Real-time sync active">
+        <div
+          className="flex items-center gap-1 px-2"
+          title="Real-time sync active"
+        >
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
         </div>
       )}
@@ -360,34 +372,54 @@ const MainToolbarContent = ({
 
       {isMobile && <ToolbarSeparator />}
     </>
-  )
-}
+  );
+};
 
 function ShareIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className={className}
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
       <polyline points="16 6 12 2 8 6" />
       <line x1="12" x2="12" y1="2" y2="15" />
     </svg>
-  )
+  );
 }
 
 function KeyboardIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className={className}
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect width="20" height="16" x="2" y="4" rx="2" ry="2" />
       <path d="M6 8h.001M10 8h.001M14 8h.001M18 8h.001M8 12h.001M12 12h.001M16 12h.001M7 16h10" />
     </svg>
-  )
+  );
 }
 
 const MobileToolbarContent = ({
   type,
   onBack,
 }: {
-  type: "highlighter" | "link"
-  onBack: () => void
+  type: "highlighter" | "link";
+  onBack: () => void;
 }) => (
   <>
     <ToolbarGroup>
@@ -409,66 +441,71 @@ const MobileToolbarContent = ({
       <LinkContent />
     )}
   </>
-)
+);
 
 export function NoteEditor({ pageId }: NoteEditorProps) {
-  const isMobile = useIsBreakpoint()
-  const { height } = useWindowSize()
-  const [mobileView, setMobileView] = useState<"main" | "highlighter" | "link">("main")
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
-  const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false)
-  const [slashMenuOpen, setSlashMenuOpen] = useState(false)
-  const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 })
-  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false)
-  const [aiMode, setAiMode] = useState<string | null>(null)
-  const toolbarRef = useRef<HTMLDivElement>(null)
+  const isMobile = useIsBreakpoint();
+  const { height } = useWindowSize();
+  const [mobileView, setMobileView] = useState<"main" | "highlighter" | "link">(
+    "main",
+  );
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false);
+  const [slashMenuOpen, setSlashMenuOpen] = useState(false);
+  const [slashMenuPosition, setSlashMenuPosition] = useState({
+    top: 0,
+    left: 0,
+  });
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(true);
+  const [aiMode, setAiMode] = useState<string | null>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
 
-  const { getPageById, updatePageContent, renamePage } = useNotes()
-  const pageInfo = getPageById(pageId)
+  const { getPageById, updatePageContent, renamePage } = useNotes();
+  const pageInfo = getPageById(pageId);
 
   // Keep pageInfo in a ref so we can use it in the fetch without triggering re-fetches
-  const pageInfoRef = useRef(pageInfo)
-  pageInfoRef.current = pageInfo
+  const pageInfoRef = useRef(pageInfo);
+  pageInfoRef.current = pageInfo;
 
   // State for page data fetched from API (works for both owned and shared pages)
   const [pageState, setPageState] = useState<{
-    page: SharedPageData | null
-    role: string | null
-    status: "idle" | "loading" | "success" | "error"
-    error: string | null
-  }>({ page: null, role: null, status: "idle", error: null })
+    page: SharedPageData | null;
+    role: string | null;
+    status: "idle" | "loading" | "success" | "error";
+    error: string | null;
+  }>({ page: null, role: null, status: "idle", error: null });
 
   // Track which pageId we've fetched to avoid re-fetching
-  const fetchedPageIdRef = useRef<string | null>(null)
+  const fetchedPageIdRef = useRef<string | null>(null);
 
   // Always fetch page content from API to ensure fresh data on refresh
   useEffect(() => {
     // Skip if no pageId
     if (!pageId) {
-      return
+      return;
     }
 
     // Skip if already fetched for this page
     if (fetchedPageIdRef.current === pageId) {
-      return
+      return;
     }
 
-    let cancelled = false
+    let cancelled = false;
 
     // Mark as loading immediately
-    setPageState({ page: null, role: null, status: "loading", error: null })
+    setPageState({ page: null, role: null, status: "loading", error: null });
 
     const fetchPageContent = async () => {
       try {
-        const res = await fetch(`/api/pages/${pageId}`)
-        if (cancelled) return
+        const res = await fetch(`/api/pages/${pageId}`);
+        if (cancelled) return;
 
-        if (!res.ok) throw new Error("Failed to fetch page")
-        const data = await res.json()
+        if (!res.ok) throw new Error("Failed to fetch page");
+        const data = await res.json();
 
-        if (cancelled) return
+        if (cancelled) return;
 
-        fetchedPageIdRef.current = pageId
+        fetchedPageIdRef.current = pageId;
         setPageState({
           page: {
             id: data.page.id,
@@ -480,433 +517,510 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
           role: data.role || (pageInfoRef.current ? "owner" : null),
           status: "success",
           error: null,
-        })
+        });
       } catch (err) {
-        if (cancelled) return
-        console.error("Error fetching page:", err)
-        setPageState({ page: null, role: null, status: "error", error: err instanceof Error ? err.message : "Failed to fetch" })
+        if (cancelled) return;
+        console.error("Error fetching page:", err);
+        setPageState({
+          page: null,
+          role: null,
+          status: "error",
+          error: err instanceof Error ? err.message : "Failed to fetch",
+        });
       }
-    }
+    };
 
-    fetchPageContent()
+    fetchPageContent();
 
     return () => {
-      cancelled = true
-    }
-  }, [pageId])
+      cancelled = true;
+    };
+  }, [pageId]);
 
   // Determine if this is a shared page or owned page
-  const isSharedPage = !pageInfo && pageState.page
-  const userRole = pageInfo ? "owner" : pageState.role
-  const canEditPage = userRole === "owner" || userRole === "admin" || userRole === "editor"
+  const isSharedPage = !pageInfo && pageState.page;
+  const userRole = pageInfo ? "owner" : pageState.role;
+  const canEditPage =
+    userRole === "owner" || userRole === "admin" || userRole === "editor";
 
   // Get initial content from API fetch (ensures fresh data on refresh)
-  const initialContent = pageState.page?.content || ""
+  const initialContent = pageState.page?.content || "";
 
   // Debounce the save operation to prevent cursor jumping
   const debouncedSave = useDebounce((id: string, content: string) => {
-    updatePageContent(id, content)
-  }, 500)
+    updatePageContent(id, content);
+  }, 500);
 
   // Save content for shared pages via API
-  const saveSharedPageContent = useCallback(async (id: string, content: string) => {
-    try {
-      await fetch(`/api/pages/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
-      })
-    } catch (err) {
-      console.error("Error saving shared page:", err)
-    }
-  }, [])
-
-  const debouncedSaveShared = useDebounce((id: string, content: string) => {
-    saveSharedPageContent(id, content)
-  }, 500)
-
-  // Handle page rename
-  const handleRenamePage = useCallback(async (newName: string) => {
-    if (!pageState.page) return
-    const folderId = pageState.page.folderId
-    try {
-      await renamePage(folderId, pageId, newName)
-      // Update local state to reflect the change immediately
-      setPageState(prev => ({
-        ...prev,
-        page: prev.page ? { ...prev.page, name: newName } : null
-      }))
-    } catch (err) {
-      console.error("Error renaming page:", err)
-    }
-  }, [pageState.page, pageId, renamePage])
-
-  // Track if we're currently receiving a remote update to prevent echo
-  const isRemoteUpdateRef = useRef(false)
-  // Ref to hold the broadcast function so it doesn't cause editor recreation
-  const broadcastContentRef = useRef<(content: string) => void>(() => {})
-
-  const editor = useEditor({
-    immediatelyRender: false,
-    editable: canEditPage,
-    editorProps: {
-      attributes: {
-        autocomplete: "off",
-        autocorrect: "off",
-        autocapitalize: "off",
-        "aria-label": "Main content area, start typing to enter text.",
-        class: "simple-editor",
-      },
-    },
-    extensions: [
-      StarterKit.configure({
-        horizontalRule: false,
-        codeBlock: false, // Disabled in favor of EnhancedCodeBlock
-        link: {
-          openOnClick: false,
-          enableClickSelection: true,
-        },
-      }),
-      EnhancedCodeBlock,
-      HorizontalRule,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Highlight.configure({ multicolor: true }),
-      ResizableImage,
-      Typography,
-      Superscript,
-      Subscript,
-      Selection,
-      Dropcursor.configure({
-        color: "#3b82f6",
-        width: 2,
-      }),
-      DragHandle,
-      Columns,
-      Column,
-      GridDropZone,
-      ImageUploadNode.configure({
-        accept: "image/*",
-        maxSize: MAX_FILE_SIZE,
-        limit: 3,
-        upload: handleImageUpload,
-        onError: (error) => console.error("Upload failed:", error),
-      }),
-      WhiteboardNode,
-      MermaidNode,
-      ExcalidrawNode,
-      Table.configure({
-        resizable: true,
-        HTMLAttributes: {
-          class: 'tiptap-table',
-        },
-      }),
-      TableRow,
-      TableHeader,
-      TableCell,
-    ],
-    content: initialContent,
-    onUpdate: ({ editor }) => {
-      // Skip if this update was triggered by a remote sync
-      if (isRemoteUpdateRef.current) return
-
-      const content = editor.getHTML()
-
-      // Broadcast to other users via WebSocket (use ref to avoid stale closure)
-      broadcastContentRef.current(content)
-
-      // Use debounced save to persist to database
-      if (isSharedPage) {
-        debouncedSaveShared(pageId, content)
-      } else {
-        debouncedSave(pageId, content)
+  const saveSharedPageContent = useCallback(
+    async (id: string, content: string) => {
+      try {
+        await fetch(`/api/pages/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        });
+      } catch (err) {
+        console.error("Error saving shared page:", err);
       }
     },
-  }, [initialContent, canEditPage])
+    [],
+  );
+
+  const debouncedSaveShared = useDebounce((id: string, content: string) => {
+    saveSharedPageContent(id, content);
+  }, 500);
+
+  // Handle page rename
+  const handleRenamePage = useCallback(
+    async (newName: string) => {
+      if (!pageState.page) return;
+      const folderId = pageState.page.folderId;
+      try {
+        await renamePage(folderId, pageId, newName);
+        // Update local state to reflect the change immediately
+        setPageState((prev) => ({
+          ...prev,
+          page: prev.page ? { ...prev.page, name: newName } : null,
+        }));
+      } catch (err) {
+        console.error("Error renaming page:", err);
+      }
+    },
+    [pageState.page, pageId, renamePage],
+  );
+
+  // Track if we're currently receiving a remote update to prevent echo
+  const isRemoteUpdateRef = useRef(false);
+  // Ref to hold the broadcast function so it doesn't cause editor recreation
+  const broadcastContentRef = useRef<(content: string) => void>(() => {});
+
+  const editor = useEditor(
+    {
+      immediatelyRender: false,
+      editable: canEditPage,
+      editorProps: {
+        attributes: {
+          autocomplete: "off",
+          autocorrect: "off",
+          autocapitalize: "off",
+          "aria-label": "Main content area, start typing to enter text.",
+          class: "simple-editor",
+        },
+      },
+      extensions: [
+        StarterKit.configure({
+          horizontalRule: false,
+          codeBlock: false, // Disabled in favor of EnhancedCodeBlock
+          link: {
+            openOnClick: false,
+            enableClickSelection: true,
+          },
+        }),
+        EnhancedCodeBlock,
+        HorizontalRule,
+        TextAlign.configure({ types: ["heading", "paragraph"] }),
+        TaskList,
+        TaskItem.configure({ nested: true }),
+        Highlight.configure({ multicolor: true }),
+        ResizableImage,
+        Typography,
+        Superscript,
+        Subscript,
+        Selection,
+        Dropcursor.configure({
+          color: "#3b82f6",
+          width: 2,
+        }),
+        DragHandle,
+        Columns,
+        Column,
+        GridDropZone,
+        ImageUploadNode.configure({
+          accept: "image/*",
+          maxSize: MAX_FILE_SIZE,
+          limit: 3,
+          upload: handleImageUpload,
+          onError: (error) => console.error("Upload failed:", error),
+        }),
+        WhiteboardNode,
+        MermaidNode,
+        ExcalidrawNode,
+        Table.configure({
+          resizable: true,
+          HTMLAttributes: {
+            class: "tiptap-table",
+          },
+        }),
+        TableRow,
+        TableHeader,
+        TableCell,
+      ],
+      content: initialContent,
+      onUpdate: ({ editor }) => {
+        // Skip if this update was triggered by a remote sync
+        if (isRemoteUpdateRef.current) return;
+
+        const content = editor.getHTML();
+
+        // Broadcast to other users via WebSocket (use ref to avoid stale closure)
+        broadcastContentRef.current(content);
+
+        // Use debounced save to persist to database
+        if (isSharedPage) {
+          debouncedSaveShared(pageId, content);
+        } else {
+          debouncedSave(pageId, content);
+        }
+      },
+    },
+    [initialContent, canEditPage],
+  );
 
   // Real-time sync with other users - use stable pageId only, not canEditPage which changes
   const { broadcastContent, isConnected, activeUsers } = useRealtimeSync({
     pageId,
     editor,
     enabled: true, // Always enable if we have a pageId, the hook handles auth internally
-  })
+  });
 
   // Keep broadcast ref in sync
-  broadcastContentRef.current = broadcastContent
+  broadcastContentRef.current = broadcastContent;
 
   // Keyboard shortcut to open shortcuts modal (Ctrl+K)
-  useHotkeys("mod+k", (e) => {
-    e.preventDefault()
-    setIsKeyboardShortcutsOpen(true)
-  }, { enableOnContentEditable: true, enableOnFormTags: true })
+  useHotkeys(
+    "mod+k",
+    (e) => {
+      e.preventDefault();
+      setIsKeyboardShortcutsOpen(true);
+    },
+    { enableOnContentEditable: true, enableOnFormTags: true },
+  );
+
+  // Keyboard shortcut to toggle AI panel (Ctrl+`)
+  useHotkeys(
+    "ctrl+`",
+    (e) => {
+      e.preventDefault();
+      setIsAIPanelOpen((prev) => !prev);
+    },
+    { enableOnContentEditable: true, enableOnFormTags: true },
+  );
 
   // Listen for AI panel open events from slash commands
   useEffect(() => {
     const handleOpenAIPanel = (event: Event) => {
-      const customEvent = event as CustomEvent<{ mode?: string }>
-      const mode = customEvent.detail?.mode || null
-      setAiMode(mode)
-      setIsAIPanelOpen(true)
-    }
+      const customEvent = event as CustomEvent<{ mode?: string }>;
+      const mode = customEvent.detail?.mode || null;
+      setAiMode(mode);
+      setIsAIPanelOpen(true);
+    };
 
-    window.addEventListener("openAIPanel", handleOpenAIPanel)
+    window.addEventListener("openAIPanel", handleOpenAIPanel);
     return () => {
-      window.removeEventListener("openAIPanel", handleOpenAIPanel)
-    }
-  }, [])
+      window.removeEventListener("openAIPanel", handleOpenAIPanel);
+    };
+  }, []);
 
   // Listen for PDF text insertion events from FileLibrary
   useEffect(() => {
-    if (!editor) return
+    if (!editor) return;
 
     const handleInsertPDFText = (event: Event) => {
-      const customEvent = event as CustomEvent<{ text: string }>
-      const text = customEvent.detail?.text
+      const customEvent = event as CustomEvent<{ text: string }>;
+      const text = customEvent.detail?.text;
       if (text && editor) {
         // Format inline markdown (bold, italic, code)
         const formatInline = (str: string): string => {
           return str
             .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
             .replace(/\*(.+?)\*/g, "<em>$1</em>")
-            .replace(/`([^`]+)`/g, "<code>$1</code>")
-        }
+            .replace(/`([^`]+)`/g, "<code>$1</code>");
+        };
 
         // Check if line is a table separator (|---|---|)
         const isTableSeparator = (line: string): boolean => {
-          return /^\|?[\s\-:|]+\|[\s\-:|]+\|?$/.test(line.trim())
-        }
+          return /^\|?[\s\-:|]+\|[\s\-:|]+\|?$/.test(line.trim());
+        };
 
         // Check if line is a table row
         const isTableRow = (line: string): boolean => {
-          const trimmed = line.trim()
-          return trimmed.startsWith("|") && trimmed.endsWith("|") && trimmed.includes("|")
-        }
+          const trimmed = line.trim();
+          return (
+            trimmed.startsWith("|") &&
+            trimmed.endsWith("|") &&
+            trimmed.includes("|")
+          );
+        };
 
         // Parse table row into cells
         const parseTableRow = (line: string): string[] => {
-          return line.trim().split("|").filter((_, i, arr) => i > 0 && i < arr.length - 1).map(cell => cell.trim())
-        }
+          return line
+            .trim()
+            .split("|")
+            .filter((_, i, arr) => i > 0 && i < arr.length - 1)
+            .map((cell) => cell.trim());
+        };
 
         // Convert markdown to proper TipTap HTML blocks
-        const lines = text.split("\n")
-        let html = ""
-        let inCodeBlock = false
-        let codeContent = ""
-        let codeLanguage = ""
-        let inList = false
-        let inTable = false
-        let tableHeaders: string[] = []
+        const lines = text.split("\n");
+        let html = "";
+        let inCodeBlock = false;
+        let codeContent = "";
+        let codeLanguage = "";
+        let inList = false;
+        let inTable = false;
+        let tableHeaders: string[] = [];
 
         for (let i = 0; i < lines.length; i++) {
-          const line = lines[i]
+          const line = lines[i];
 
           // Handle code blocks
           if (line.startsWith("```")) {
-            if (inList) { html += "</ul>"; inList = false }
-            if (inTable) { html += "</tbody></table>"; inTable = false }
-            if (!inCodeBlock) {
-              inCodeBlock = true
-              codeLanguage = line.slice(3).trim() || "plaintext"
-              codeContent = ""
-            } else {
-              inCodeBlock = false
-              html += `<pre><code class="language-${codeLanguage}">${codeContent.trim()}</code></pre>`
+            if (inList) {
+              html += "</ul>";
+              inList = false;
             }
-            continue
+            if (inTable) {
+              html += "</tbody></table>";
+              inTable = false;
+            }
+            if (!inCodeBlock) {
+              inCodeBlock = true;
+              codeLanguage = line.slice(3).trim() || "plaintext";
+              codeContent = "";
+            } else {
+              inCodeBlock = false;
+              html += `<pre><code class="language-${codeLanguage}">${codeContent.trim()}</code></pre>`;
+            }
+            continue;
           }
 
           if (inCodeBlock) {
-            codeContent += line + "\n"
-            continue
+            codeContent += line + "\n";
+            continue;
           }
 
           // Handle tables
           if (isTableRow(line)) {
-            if (inList) { html += "</ul>"; inList = false }
+            if (inList) {
+              html += "</ul>";
+              inList = false;
+            }
 
             // Check if next line is separator (this is header row)
-            const nextLine = lines[i + 1]
+            const nextLine = lines[i + 1];
             if (!inTable && nextLine && isTableSeparator(nextLine)) {
-              tableHeaders = parseTableRow(line)
-              html += "<table><thead><tr>"
-              tableHeaders.forEach(header => {
-                html += `<th>${formatInline(header)}</th>`
-              })
-              html += "</tr></thead><tbody>"
-              inTable = true
-              i++ // Skip separator line
-              continue
+              tableHeaders = parseTableRow(line);
+              html += "<table><thead><tr>";
+              tableHeaders.forEach((header) => {
+                html += `<th>${formatInline(header)}</th>`;
+              });
+              html += "</tr></thead><tbody>";
+              inTable = true;
+              i++; // Skip separator line
+              continue;
             } else if (inTable) {
               // Regular table row
-              const cells = parseTableRow(line)
-              html += "<tr>"
-              cells.forEach(cell => {
-                html += `<td>${formatInline(cell)}</td>`
-              })
-              html += "</tr>"
-              continue
+              const cells = parseTableRow(line);
+              html += "<tr>";
+              cells.forEach((cell) => {
+                html += `<td>${formatInline(cell)}</td>`;
+              });
+              html += "</tr>";
+              continue;
             }
           } else if (inTable) {
             // End of table
-            html += "</tbody></table>"
-            inTable = false
+            html += "</tbody></table>";
+            inTable = false;
           }
 
           // Skip table separator lines that weren't caught
           if (isTableSeparator(line)) {
-            continue
+            continue;
           }
 
           // Handle headers (####, ###, ##, #)
           if (line.startsWith("#### ")) {
-            if (inList) { html += "</ul>"; inList = false }
-            html += `<h4>${formatInline(line.slice(5))}</h4>`
+            if (inList) {
+              html += "</ul>";
+              inList = false;
+            }
+            html += `<h4>${formatInline(line.slice(5))}</h4>`;
           } else if (line.startsWith("### ")) {
-            if (inList) { html += "</ul>"; inList = false }
-            html += `<h3>${formatInline(line.slice(4))}</h3>`
+            if (inList) {
+              html += "</ul>";
+              inList = false;
+            }
+            html += `<h3>${formatInline(line.slice(4))}</h3>`;
           } else if (line.startsWith("## ")) {
-            if (inList) { html += "</ul>"; inList = false }
-            html += `<h2>${formatInline(line.slice(3))}</h2>`
+            if (inList) {
+              html += "</ul>";
+              inList = false;
+            }
+            html += `<h2>${formatInline(line.slice(3))}</h2>`;
           } else if (line.startsWith("# ")) {
-            if (inList) { html += "</ul>"; inList = false }
-            html += `<h1>${formatInline(line.slice(2))}</h1>`
+            if (inList) {
+              html += "</ul>";
+              inList = false;
+            }
+            html += `<h1>${formatInline(line.slice(2))}</h1>`;
           }
           // Handle bullet points
           else if (line.match(/^[\-\*]\s/) && !isTableSeparator(line)) {
-            if (!inList) { html += "<ul>"; inList = true }
-            html += `<li>${formatInline(line.slice(2))}</li>`
+            if (!inList) {
+              html += "<ul>";
+              inList = true;
+            }
+            html += `<li>${formatInline(line.slice(2))}</li>`;
           }
           // Handle numbered lists
           else if (line.match(/^\d+\.\s/)) {
-            if (inList) { html += "</ul>"; inList = false }
-            const content = line.replace(/^\d+\.\s/, "")
-            html += `<p>${formatInline(content)}</p>`
+            if (inList) {
+              html += "</ul>";
+              inList = false;
+            }
+            const content = line.replace(/^\d+\.\s/, "");
+            html += `<p>${formatInline(content)}</p>`;
           }
           // Handle blockquotes
           else if (line.startsWith("> ")) {
-            if (inList) { html += "</ul>"; inList = false }
-            html += `<blockquote><p>${formatInline(line.slice(2))}</p></blockquote>`
+            if (inList) {
+              html += "</ul>";
+              inList = false;
+            }
+            html += `<blockquote><p>${formatInline(line.slice(2))}</p></blockquote>`;
           }
           // Handle empty lines
           else if (line.trim() === "") {
-            if (inList) { html += "</ul>"; inList = false }
+            if (inList) {
+              html += "</ul>";
+              inList = false;
+            }
           }
           // Regular paragraph
           else {
-            if (inList) { html += "</ul>"; inList = false }
-            html += `<p>${formatInline(line)}</p>`
+            if (inList) {
+              html += "</ul>";
+              inList = false;
+            }
+            html += `<p>${formatInline(line)}</p>`;
           }
         }
 
-        if (inList) html += "</ul>"
-        if (inTable) html += "</tbody></table>"
+        if (inList) html += "</ul>";
+        if (inTable) html += "</tbody></table>";
 
-        editor.chain().focus().insertContent(html).run()
+        editor.chain().focus().insertContent(html).run();
       }
-    }
+    };
 
-    window.addEventListener("insertPDFText", handleInsertPDFText)
+    window.addEventListener("insertPDFText", handleInsertPDFText);
     return () => {
-      window.removeEventListener("insertPDFText", handleInsertPDFText)
-    }
-  }, [editor])
+      window.removeEventListener("insertPDFText", handleInsertPDFText);
+    };
+  }, [editor]);
 
   // Slash command detection
   useEffect(() => {
-    if (!editor) return
+    if (!editor) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       // Only trigger on "/" key at the start of a line or after whitespace
       if (event.key === "/" && !slashMenuOpen) {
-        const { selection } = editor.state
-        const { $from } = selection
-        const textBefore = $from.parent.textContent.slice(0, $from.parentOffset)
+        const { selection } = editor.state;
+        const { $from } = selection;
+        const textBefore = $from.parent.textContent.slice(
+          0,
+          $from.parentOffset,
+        );
 
         // Check if we're at the start of a line or after a space
         if (textBefore === "" || textBefore.endsWith(" ")) {
           // Get cursor position for menu placement
-          const coords = editor.view.coordsAtPos(selection.from)
+          const coords = editor.view.coordsAtPos(selection.from);
           setSlashMenuPosition({
             top: coords.bottom + 8,
             left: coords.left,
-          })
+          });
 
           // Delay opening to let the "/" be typed first
           setTimeout(() => {
-            setSlashMenuOpen(true)
-          }, 10)
+            setSlashMenuOpen(true);
+          }, 10);
         }
       }
-    }
+    };
 
-    const dom = editor.view.dom
-    dom.addEventListener("keydown", handleKeyDown)
+    const dom = editor.view.dom;
+    dom.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      dom.removeEventListener("keydown", handleKeyDown)
-    }
-  }, [editor, slashMenuOpen])
+      dom.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [editor, slashMenuOpen]);
 
   // Close slash menu when editor loses focus or selection changes significantly
   useEffect(() => {
-    if (!editor || !slashMenuOpen) return
+    if (!editor || !slashMenuOpen) return;
 
     const handleSelectionChange = () => {
       // Check if the current line still starts with /
-      const { selection } = editor.state
-      const { $from } = selection
-      const textBefore = $from.parent.textContent.slice(0, $from.parentOffset)
+      const { selection } = editor.state;
+      const { $from } = selection;
+      const textBefore = $from.parent.textContent.slice(0, $from.parentOffset);
 
       if (!textBefore.includes("/")) {
-        setSlashMenuOpen(false)
+        setSlashMenuOpen(false);
       }
-    }
+    };
 
-    editor.on("selectionUpdate", handleSelectionChange)
+    editor.on("selectionUpdate", handleSelectionChange);
 
     return () => {
-      editor.off("selectionUpdate", handleSelectionChange)
-    }
-  }, [editor, slashMenuOpen])
+      editor.off("selectionUpdate", handleSelectionChange);
+    };
+  }, [editor, slashMenuOpen]);
 
   // Update editor editable state when role changes
   useEffect(() => {
     if (editor) {
-      editor.setEditable(canEditPage)
+      editor.setEditable(canEditPage);
     }
-  }, [editor, canEditPage])
+  }, [editor, canEditPage]);
 
   // Store toolbar height in state to avoid ref access during render
-  const [toolbarHeight, setToolbarHeight] = useState(0)
+  const [toolbarHeight, setToolbarHeight] = useState(0);
 
   useEffect(() => {
     if (toolbarRef.current) {
-      setToolbarHeight(toolbarRef.current.getBoundingClientRect().height)
+      setToolbarHeight(toolbarRef.current.getBoundingClientRect().height);
     }
-  }, [])
+  }, []);
 
   const rect = useCursorVisibility({
     editor,
     overlayHeight: toolbarHeight,
-  })
+  });
 
   // Reset mobile view when switching to desktop
-  const effectiveMobileView = !isMobile ? "main" : mobileView
+  const effectiveMobileView = !isMobile ? "main" : mobileView;
 
   // Load content when pageState changes (fresh data from API)
   useEffect(() => {
     if (editor && pageState.page && pageState.status === "success") {
-      const content = pageState.page.content || ""
+      const content = pageState.page.content || "";
       // Only update if content is different to avoid unnecessary re-renders
       if (editor.getHTML() !== content) {
-        editor.commands.setContent(content)
+        editor.commands.setContent(content);
       }
     }
-  }, [editor, pageState.page, pageState.status])
+  }, [editor, pageState.page, pageState.status]);
 
   // Show loading spinner while data is being fetched
-  const isPageLoading = pageState.status === "idle" || pageState.status === "loading"
+  const isPageLoading =
+    pageState.status === "idle" || pageState.status === "loading";
   if (isPageLoading) {
     return (
       <div className="simple-editor-wrapper">
@@ -917,11 +1031,11 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   // Check if we have page data from API
-  const hasPage = pageState.page !== null
+  const hasPage = pageState.page !== null;
 
   if (!hasPage) {
     return (
@@ -930,12 +1044,12 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
           <p>Page not found</p>
         </div>
       </div>
-    )
+    );
   }
 
   // Get page info from API state
-  const pageName = pageState.page!.name
-  const currentFolderId = pageState.page!.folderId
+  const pageName = pageState.page!.name;
+  const currentFolderId = pageState.page!.folderId;
 
   return (
     <>
@@ -958,7 +1072,9 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
                     onHighlighterClick={() => setMobileView("highlighter")}
                     onLinkClick={() => setMobileView("link")}
                     onShareClick={() => setIsShareModalOpen(true)}
-                    onKeyboardShortcutsClick={() => setIsKeyboardShortcutsOpen(true)}
+                    onKeyboardShortcutsClick={() =>
+                      setIsKeyboardShortcutsOpen(true)
+                    }
                     isMobile={isMobile}
                     folderId={currentFolderId}
                     isConnected={isConnected}
@@ -970,7 +1086,11 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
                   />
                 ) : (
                   <MobileToolbarContent
-                    type={effectiveMobileView === "highlighter" ? "highlighter" : "link"}
+                    type={
+                      effectiveMobileView === "highlighter"
+                        ? "highlighter"
+                        : "link"
+                    }
                     onBack={() => setMobileView("main")}
                   />
                 )}
@@ -1034,12 +1154,12 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
           pageId={pageId}
           isOpen={isAIPanelOpen}
           onClose={() => {
-            setIsAIPanelOpen(false)
-            setAiMode(null)
+            setIsAIPanelOpen(false);
+            setAiMode(null);
           }}
           initialMode={aiMode}
         />
       )}
     </>
-  )
+  );
 }

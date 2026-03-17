@@ -85,56 +85,47 @@ export function FlashcardModal() {
   // Review Mode
   if (isReviewing && currentReviewCard) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
         <div className="w-full max-w-2xl mx-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={endReview}
-              className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors"
+              className="flex items-center gap-2 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
             >
               <ArrowLeft size={20} />
               <span>Exit Review</span>
             </button>
-            <span className="text-zinc-400">
+            <span className="text-neutral-500 dark:text-neutral-400">
               {reviewProgress.completed + 1} / {reviewProgress.total}
             </span>
           </div>
 
-          {/* Card */}
+          {/* Card - Conditional Rendering */}
           <div
-            onClick={flipCard}
-            className="relative min-h-[400px] bg-zinc-900 rounded-2xl border border-zinc-800 cursor-pointer overflow-hidden transform transition-all duration-500"
-            style={{
-              transformStyle: "preserve-3d",
-              transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
-            }}
+            className="min-h-[400px] bg-white dark:bg-[#1C1C1C] rounded-2xl border border-neutral-200 dark:border-neutral-800 cursor-pointer overflow-hidden shadow-xl"
           >
-            {/* Front */}
-            <div
-              className="absolute inset-0 p-8 flex flex-col items-center justify-center backface-hidden"
-              style={{ backfaceVisibility: "hidden" }}
-            >
-              <span className="text-xs text-zinc-500 uppercase tracking-wider mb-4">Question</span>
-              <p className="text-2xl text-white text-center leading-relaxed">
-                {currentReviewCard.front}
-              </p>
-              <span className="mt-8 text-sm text-zinc-500">Click to reveal answer</span>
-            </div>
-
-            {/* Back */}
-            <div
-              className="absolute inset-0 p-8 flex flex-col items-center justify-center"
-              style={{
-                backfaceVisibility: "hidden",
-                transform: "rotateY(180deg)",
-              }}
-            >
-              <span className="text-xs text-zinc-500 uppercase tracking-wider mb-4">Answer</span>
-              <p className="text-2xl text-white text-center leading-relaxed">
-                {currentReviewCard.back}
-              </p>
-            </div>
+            {!isFlipped ? (
+              // Front - Question
+              <div 
+                onClick={flipCard}
+                className="p-8 flex flex-col items-center justify-center min-h-[400px]"
+              >
+                <span className="text-xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-4">Question</span>
+                <p className="text-2xl text-neutral-900 dark:text-white text-center leading-relaxed">
+                  {currentReviewCard.front}
+                </p>
+                <span className="mt-8 text-sm text-neutral-400 dark:text-neutral-500">Click to reveal answer</span>
+              </div>
+            ) : (
+              // Back - Answer
+              <div className="p-8 flex flex-col items-center justify-center min-h-[400px]">
+                <span className="text-xs text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-4">Answer</span>
+                <p className="text-2xl text-neutral-900 dark:text-white text-center leading-relaxed">
+                  {currentReviewCard.back}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Rating buttons - only show when flipped */}
@@ -142,28 +133,28 @@ export function FlashcardModal() {
             <div className="flex justify-center gap-3 mt-6">
               <button
                 onClick={() => handleRating("again")}
-                className="flex flex-col items-center gap-1 px-6 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl transition-colors"
+                className="flex flex-col items-center gap-1 px-6 py-3 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-xl transition-colors"
               >
                 <span className="font-medium">Again</span>
                 <span className="text-xs opacity-70">&lt;1m</span>
               </button>
               <button
                 onClick={() => handleRating("hard")}
-                className="flex flex-col items-center gap-1 px-6 py-3 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-xl transition-colors"
+                className="flex flex-col items-center gap-1 px-6 py-3 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200 dark:hover:bg-orange-900/50 text-orange-600 dark:text-orange-400 rounded-xl transition-colors"
               >
                 <span className="font-medium">Hard</span>
                 <span className="text-xs opacity-70">6m</span>
               </button>
               <button
                 onClick={() => handleRating("good")}
-                className="flex flex-col items-center gap-1 px-6 py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-xl transition-colors"
+                className="flex flex-col items-center gap-1 px-6 py-3 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400 rounded-xl transition-colors"
               >
                 <span className="font-medium">Good</span>
                 <span className="text-xs opacity-70">10m</span>
               </button>
               <button
                 onClick={() => handleRating("easy")}
-                className="flex flex-col items-center gap-1 px-6 py-3 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-xl transition-colors"
+                className="flex flex-col items-center gap-1 px-6 py-3 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-xl transition-colors"
               >
                 <span className="font-medium">Easy</span>
                 <span className="text-xs opacity-70">4d</span>
@@ -173,9 +164,9 @@ export function FlashcardModal() {
 
           {/* Progress bar */}
           <div className="mt-6">
-            <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+            <div className="h-1 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
               <div
-                className="h-full bg-indigo-500 transition-all duration-300"
+                className="h-full bg-indigo-600 dark:bg-indigo-500 transition-all duration-300"
                 style={{ width: `${((reviewProgress.completed + 1) / reviewProgress.total) * 100}%` }}
               />
             </div>

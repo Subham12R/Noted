@@ -22,14 +22,20 @@ function MoonIcon({ className }: { className?: string }) {
 }
 
 export function DashboardThemeToggle() {
-  const { resolvedTheme, toggleTheme } = useTheme()
+  const { resolvedTheme, toggleTheme, isDark } = useTheme()
   const isDarkMode = resolvedTheme === "dark"
+
+  const handleToggle = () => {
+    console.log("Theme toggle clicked, current:", resolvedTheme, "isDark:", isDark)
+    toggleTheme()
+    console.log("After toggle, html classList:", document.documentElement.classList.toString())
+  }
 
   return (
     <button
-      onClick={toggleTheme}
+      onClick={handleToggle}
       aria-label={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
-      className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
+      className="p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-400 transition-colors"
     >
       {isDarkMode ? (
         <SunIcon className="w-5 h-5" />

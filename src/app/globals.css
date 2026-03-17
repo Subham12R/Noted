@@ -8,6 +8,11 @@
   --font-grandhotel: 'Grandhotel', cursive;
 }
 
+.dark {
+  --background: #121212;
+  --foreground: #ededed;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -17,14 +22,9 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1a1a1a;
-    --foreground: #ededed;
-  }
-
-  dark {
-    --color-background: var(--background);
-    --color-foreground: var(--foreground);
+  :root:not(.dark) {
+    --background: #ffffff;
+    --foreground: #171717;
   }
 }
 

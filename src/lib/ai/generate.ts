@@ -1,15 +1,28 @@
 // AI Generation Service
 // Handles text generation with streaming support
 
-import { createAIClient, getDefaultModel } from './providers'
+import { createOpenAIClient, getDefaultModel } from './providers'
 import { AI_CONFIG } from './config'
 import type { AIMode, AIProvider, AIStreamChunk } from '@/types/ai'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 
-// Helper to check if provider is Gemini
+// Only import Google Generative AI when actually needed (lazy import)
+let GoogleGenerativeAI: any = null
+
+function getGoogleGenerativeAI() {
+  if (!GoogleGenerativeAI) {
+    GoogleGenerativeAI = require('@google/generative-ai').GoogleGenerativeAI
+  }
+  return GoogleGenerativeAI
+}
+
+// Helper to check if provider is Gemini - ONLY true if explicitly set to 'gemini'
 function isGeminiProvider(provider?: AIProvider): boolean {
-  const targetProvider = provider || AI_CONFIG.provider
-  return targetProvider === 'gemini'
+  return provider === 'gemini'
+}
+
+// Helper to get OpenAI-compatible client (groq, openai, ollama)
+function getOpenAIClient(provider?: AIProvider) {
+  return createOpenAIClient(provider)
 }
 
 // System prompts for different modes
@@ -242,7 +255,6 @@ export async function generateAIResponse(options: GenerateOptions): Promise<{
     temperature,
   } = options
 
-  const client = createAIClient(provider)
   const modelId = model || getDefaultModel(provider)
 
   // Determine temperature: use provided value, or fall back to mode-based defaults from config
@@ -263,36 +275,52 @@ export async function generateAIResponse(options: GenerateOptions): Promise<{
     : prompt
 
   console.log('[AI Generate] Mode:', mode)
+  console.log('[AI Generate] Provider:', provider || AI_CONFIG.provider)
+  console.log('[AI Generate] Model:', modelId)
   console.log('[AI Generate] System prompt exists:', !!systemPrompt)
-  console.log('[AI Generate] System prompt length:', systemPrompt?.length || 0)
   console.log('[AI Generate] Temperature:', finalTemperature)
 
   // Handle Gemini provider separately
   if (isGeminiProvider(provider)) {
-    const genAI = client as GoogleGenerativeAI
-    const geminiModel = genAI.getGenerativeModel({ model: modelId })
+    try {
+      const GenAI = getGoogleGenerativeAI()
+      const genAI = new GenAI(AI_CONFIG.gemini.apiKey)
+      const geminiModel = genAI.getGenerativeModel({ 
+        model: modelId,
+        systemInstruction: systemPrompt 
+      })
 
-    const fullPrompt = `System: ${systemPrompt}\n\nUser: ${userMessage}`
-    
-    const result = await geminiModel.generateContent({
-      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
-      generationConfig: {
-        maxOutputTokens: maxTokens,
-        temperature: finalTemperature,
-      },
-    })
+      console.log('[AI Generate] Sending request to Gemini...')
+      
+      const result = await geminiModel.generateContent({
+        contents: [{ 
+          role: 'user', 
+          parts: [{ text: userMessage }] 
+        }],
+        generationConfig: {
+          maxOutputTokens: maxTokens,
+          temperature: finalTemperature,
+        },
+      })
 
-    const response = result.response
-    const content = response.text()
+      console.log('[AI Generate] Gemini response received')
+      const response = result.response
+      const content = response.text()
 
-    return {
-      content: content || '',
-      model: modelId,
-      tokensUsed: Math.ceil((content?.length || 0) / 4),
+      return {
+        content: content || '',
+        model: modelId,
+        tokensUsed: Math.ceil((content?.length || 0) / 4),
+      }
+    } catch (error) {
+      console.error('[AI Generate] Gemini error:', error)
+      throw error
     }
   }
 
-  const response = await (client as any).chat.completions.create({
+  // Use OpenAI-compatible client for groq, openai, ollama
+  const openAIClient = getOpenAIClient(provider)
+  const response = await openAIClient.chat.completions.create({
     model: modelId,
     messages: [
       { role: 'system', content: systemPrompt },
@@ -325,7 +353,6 @@ export async function* generateAIResponseStream(
     temperature,
   } = options
 
-  const client = createAIClient(provider)
   const modelId = model || getDefaultModel(provider)
   const responseId = crypto.randomUUID()
 
@@ -347,6 +374,8 @@ export async function* generateAIResponseStream(
     : prompt
 
   console.log('[AI Generate Stream] Mode:', mode)
+  console.log('[AI Generate Stream] Provider:', provider || AI_CONFIG.provider)
+  console.log('[AI Generate Stream] Model:', modelId)
   console.log('[AI Generate Stream] System prompt exists:', !!systemPrompt)
   console.log('[AI Generate Stream] Has context:', !!context)
   console.log('[AI Generate Stream] Temperature:', finalTemperature)
@@ -361,43 +390,66 @@ export async function* generateAIResponseStream(
   try {
     // Handle Gemini provider separately
     if (isGeminiProvider(provider)) {
-      const genAI = client as GoogleGenerativeAI
-      const geminiModel = genAI.getGenerativeModel({ model: modelId })
+      try {
+        const GenAI = getGoogleGenerativeAI()
+        const genAI = new GenAI(AI_CONFIG.gemini.apiKey)
+        console.log('[AI Generate Stream] Creating Gemini model with:', modelId)
+        
+        const geminiModel = genAI.getGenerativeModel({ 
+          model: modelId,
+          systemInstruction: systemPrompt 
+        })
 
-      const fullPrompt = `System: ${systemPrompt}\n\nUser: ${userMessage}`
+        console.log('[AI Generate Stream] Sending request to Gemini...')
 
-      // Use streaming for Gemini
-      const result = await geminiModel.generateContentStream({
-        contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
-        generationConfig: {
-          maxOutputTokens: maxTokens,
-          temperature: finalTemperature,
-        },
-      })
+        // Use streaming for Gemini - simplified approach
+        const result = await geminiModel.generateContentStream({
+          contents: [{ 
+            role: 'user', 
+            parts: [{ text: userMessage }] 
+          }],
+          generationConfig: {
+            maxOutputTokens: maxTokens,
+            temperature: finalTemperature,
+          },
+        })
+        
+        console.log('[AI Generate Stream] Gemini response received')
 
-      let totalContent = ''
+        let totalContent = ''
 
-      for await (const chunk of result.stream) {
-        const content = chunk.text()
-        if (content) {
-          totalContent += content
-          yield {
-            type: 'chunk',
-            content,
+        for await (const chunk of result.stream) {
+          const content = chunk.text()
+          if (content) {
+            totalContent += content
+            yield {
+              type: 'chunk',
+              content,
+            }
           }
         }
-      }
 
-      // Emit done event
-      yield {
-        type: 'done',
-        content: totalContent,
-        id: responseId,
-        model: modelId,
-        tokensUsed: Math.ceil(totalContent.length / 4),
+        // Emit done event
+        yield {
+          type: 'done',
+          content: totalContent,
+          id: responseId,
+          model: modelId,
+          tokensUsed: Math.ceil(totalContent.length / 4),
+        }
+      } catch (geminiError) {
+        console.error('[AI Generate Stream] Gemini error:', geminiError)
+        yield {
+          type: 'error',
+          error: geminiError instanceof Error ? geminiError.message : 'Gemini API error',
+        }
+        return
       }
     } else {
-      const stream = await (client as any).chat.completions.create({
+      // Use OpenAI-compatible client for groq, openai, ollama
+      try {
+        const openAIClient = getOpenAIClient(provider)
+        const stream = await openAIClient.chat.completions.create({
         model: modelId,
         messages: [
           { role: 'system', content: systemPrompt },
@@ -430,8 +482,17 @@ export async function* generateAIResponseStream(
         // Groq doesn't return token count in stream, estimate it
         tokensUsed: Math.ceil(totalContent.length / 4),
       }
+      } catch (openaiError) {
+        console.error('[AI Generate Stream] OpenAI client error:', openaiError)
+        yield {
+          type: 'error',
+          error: openaiError instanceof Error ? openaiError.message : 'OpenAI client error',
+        }
+        return
+      }
     }
   } catch (error) {
+    console.error('[AI Generate Stream] Final error:', error)
     yield {
       type: 'error',
       error: error instanceof Error ? error.message : 'Unknown error occurred',

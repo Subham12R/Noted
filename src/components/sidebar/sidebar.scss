@@ -1,5 +1,5 @@
 .sidebar {
-  --sidebar-width: 280px;
+  --sidebar-width: 320px;
   --sidebar-bg: #0f0f0f;
   --sidebar-bg-solid: #0a0a0a;
   --sidebar-border: rgba(255, 255, 255, 0.08);
@@ -22,7 +22,9 @@
   flex-direction: column;
   z-index: 50;
   transform: translateX(-100%);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 
   &[data-open="true"] {
     transform: translateX(0);
@@ -48,7 +50,8 @@
   border-bottom: 1px solid var(--sidebar-border);
   background: transparent;
 
-  h2, .sidebar-title {
+  h2,
+  .sidebar-title {
     font-size: 1.25rem;
     font-weight: 700;
     color: var(--sidebar-text);
@@ -72,7 +75,9 @@
   align-items: center;
   gap: 0.625rem;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 
   &:hover {
     background: rgba(255, 255, 255, 0.06);
@@ -157,7 +162,10 @@
   padding: 0.5rem 0.5rem;
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: background-color 0.15s ease, border 0.15s ease, opacity 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border 0.15s ease,
+    opacity 0.15s ease;
   color: var(--sidebar-text);
   border: 2px solid transparent;
 
@@ -228,7 +236,7 @@
 
   // Connecting line
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     left: 0.5rem;
     top: 0;
@@ -245,13 +253,15 @@
   padding: 0.5rem;
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: background-color 0.15s ease, opacity 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
   color: var(--sidebar-text);
   position: relative;
 
   // Horizontal connecting line
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     left: -0.5rem;
     top: 50%;
@@ -275,7 +285,7 @@
     border-radius: 0.75rem;
 
     &::after {
-      content: '';
+      content: "";
       position: absolute;
       left: 0.25rem;
       top: 50%;
@@ -338,7 +348,10 @@
   background: transparent;
   color: var(--sidebar-text);
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
 
   &:hover {
     background: var(--sidebar-hover);
@@ -386,7 +399,9 @@
   z-index: 40;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.3s ease, visibility 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s ease;
 
   &[data-visible="true"] {
     opacity: 1;
@@ -627,7 +642,7 @@
   border-radius: 0 6px 6px 6px;
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: -8px;
     left: 0;
@@ -835,10 +850,18 @@
   background: rgba(0, 0, 0, 0.08);
   border-radius: 1px;
 
-  &:nth-child(1) { width: 100%; }
-  &:nth-child(2) { width: 85%; }
-  &:nth-child(3) { width: 70%; }
-  &:nth-child(4) { width: 90%; }
+  &:nth-child(1) {
+    width: 100%;
+  }
+  &:nth-child(2) {
+    width: 85%;
+  }
+  &:nth-child(3) {
+    width: 70%;
+  }
+  &:nth-child(4) {
+    width: 90%;
+  }
 }
 
 .page-card-fold {
@@ -956,7 +979,7 @@
   border-radius: 0 3px 3px 3px;
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: -5px;
     left: 0;

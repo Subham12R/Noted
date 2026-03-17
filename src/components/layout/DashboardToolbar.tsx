@@ -33,17 +33,17 @@ export function DashboardToolbar() {
   const isPaidUser = tier === "pro" || tier === "team"
 
   return (
-    <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-2 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-200 dark:border-white/10">
+    <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-2 bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-800">
       <div className="flex items-center gap-2">
         <button
-          className={`flex items-center justify-center w-9 h-9 rounded-lg border-none bg-transparent text-foreground cursor-pointer transition-all duration-150 hover:bg-zinc-100 dark:hover:bg-white/10 [&_svg]:w-5 [&_svg]:h-5 ${isOpen ? 'bg-zinc-100 dark:bg-white/15' : ''}`}
+          className={`flex items-center justify-center w-9 h-9 rounded-lg border-none bg-transparent text-neutral-900 dark:text-white cursor-pointer transition-all duration-150 hover:bg-neutral-100 dark:hover:bg-white/10 ${isOpen ? 'bg-neutral-100 dark:bg-white/15' : ''}`}
           onClick={toggleSidebar}
           title="Toggle Sidebar"
         >
           <SidebarIcon />
         </button>
-        <div className="w-px h-6 bg-zinc-200 dark:bg-white/10 mx-1" />
-        <Link href="/" className="text-2xl text-foreground no-underline px-2 font-grandhotel">
+        <div className="w-px h-6 bg-neutral-200 dark:bg-neutral-800 mx-1" />
+        <Link href="/" className="text-2xl text-neutral-900 dark:text-white no-underline px-2 font-grandhotel">
           Noted.
         </Link>
       </div>
@@ -51,14 +51,14 @@ export function DashboardToolbar() {
         {isPaidUser ? (
           <Link
             href="/profile"
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium tracking-tight text-foreground bg-zinc-100 dark:bg-white/5 backdrop-blur-md border border-zinc-200 dark:border-white/10 rounded-lg no-underline transition-all duration-200 hover:bg-zinc-200 dark:hover:bg-white/10 hover:border-zinc-300 dark:hover:border-white/20"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium tracking-tight text-neutral-900 dark:text-white bg-neutral-100 dark:bg-white/5 backdrop-blur-md border border-neutral-200 dark:border-neutral-800 rounded-lg no-underline transition-all duration-200 hover:bg-neutral-200 dark:hover:bg-white/10"
           >
             {tier === "team" ? "Team" : "Pro"}
           </Link>
         ) : (
           <Link
             href="/pricing"
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium tracking-tight text-foreground bg-zinc-100 dark:bg-white/5 backdrop-blur-md border border-zinc-200 dark:border-white/10 rounded-lg no-underline transition-all duration-200 hover:bg-zinc-200 dark:hover:bg-white/10 hover:border-zinc-300 dark:hover:border-white/20"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium tracking-tight text-neutral-900 dark:text-white bg-neutral-100 dark:bg-white/5 backdrop-blur-md border border-neutral-200 dark:border-neutral-800 rounded-lg no-underline transition-all duration-200 hover:bg-neutral-200 dark:hover:bg-white/10"
           >
             Get +
           </Link>

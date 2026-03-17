@@ -166,7 +166,7 @@ export function FlashcardProvider({ children }: { children: ReactNode }) {
   const currentReviewCard = reviewQueue[currentReviewIndex] || null
   const reviewProgress = { completed: currentReviewIndex, total: reviewQueue.length }
 
-  // Load progress from localStorage
+  // Load progress and decks from localStorage
   useEffect(() => {
     if (typeof window === "undefined") return
     try {
@@ -182,8 +182,12 @@ export function FlashcardProvider({ children }: { children: ReactNode }) {
         })
         setCardProgress(map)
       }
+      const storedDecks = localStorage.getItem("noted-flashcard-decks")
+      if (storedDecks) {
+        setDecks(JSON.parse(storedDecks))
+      }
     } catch (e) {
-      console.error("Failed to load flashcard progress:", e)
+      console.error("Failed to load flashcard data:", e)
     }
   }, [])
 
@@ -196,6 +200,12 @@ export function FlashcardProvider({ children }: { children: ReactNode }) {
     })
     localStorage.setItem("noted-flashcard-progress", JSON.stringify(data))
   }, [cardProgress])
+
+  // Save decks to localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    localStorage.setItem("noted-flashcard-decks", JSON.stringify(decks))
+  }, [decks])
 
   // Listen for openFlashcardsModal events from slash menu
   useEffect(() => {
@@ -218,26 +228,29 @@ export function FlashcardProvider({ children }: { children: ReactNode }) {
     setIsLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/flashcards/decks")
-      if (!res.ok) throw new Error("Failed to fetch decks")
-      const data = await res.json()
-      setDecks(data.decks || [])
+      const stored = localStorage.getItem("noted-flashcard-decks")
+      if (stored) {
+        const loadedDecks = JSON.parse(stored)
+        if (decks.length === 0) {
+          setDecks(loadedDecks)
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to fetch decks")
-      // Use mock data for now
-      setDecks([])
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [decks.length])
 
   const fetchDeckCards = useCallback(async (deckId: string) => {
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/flashcards/decks/${deckId}/cards`)
-      if (!res.ok) throw new Error("Failed to fetch cards")
-      const data = await res.json()
-      setCurrentCards(data.cards || [])
+      const stored = localStorage.getItem("noted-flashcard-decks")
+      if (stored) {
+        const decks = JSON.parse(stored)
+        const deck = decks.find((d: any) => d.id === deckId)
+        setCurrentCards(deck?.cards || [])
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to fetch cards")
       setCurrentCards([])
@@ -262,39 +275,21 @@ export function FlashcardProvider({ children }: { children: ReactNode }) {
   }, [currentCards, cardProgress])
 
   const createDeck = useCallback(async (title: string, description?: string, sourcePageId?: string): Promise<FlashcardDeck | null> => {
-    try {
-      const res = await fetch("/api/flashcards/decks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, sourcePageId }),
-      })
-      if (!res.ok) throw new Error("Failed to create deck")
-      const deck = await res.json()
-      setDecks(prev => [...prev, deck])
-      return deck
-    } catch (e) {
-      // Create local deck for demo
-      const deck: FlashcardDeck = {
-        id: `deck-${Date.now()}`,
-        title,
-        description: description || "",
-        sourcePageId: sourcePageId || null,
-        cardCount: 0,
-        dueCount: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-      setDecks(prev => [...prev, deck])
-      return deck
+    const deck: FlashcardDeck = {
+      id: `deck-${Date.now()}`,
+      title,
+      description: description || "",
+      sourcePageId: sourcePageId || null,
+      cardCount: 0,
+      dueCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }
+    setDecks(prev => [...prev, deck])
+    return deck
   }, [])
 
   const deleteDeck = useCallback(async (deckId: string) => {
-    try {
-      await fetch(`/api/flashcards/decks/${deckId}`, { method: "DELETE" })
-    } catch (e) {
-      // Continue with local deletion
-    }
     setDecks(prev => prev.filter(d => d.id !== deckId))
     if (currentDeck?.id === deckId) {
       setCurrentDeck(null)
@@ -314,22 +309,6 @@ export function FlashcardProvider({ children }: { children: ReactNode }) {
       updatedAt: new Date(),
     }
 
-    try {
-      const res = await fetch(`/api/flashcards/decks/${deckId}/cards`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ front, back, type }),
-      })
-      if (res.ok) {
-        const savedCard = await res.json()
-        setCurrentCards(prev => [...prev, savedCard])
-        setDecks(prev => prev.map(d => d.id === deckId ? { ...d, cardCount: d.cardCount + 1 } : d))
-        return savedCard
-      }
-    } catch (e) {
-      // Use local card
-    }
-
     setCurrentCards(prev => [...prev, card])
     setDecks(prev => prev.map(d => d.id === deckId ? { ...d, cardCount: d.cardCount + 1 } : d))
     return card
@@ -337,15 +316,6 @@ export function FlashcardProvider({ children }: { children: ReactNode }) {
 
   const updateCard = useCallback(async (cardId: string, updates: Partial<Flashcard>) => {
     setCurrentCards(prev => prev.map(c => c.id === cardId ? { ...c, ...updates, updatedAt: new Date() } : c))
-    try {
-      await fetch(`/api/flashcards/cards/${cardId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updates),
-      })
-    } catch (e) {
-      // Local update already done
-    }
   }, [])
 
   const deleteCard = useCallback(async (cardId: string) => {
@@ -353,11 +323,6 @@ export function FlashcardProvider({ children }: { children: ReactNode }) {
     setCurrentCards(prev => prev.filter(c => c.id !== cardId))
     if (card) {
       setDecks(prev => prev.map(d => d.id === card.deckId ? { ...d, cardCount: Math.max(0, d.cardCount - 1) } : d))
-    }
-    try {
-      await fetch(`/api/flashcards/cards/${cardId}`, { method: "DELETE" })
-    } catch (e) {
-      // Local deletion already done
     }
   }, [currentCards])
 

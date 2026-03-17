@@ -21,12 +21,17 @@ export function ProfileDropdown() {
   const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const userName = user?.name || "User"
   const userEmail = user?.email || ""
   const avatarSrc = user?.image || undefined
   const initials = getInitials(userName)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -38,6 +43,12 @@ export function ProfileDropdown() {
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
+
+  if (!mounted) {
+    return (
+      <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
+    )
+  }
 
   return (
     <div className="relative" ref={dropdownRef}>

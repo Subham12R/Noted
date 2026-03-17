@@ -100,12 +100,12 @@ export function QuizModal() {
   }
 
   const containerClasses = isFullscreen
-    ? "fixed inset-0 z-50 bg-zinc-950"
-    : "fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+    ? "fixed inset-0 z-50 bg-neutral-50 dark:bg-[#121212]"
+    : "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
 
   const contentClasses = isFullscreen
     ? "h-full flex flex-col"
-    : "w-full max-w-3xl max-h-[90vh] mx-4 bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden flex flex-col"
+    : "w-full max-w-2xl max-h-[90vh] mx-4 bg-white dark:bg-[#1C1C1C] rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col"
 
   // Results View
   if (modalMode === "results" && lastResult) {
@@ -114,11 +114,11 @@ export function QuizModal() {
     return (
       <div className={containerClasses}>
         <div className={contentClasses}>
-          <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Quiz Results</h2>
+          <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">Quiz Results</h2>
             <button
               onClick={closeModal}
-              className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors"
+              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-white transition-colors"
             >
               <X size={20} />
             </button>
@@ -128,38 +128,38 @@ export function QuizModal() {
             {/* Score Display */}
             <div className="text-center mb-8">
               <div className={`inline-flex items-center justify-center w-32 h-32 rounded-full mb-4 ${
-                passed ? "bg-green-500/20" : "bg-red-500/20"
+                passed ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"
               }`}>
                 <div className="text-center">
-                  <div className={`text-4xl font-bold ${passed ? "text-green-400" : "text-red-400"}`}>
+                  <div className={`text-4xl font-bold ${passed ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                     {lastResult.percentage}%
                   </div>
-                  <div className="text-sm text-zinc-400">Score</div>
+                  <div className="text-sm text-neutral-500 dark:text-neutral-400">Score</div>
                 </div>
               </div>
 
               <div className="flex items-center justify-center gap-2 mb-2">
                 {passed ? (
                   <>
-                    <Trophy className="text-yellow-400" size={24} />
-                    <span className="text-xl font-semibold text-white">Great job!</span>
+                    <Trophy className="text-amber-500" size={24} />
+                    <span className="text-xl font-semibold text-neutral-900 dark:text-white">Great job!</span>
                   </>
                 ) : (
-                  <span className="text-xl font-semibold text-white">Keep practicing!</span>
+                  <span className="text-xl font-semibold text-neutral-900 dark:text-white">Keep practicing!</span>
                 )}
               </div>
 
-              <p className="text-zinc-400">
+              <p className="text-neutral-600 dark:text-neutral-400">
                 {lastResult.correctCount} of {lastResult.totalQuestions} questions correct
               </p>
-              <p className="text-sm text-zinc-500 mt-1">
+              <p className="text-sm text-neutral-400 dark:text-neutral-500 mt-1">
                 Time: {formatTime(lastResult.timeTaken)}
               </p>
             </div>
 
             {/* Performance Breakdown */}
-            <div className="bg-zinc-800/50 rounded-xl p-4 mb-6">
-              <h3 className="text-sm font-medium text-white mb-3">Performance Breakdown</h3>
+            <div className="bg-neutral-50 dark:bg-neutral-800/50 rounded-xl p-4 mb-6">
+              <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">Performance Breakdown</h3>
               <div className="space-y-2">
                 {["easy", "medium", "hard"].map(difficulty => {
                   const questions = currentQuiz?.questions.filter(q => q.difficulty === difficulty) || []

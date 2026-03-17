@@ -2,26 +2,33 @@
 // Creates the appropriate client based on configuration
 
 import OpenAI from 'openai'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { AI_CONFIG, getActiveProviderConfig } from '../config'
 import type { AIProvider } from '@/types/ai'
 
-// Provider instances cache
-const providerInstances: Map<AIProvider, OpenAI | GoogleGenerativeAI> = new Map()
+// Separate cache for OpenAI-compatible clients (groq, openai, ollama)
+const openAIClients: Map<string, OpenAI> = new Map()
 
 /**
- * Create an OpenAI-compatible client for any provider
- * Groq, Ollama, and OpenAI all support OpenAI's API format
+ * Create an OpenAI-compatible client for groq, ollama, openai
+ * This is the standard way - works perfectly for these providers
  */
-export function createAIClient(provider?: AIProvider): OpenAI | GoogleGenerativeAI {
+export function createOpenAIClient(provider?: AIProvider): OpenAI {
   const targetProvider = provider || AI_CONFIG.provider
 
-  // Return cached instance if exists
-  if (providerInstances.has(targetProvider)) {
-    return providerInstances.get(targetProvider)! as OpenAI | GoogleGenerativeAI
+  // Don't create OpenAI client for gemini
+  if (targetProvider === 'gemini') {
+    throw new Error('Use createGeminiClient() for Gemini provider')
   }
 
-  let client: OpenAI | GoogleGenerativeAI
+  // Return cached instance if exists
+  const apiKey = targetProvider === 'groq' ? AI_CONFIG.groq.apiKey : 
+                 targetProvider === 'openai' ? AI_CONFIG.openai.apiKey : 'default'
+  const cacheKey = `${targetProvider}-${apiKey || 'default'}`
+  if (openAIClients.has(cacheKey)) {
+    return openAIClients.get(cacheKey)!
+  }
+
+  let client: OpenAI
 
   switch (targetProvider) {
     case 'groq':
@@ -32,9 +39,8 @@ export function createAIClient(provider?: AIProvider): OpenAI | GoogleGenerative
       break
 
     case 'ollama':
-      // Ollama uses OpenAI-compatible API
       client = new OpenAI({
-        apiKey: 'ollama', // Ollama doesn't require a real key
+        apiKey: 'ollama',
         baseURL: `${AI_CONFIG.ollama.baseUrl}/v1`,
       })
       break
@@ -46,17 +52,21 @@ export function createAIClient(provider?: AIProvider): OpenAI | GoogleGenerative
       })
       break
 
-    case 'gemini':
-      // Gemini uses Google Generative AI SDK
-      client = new GoogleGenerativeAI(AI_CONFIG.gemini.apiKey)
-      break
-
     default:
-      throw new Error(`Unknown AI provider: ${targetProvider}`)
+      // Default to groq
+      client = new OpenAI({
+        apiKey: AI_CONFIG.groq.apiKey,
+        baseURL: AI_CONFIG.groq.baseUrl,
+      })
   }
 
-  providerInstances.set(targetProvider, client)
-  return client as OpenAI | GoogleGenerativeAI
+  openAIClients.set(cacheKey, client)
+  return client
+}
+
+// Keep the old function for backward compatibility - but it will throw for gemini
+export function createAIClient(provider?: AIProvider): OpenAI {
+  return createOpenAIClient(provider)
 }
 
 /**

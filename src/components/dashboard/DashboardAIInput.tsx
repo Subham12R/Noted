@@ -777,25 +777,20 @@ INSTRUCTIONS:
         {/* Chat Area */}
         {(messages.length > 0 || streamingContent || isProcessing || error) && (
           <div
-            className="mb-4  rounded-2xl overflow-hidden transition-all duration-300 border border-white/10"
-            style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              backdropFilter: 'blur(24px)',
-              WebkitBackdropFilter: 'blur(24px)',
-            }}
+            className="mb-4 rounded-[32px] overflow-hidden transition-all duration-300 bg-white dark:bg-[#1C1C1C] border border-neutral-200 dark:border-neutral-800"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-800">
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all"
+                className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-white/10 hover:bg-neutral-200 dark:hover:bg-white/20 flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-white transition-all"
                 title={isExpanded ? 'Collapse' : 'Expand'}
               >
                 {isExpanded ? <CollapseIcon className="w-3.5 h-3.5" /> : <ExpandIcon className="w-3.5 h-3.5" />}
               </button>
               <button
                 onClick={clearConversation}
-                className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all"
+                className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-white/10 hover:bg-neutral-200 dark:hover:bg-white/20 flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-white transition-all"
                 title="Clear conversation"
               >
                 <CloseIcon className="w-3.5 h-3.5" />
@@ -917,15 +912,15 @@ INSTRUCTIONS:
         )}
 
         {/* Main Input Container */}
-        <div className="relative flex items-end gap-2 backdrop-blur-3xl  rounded-xl dark:border-zinc-600/40 border border-zinc-200/60">
+        <div className="relative flex items-end gap-2 bg-white dark:bg-[#1C1C1C] rounded-[32px] border border-neutral-200 dark:border-neutral-800 p-2">
           {/* Folder Selector - Custom styled dropdown */}
           <div className="relative p-2 ml-1 group">
             <button
               onClick={() => setIsFolderDropdownOpen(!isFolderDropdownOpen)}
-              className="w-9 h-9 flex items-center justify-center rounded-lg bg-zinc-800/50 border border-white/10 cursor-pointer hover:bg-zinc-700/50 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-full bg-neutral-100 dark:bg-white/10 border border-neutral-200 dark:border-neutral-700 cursor-pointer hover:bg-neutral-200 dark:hover:bg-white/20 transition-colors"
               title={selectedFolder ? selectedFolder.name : "All folders"}
             >
-              <FolderIcon className={`w-4 h-4 ${selectedFolderId ? 'text-indigo-400' : 'text-zinc-400'}`} />
+              <FolderIcon className={`w-4 h-4 ${selectedFolderId ? 'text-indigo-500' : 'text-neutral-500'}`} />
             </button>
 
             {/* Custom Dropdown Menu */}
@@ -937,17 +932,17 @@ INSTRUCTIONS:
                   onClick={() => setIsFolderDropdownOpen(false)}
                 />
                 {/* Dropdown content */}
-                <div className="absolute bottom-full left-0 mb-2 w-64 max-h-80 overflow-y-auto bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl z-50">
+                <div className="absolute bottom-full left-0 mb-2 w-64 max-h-80 overflow-y-auto bg-white dark:bg-[#1C1C1C] border border-neutral-100 dark:border-neutral-800 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50">
                   <div className="p-1">
                     <button
                       onClick={() => {
                         setSelectedFolderId(null)
                         setIsFolderDropdownOpen(false)
                       }}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                      className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${
                         !selectedFolderId
-                          ? 'bg-indigo-500/20 text-indigo-400'
-                          : 'text-zinc-300 hover:bg-zinc-800'
+                          ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                          : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10'
                       }`}
                     >
                       All folders
@@ -959,9 +954,9 @@ INSTRUCTIONS:
                           setSelectedFolderId(f.id)
                           setIsFolderDropdownOpen(false)
                         }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                        className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${
                           selectedFolderId === f.id
-                            ? 'bg-indigo-500/20 text-indigo-400'
+                            ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
                             : 'text-zinc-300 hover:bg-zinc-800'
                         }`}
                       >
@@ -987,28 +982,28 @@ INSTRUCTIONS:
           />
 
           {/* Model Selector and Send Button */}
-          <div className="flex items-center  gap-1 px-2 py-2 relative">
+          <div className="flex items-center gap-1 px-2 py-2 relative">
             {/* Model Selector */}
              <button
-                onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                disabled={isProcessing}
-                className="absolute top-[-40%] bg-white/10 border border-white/10 backdrop-blur-3xl right-[50px] inline-flex items-center gap-1.5 px-2 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 rounded-lg transition-colors disabled:opacity-50"
-                title="Select AI model"
-              >
-                <ModelIcon className="w-4 h-4" />
-                <span className="max-w-[80px] truncate hidden sm:inline">
-                  {availableModels.find(m => m.id === selectedModel)?.name?.split(' ')[0] || 'Model'}
-                </span>
-                <ChevronDownIcon className="w-3 h-3" />
-              </button>
+               onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+               disabled={isProcessing}
+               className="absolute top-[-40%] bg-white dark:bg-[#1C1C1C] border border-neutral-200 dark:border-neutral-700 right-[50px] inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-2xl transition-colors disabled:opacity-50"
+               title="Select AI model"
+             >
+               <ModelIcon className="w-4 h-4" />
+               <span className="max-w-[80px] truncate hidden sm:inline">
+                 {availableModels.find(m => m.id === selectedModel)?.name?.split(' ')[0] || 'Model'}
+               </span>
+               <ChevronDownIcon className="w-3 h-3" />
+             </button>
 
             <div className="relative" ref={modelDropdownRef}>
              
               {/* Model Dropdown */}
               {isModelDropdownOpen && (
-                <div className="absolute bottom-full right-0 mb-2 w-72 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50">
-                  <div className="p-2 border-b border-zinc-800">
-                    <p className="text-xs font-medium text-zinc-500 px-2">Select Model</p>
+                <div className="absolute bottom-full right-0 mb-2 w-72 bg-white dark:bg-[#1C1C1C] border border-neutral-100 dark:border-neutral-800 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] overflow-hidden z-50">
+                  <div className="p-2 border-b border-neutral-100 dark:border-neutral-800">
+                    <p className="text-xs font-medium text-neutral-500 px-2">Select Model</p>
                   </div>
                   <div className="max-h-64 overflow-y-auto p-1">
                     {availableModels.map((model) => (
@@ -1021,12 +1016,12 @@ INSTRUCTIONS:
                           }
                         }}
                         disabled={!model.available}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                        className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors ${
                           selectedModel === model.id
-                            ? 'bg-indigo-500/20 text-indigo-400'
+                            ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
                             : model.available
-                            ? 'text-zinc-300 hover:bg-zinc-800'
-                            : 'text-zinc-600 cursor-not-allowed opacity-60'
+                            ? 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10'
+                            : 'text-neutral-400 dark:text-neutral-600 cursor-not-allowed opacity-60'
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -1034,12 +1029,12 @@ INSTRUCTIONS:
                             <div className="flex items-center gap-2">
                               <span className="font-medium truncate">{model.name}</span>
                               {!model.available && (
-                                <span className="text-[10px] px-1.5 py-0.5 bg-zinc-700 rounded text-zinc-400 shrink-0">
+                                <span className="text-[10px] px-1.5 py-0.5 bg-neutral-200 dark:bg-neutral-700 rounded text-neutral-500 dark:text-neutral-400 shrink-0">
                                   Unavailable
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-zinc-500 truncate mt-0.5">
+                            <p className="text-xs text-neutral-500 truncate mt-0.5">
                               {model.description}
                             </p>
                           </div>
@@ -1058,7 +1053,7 @@ INSTRUCTIONS:
             <button
               onClick={handleGenerate}
               disabled={isProcessing || !inputValue.trim()}
-              className="p-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-lg hover:bg-neutral-700 dark:hover:bg-neutral-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title="Send"
             >
               {isProcessing ? (
@@ -1073,30 +1068,30 @@ INSTRUCTIONS:
         {/* Quick Actions */}
         {!inputValue && (
           <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
-            <span className="text-xs text-zinc-500">Try:</span>
+            <span className="text-xs text-neutral-500 dark:text-neutral-400">Try:</span>
             {selectedFolder ? (
               <>
                 <button
                   onClick={() => setInputValue("Summarize the notes in this folder")}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 transition-all"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all"
                 >
                   Summarize
                 </button>
                 <button
                   onClick={() => setInputValue("Create a new note about today's meeting")}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-all"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-all"
                 >
                   + New Note
                 </button>
                 <button
                   onClick={() => setInputValue("Create a flowchart of the main concepts")}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10 transition-all"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-white/10 transition-all"
                 >
                   Flowchart
                 </button>
                 <button
                   onClick={() => setInputValue("Organize and rename the notes in this folder")}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10 transition-all"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-white/10 transition-all"
                 >
                   Organize
                 </button>
@@ -1105,13 +1100,13 @@ INSTRUCTIONS:
               <>
                 <button
                   onClick={() => setInputValue("Hi! What can you help me with?")}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 transition-all"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all"
                 >
                   Say Hi
                 </button>
                 <button
                   onClick={() => setInputValue("Create a new folder for my projects")}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-all"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-all"
                 >
                   + New Folder
                 </button>

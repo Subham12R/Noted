@@ -86,11 +86,16 @@ export function ExportMenu({ editor, pageName }: ExportMenuProps) {
   }, [isOpen])
 
   const handleExport = async (format: ExportFormat) => {
-    if (!editor) return
+    if (!editor) {
+      console.error("No editor instance available")
+      return
+    }
 
     setIsExporting(format)
     const htmlContent = editor.getHTML()
     const filename = pageName || "untitled"
+
+    console.log("Exporting:", format, "content length:", htmlContent.length)
 
     try {
       switch (format) {
@@ -107,6 +112,7 @@ export function ExportMenu({ editor, pageName }: ExportMenuProps) {
           exportToText(htmlContent, filename)
           break
       }
+      console.log("Export successful:", format)
     } catch (error) {
       console.error(`Failed to export as ${format}:`, error)
     } finally {

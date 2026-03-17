@@ -144,7 +144,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   const [modalMode, setModalMode] = useState<"list" | "taking" | "results" | "create">("list")
   const [isFullscreen, setIsFullscreen] = useState(false)
 
-  // Load settings from localStorage
+  // Load settings and quizzes from localStorage
   useEffect(() => {
     if (typeof window === "undefined") return
     try {
@@ -156,8 +156,16 @@ export function QuizProvider({ children }: { children: ReactNode }) {
       if (storedResults) {
         setResults(JSON.parse(storedResults))
       }
+      const storedQuizzes = localStorage.getItem("noted-quizzes")
+      if (storedQuizzes) {
+        const parsed = JSON.parse(storedQuizzes)
+        setQuizzes(parsed.map((q: any) => ({
+          ...q,
+          createdAt: new Date(q.createdAt)
+        })))
+      }
     } catch (e) {
-      console.error("Failed to load quiz settings:", e)
+      console.error("Failed to load quiz data:", e)
     }
   }, [])
 
@@ -170,8 +178,14 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   // Save results
   useEffect(() => {
     if (typeof window === "undefined" || results.length === 0) return
-    localStorage.setItem("noted-quiz-results", JSON.stringify(results.slice(-50))) // Keep last 50
+    localStorage.setItem("noted-quiz-results", JSON.stringify(results.slice(-50)))
   }, [results])
+
+  // Save quizzes
+  useEffect(() => {
+    if (typeof window === "undefined" || quizzes.length === 0) return
+    localStorage.setItem("noted-quizzes", JSON.stringify(quizzes))
+  }, [quizzes])
 
   // Timer effect
   useEffect(() => {
@@ -217,53 +231,61 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   const fetchQuizzes = useCallback(async () => {
     setIsLoading(true)
     try {
-      const res = await fetch("/api/quizzes")
-      if (!res.ok) throw new Error("Failed to fetch quizzes")
-      const data = await res.json()
-      setQuizzes(data.quizzes || [])
+      const stored = localStorage.getItem("noted-quizzes")
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        const loadedQuizzes = parsed.map((q: any) => ({
+          ...q,
+          createdAt: new Date(q.createdAt)
+        }))
+        if (quizzes.length === 0) {
+          setQuizzes(loadedQuizzes)
+        }
+      }
+      setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to fetch quizzes")
-      setQuizzes([])
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [quizzes.length])
 
   const createQuiz = useCallback(async (title: string, questions: Omit<QuizQuestion, "id">[]): Promise<Quiz | null> => {
+    console.log('[QuizContext] Creating quiz with title:', title, 'questions count:', questions.length);
+    console.log('[QuizContext] First question:', questions[0]);
+    
+    // Create quiz with unique IDs
     const quiz: Quiz = {
-      id: `quiz-${Date.now()}`,
+      id: `quiz-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title,
-      questions: questions.map((q, i) => ({ ...q, id: `q-${Date.now()}-${i}` })),
-      isAIGenerated: false,
+      questions: questions.map((q, i) => ({ 
+        ...q, 
+        id: `q-${Date.now()}-${i}`,
+        // Ensure required fields
+        type: q.type || 'multiple-choice',
+        points: q.points || 1,
+        difficulty: q.difficulty || 'medium',
+      })),
+      isAIGenerated: true,
       createdAt: new Date(),
     }
 
-    try {
-      const res = await fetch("/api/quizzes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(quiz),
-      })
-      if (res.ok) {
-        const savedQuiz = await res.json()
-        setQuizzes(prev => [...prev, savedQuiz])
-        return savedQuiz
-      }
-    } catch (e) {
-      // Use local quiz
-    }
+    console.log('[QuizContext] Quiz object created:', quiz);
+    console.log('[QuizContext] Quiz questions:', quiz.questions.map(q => ({ id: q.id, question: q.question?.substring(0, 30) })));
+    
+    // Add to local state
+    setQuizzes(prev => {
+      const newQuizzes = [...prev, quiz];
+      console.log('[QuizContext] Updated quizzes state, count:', newQuizzes.length);
+      return newQuizzes;
+    });
 
-    setQuizzes(prev => [...prev, quiz])
+    console.log('[QuizContext] Returning quiz:', quiz.id);
     return quiz
   }, [])
 
   const deleteQuiz = useCallback(async (quizId: string) => {
     setQuizzes(prev => prev.filter(q => q.id !== quizId))
-    try {
-      await fetch(`/api/quizzes/${quizId}`, { method: "DELETE" })
-    } catch (e) {
-      // Local deletion done
-    }
   }, [])
 
   const generateFromNote = useCallback(async (

@@ -7,7 +7,6 @@ import { FolderCard } from "./FolderCard"
 import { PageCard } from "./PageCard"
 import { SharedWithMe } from "./SharedWithMe"
 import { DashboardAIInput } from "./DashboardAIInput"
-import { DotLottieReact } from "@lottiefiles/dotlottie-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 import {
@@ -108,6 +107,39 @@ export function Dashboard() {
   const recentPages = getAllPages()
   const firstName = user?.name?.split(" ")[0] || "there"
 
+  // Skeleton loader component
+  function DashboardSkeleton() {
+    return (
+      <div className="min-h-full pb-20 bg-white dark:bg-zinc-950">
+        <div className="max-w-7xl mx-auto px-6 py-8 lg:px-8">
+          <header className="mb-12">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="h-4 w-32 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse mb-2" />
+                <div className="h-12 w-64 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse mb-3" />
+                <div className="h-5 w-96 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
+              </div>
+            </div>
+          </header>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-20">
+            <div className="lg:col-span-2">
+              <div className="h-6 w-32 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse mb-4" />
+              <div className="flex gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="w-48 h-32 bg-neutral-200 dark:bg-neutral-800 rounded-2xl animate-pulse" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isHydrated) {
+    return <DashboardSkeleton />
+  }
+
   return (
     <div className="min-h-full pb-20 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-6 py-8 lg:px-8">
@@ -115,24 +147,16 @@ export function Dashboard() {
         <header className="mb-12">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1 tracking-tighter">
+              <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mb-1 tracking-tighter">
                 {currentDate}
               </p>
               <h1 className="text-4xl lg:text-5xl font-bold tracking-tight mb-3">
-                <span className="text-zinc-500 dark:text-zinc-400">{greeting}, </span>
-                <span className="text-zinc-900 dark:text-white font-grandhotel italic text-6xl">{firstName}!</span>
+                <span className="text-neutral-500 dark:text-neutral-400">{greeting}, </span>
+                <span className="text-neutral-900 dark:text-white font-grandhotel italic text-6xl">{firstName}!</span>
               </h1>
-              <p className="text-zinc-500 dark:text-zinc-400 max-w-lg">
+              <p className="text-neutral-500 dark:text-neutral-400 max-w-lg">
                 Ready to capture your ideas? Create, organize, and collaborate on your notes.
               </p>
-            </div>
-            <div className="hidden lg:block w-32 h-32">
-              <DotLottieReact
-                src="/lottie/Octahedron - Cube Morph.lottie"
-                loop
-                autoplay
-                style={{ width: "100%", height: "100%", background: "transparent" }}
-              />
             </div>
           </div>
         </header>
@@ -213,13 +237,12 @@ export function Dashboard() {
                   action={
                     <button
                       onClick={handleCreateFolder}
-                      className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium text-sm hover:opacity-90 transition-opacity"
+                      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium text-sm transition-colors"
                     >
                       <HugeiconsIcon icon={Add01Icon} size={16} />
                       Create Folder
                     </button>
                   }
-                  lottie="/lottie/Learning.lottie"
                 />
               )}
             </div>
@@ -248,32 +271,19 @@ function EmptyState({
   title,
   description,
   action,
-  lottie,
 }: {
   icon: React.ReactNode
   title: string
   description: string
   action?: React.ReactNode
-  lottie?: string
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      {lottie ? (
-        <div className="w-32 h-32 mb-4 opacity-80">
-          <DotLottieReact
-            src={lottie}
-            loop
-            autoplay
-            style={{ width: "100%", height: "100%", background: "transparent" }}
-          />
-        </div>
-      ) : (
-        <div className="text-zinc-300 dark:text-zinc-600 mb-4">
-          {icon}
-        </div>
-      )}
-      <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">{title}</h3>
-      <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 max-w-sm">{description}</p>
+      <div className="text-neutral-300 dark:text-neutral-600 mb-4">
+        {icon}
+      </div>
+      <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">{title}</h3>
+      <p className="text-neutral-500 dark:text-neutral-400 max-w-sm mb-4">{description}</p>
       {action}
     </div>
   )

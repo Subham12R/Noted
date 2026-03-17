@@ -64,7 +64,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${grandstander.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${grandstander.variable} antialiased bg-white dark:bg-[#121212]`}
       >
         <ThemeProvider>
         <AuthProvider>
