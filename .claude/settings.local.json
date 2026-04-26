@@ -6,7 +6,14 @@
       "Bash(git -C \"d:\\\\noted\" status)",
       "Bash(ls -la \"d:\\\\noted\\\\src\\\\app\\\\api\\\\share\"\" 2>/dev/null || echo \"Directory not found or empty \")",
       "Bash(ls:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npx drizzle-kit *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(gh pr create --title 'feat: custom LLM keys, R2 storage, flashcard DB, AI model rebrand + security hardening' --body ' *)",
+      "Bash(gh auth *)",
+      "Bash(git fetch *)"
     ]
   }
 }
