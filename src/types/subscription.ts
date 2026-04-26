@@ -29,14 +29,14 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierConfig> = {
       maxNotes: 10,
       maxFolders: 3,
       maxCollaboratorsPerNote: 2,
-      maxStorageMB: 100,
+      maxStorageMB: 50,   // 50 MB
       maxAiRequestsPerMonth: 10,
     },
     features: [
       "Up to 10 notes",
       "3 folders",
       "Basic collaboration (2 users)",
-      "100 MB storage",
+      "50 MB storage",
       "10 AI requests/month",
     ],
   },
@@ -49,14 +49,14 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierConfig> = {
       maxNotes: 100,
       maxFolders: 20,
       maxCollaboratorsPerNote: 10,
-      maxStorageMB: 5120, // 5GB
+      maxStorageMB: 100,  // 100 MB
       maxAiRequestsPerMonth: 500,
     },
     features: [
       "Up to 100 notes",
       "20 folders",
       "Advanced collaboration (10 users)",
-      "5 GB storage",
+      "100 MB storage",
       "500 AI requests/month",
       "Priority support",
     ],
@@ -70,14 +70,14 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierConfig> = {
       maxNotes: -1, // unlimited
       maxFolders: -1,
       maxCollaboratorsPerNote: -1,
-      maxStorageMB: 51200, // 50GB
+      maxStorageMB: 500,  // 500 MB
       maxAiRequestsPerMonth: -1,
     },
     features: [
       "Unlimited notes",
       "Unlimited folders",
       "Unlimited collaborators",
-      "50 GB storage",
+      "500 MB storage",
       "Unlimited AI requests",
       "Priority support",
       "Admin dashboard",

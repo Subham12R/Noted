@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth-utils"
+import { rateLimitMemory, RATE_LIMITS } from "@/lib/rate-limit"
 import { db } from "@/db"
 import { accounts } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
@@ -13,18 +14,23 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const rl = rateLimitMemory({ identifier: session.user.id, endpoint: "password-change", limit: 5, windowMs: 60 * 1000 })
+    if (!rl.success) {
+      return NextResponse.json({ error: "Rate limit exceeded", retryAfter: rl.retryAfter }, { status: 429 })
+    }
+
     const body = await request.json()
     const { currentPassword, newPassword } = body
 
     // Validate input
-    if (!currentPassword || typeof currentPassword !== "string") {
+    if (!currentPassword || typeof currentPassword !== "string" || !currentPassword.trim()) {
       return NextResponse.json(
         { error: "Current password is required" },
         { status: 400 }
       )
     }
 
-    if (!newPassword || typeof newPassword !== "string") {
+    if (!newPassword || typeof newPassword !== "string" || !newPassword.trim()) {
       return NextResponse.json(
         { error: "New password is required" },
         { status: 400 }

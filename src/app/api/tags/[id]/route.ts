@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db, tags, pageTags, folderTags } from "@/db"
 import { eq, and } from "drizzle-orm"
 import { getServerSession } from "@/lib/auth-utils"
+import { rateLimitMemory, RATE_LIMITS } from "@/lib/rate-limit"
 import { z } from "zod"
 
 // Validation schema
@@ -51,6 +52,11 @@ export async function PATCH(
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const rl = rateLimitMemory({ identifier: session.user.id, endpoint: "tag-update", ...RATE_LIMITS.API_GENERAL })
+    if (!rl.success) {
+      return NextResponse.json({ error: "Rate limit exceeded", retryAfter: rl.retryAfter }, { status: 429 })
     }
 
     const { id } = await params
@@ -117,13 +123,13 @@ export async function PATCH(
     const [updatedTag] = await db
       .update(tags)
       .set(updates)
-      .where(eq(tags.id, id))
+      .where(and(eq(tags.id, id), eq(tags.userId, session.user.id)))
       .returning()
 
     return NextResponse.json({ tag: updatedTag })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: error.errors }, { status: 400 })
+      return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 })
     }
     console.error("Update tag error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -142,6 +148,11 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const rl = rateLimitMemory({ identifier: session.user.id, endpoint: "tag-delete", ...RATE_LIMITS.API_GENERAL })
+    if (!rl.success) {
+      return NextResponse.json({ error: "Rate limit exceeded", retryAfter: rl.retryAfter }, { status: 429 })
+    }
+
     const { id } = await params
 
     // Verify tag exists and belongs to user
@@ -155,7 +166,7 @@ export async function DELETE(
     }
 
     // Delete tag (cascade will handle page_tags and folder_tags)
-    await db.delete(tags).where(eq(tags.id, id))
+    await db.delete(tags).where(and(eq(tags.id, id), eq(tags.userId, session.user.id)))
 
     return NextResponse.json({ success: true })
   } catch (error) {

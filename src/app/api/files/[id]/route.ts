@@ -2,6 +2,35 @@ import { NextRequest, NextResponse } from "next/server"
 import { db, files } from "@/db"
 import { eq, and } from "drizzle-orm"
 import { getServerSession } from "@/lib/auth-utils"
+import { rateLimitMemory, RATE_LIMITS } from "@/lib/rate-limit"
+import { deleteFile, isR2Configured } from "@/lib/storage/r2"
+import { z } from "zod"
+
+const SAFE_FILE_COLUMNS = {
+  id: files.id,
+  userId: files.userId,
+  pageId: files.pageId,
+  folderId: files.folderId,
+  name: files.name,
+  originalName: files.originalName,
+  mimeType: files.mimeType,
+  size: files.size,
+  url: files.url,
+  thumbnailUrl: files.thumbnailUrl,
+  type: files.type,
+  isStarred: files.isStarred,
+  accessedAt: files.accessedAt,
+  createdAt: files.createdAt,
+  updatedAt: files.updatedAt,
+  // storageKey intentionally omitted — internal storage path, not for clients
+}
+
+const patchFileSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  folderId: z.string().uuid().nullable().optional(),
+  pageId: z.string().uuid().nullable().optional(),
+  isStarred: z.boolean().optional(),
+})
 
 // GET /api/files/[id] - Get file details
 export async function GET(
@@ -18,7 +47,7 @@ export async function GET(
     const { id } = await params
 
     const [file] = await db
-      .select()
+      .select(SAFE_FILE_COLUMNS)
       .from(files)
       .where(and(eq(files.id, id), eq(files.userId, session.user.id)))
 
@@ -30,7 +59,7 @@ export async function GET(
     await db
       .update(files)
       .set({ accessedAt: new Date() })
-      .where(eq(files.id, id))
+      .where(and(eq(files.id, id), eq(files.userId, session.user.id)))
 
     return NextResponse.json({ file })
   } catch (error) {
@@ -51,12 +80,18 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const rl = rateLimitMemory({ identifier: session.user.id, endpoint: "file-patch", ...RATE_LIMITS.API_GENERAL })
+    if (!rl.success) {
+      return NextResponse.json({ error: "Rate limit exceeded", retryAfter: rl.retryAfter }, { status: 429 })
+    }
+
     const { id } = await params
     const body = await request.json()
+    const updates = patchFileSchema.parse(body)
 
     // Verify file exists and belongs to user
     const [existingFile] = await db
-      .select()
+      .select({ id: files.id })
       .from(files)
       .where(and(eq(files.id, id), eq(files.userId, session.user.id)))
 
@@ -64,36 +99,18 @@ export async function PATCH(
       return NextResponse.json({ error: "File not found" }, { status: 404 })
     }
 
-    // Build update object
-    const updates: Partial<typeof files.$inferInsert> = {}
-
-    if (body.name !== undefined) {
-      updates.name = body.name
-    }
-
-    if (body.folderId !== undefined) {
-      updates.folderId = body.folderId
-    }
-
-    if (body.isStarred !== undefined) {
-      updates.isStarred = body.isStarred
-    }
-
-    if (body.pageId !== undefined) {
-      updates.pageId = body.pageId
-    }
-
-    updates.updatedAt = new Date()
-
-    // Update file
+    // Update file — WHERE includes userId to prevent TOCTOU
     const [updatedFile] = await db
       .update(files)
-      .set(updates)
-      .where(eq(files.id, id))
-      .returning()
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(files.id, id), eq(files.userId, session.user.id)))
+      .returning(SAFE_FILE_COLUMNS)
 
     return NextResponse.json({ file: updatedFile })
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 })
+    }
     console.error("Update file error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
@@ -111,11 +128,16 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const rl = rateLimitMemory({ identifier: session.user.id, endpoint: "file-delete", ...RATE_LIMITS.API_GENERAL })
+    if (!rl.success) {
+      return NextResponse.json({ error: "Rate limit exceeded", retryAfter: rl.retryAfter }, { status: 429 })
+    }
+
     const { id } = await params
 
-    // Verify file exists and belongs to user
+    // Verify file exists and belongs to user — fetch storageKey for R2 cleanup
     const [existingFile] = await db
-      .select()
+      .select({ id: files.id, storageKey: files.storageKey })
       .from(files)
       .where(and(eq(files.id, id), eq(files.userId, session.user.id)))
 
@@ -123,11 +145,17 @@ export async function DELETE(
       return NextResponse.json({ error: "File not found" }, { status: 404 })
     }
 
-    // TODO: Delete from storage (S3/R2/etc.)
-    // For now, we just delete the database record
+    // Delete from R2 storage first
+    if (isR2Configured() && existingFile.storageKey) {
+      try {
+        await deleteFile(existingFile.storageKey)
+      } catch (storageErr) {
+        console.error("Failed to delete file from R2:", storageErr)
+        // Continue with DB deletion even if R2 cleanup fails
+      }
+    }
 
-    // Delete file record
-    await db.delete(files).where(eq(files.id, id))
+    await db.delete(files).where(and(eq(files.id, id), eq(files.userId, session.user.id)))
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db, pages, folders } from "@/db"
 import { eq } from "drizzle-orm"
 import { getServerSession } from "@/lib/auth-utils"
+import { rateLimitMemory, RATE_LIMITS } from "@/lib/rate-limit"
 import { z } from "zod"
 
 const movePageSchema = z.object({
@@ -19,6 +20,11 @@ export async function POST(
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const rl = rateLimitMemory({ identifier: session.user.id, endpoint: "page-move", ...RATE_LIMITS.API_GENERAL })
+    if (!rl.success) {
+      return NextResponse.json({ error: "Rate limit exceeded", retryAfter: rl.retryAfter }, { status: 429 })
     }
 
     const body = await request.json()
@@ -82,7 +88,7 @@ export async function POST(
     return NextResponse.json({ page: updatedPage })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: error.errors }, { status: 400 })
+      return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 })
     }
     console.error("Move page error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

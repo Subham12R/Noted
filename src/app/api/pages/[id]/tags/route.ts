@@ -129,7 +129,7 @@ export async function PUT(
     return NextResponse.json({ tags: updatedTags })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: error.errors }, { status: 400 })
+      return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 })
     }
     console.error("Update page tags error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

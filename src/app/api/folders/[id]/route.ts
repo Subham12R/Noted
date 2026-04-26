@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db, folders, pages } from "@/db"
 import { eq, and } from "drizzle-orm"
 import { getServerSession } from "@/lib/auth-utils"
+import { rateLimitMemory, RATE_LIMITS } from "@/lib/rate-limit"
 import { updateFolderSchema } from "@/lib/validation"
 
 // GET /api/folders/[id] - Get a specific folder with its pages
@@ -72,6 +73,11 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const rl = rateLimitMemory({ identifier: session.user.id, endpoint: "folder-update", ...RATE_LIMITS.API_GENERAL })
+    if (!rl.success) {
+      return NextResponse.json({ error: "Rate limit exceeded", retryAfter: rl.retryAfter }, { status: 429 })
+    }
+
     const body = await request.json()
     const validatedData = updateFolderSchema.parse(body)
 
@@ -137,6 +143,11 @@ export async function DELETE(
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const rl = rateLimitMemory({ identifier: session.user.id, endpoint: "folder-delete", ...RATE_LIMITS.API_GENERAL })
+    if (!rl.success) {
+      return NextResponse.json({ error: "Rate limit exceeded", retryAfter: rl.retryAfter }, { status: 429 })
     }
 
     // Check ownership

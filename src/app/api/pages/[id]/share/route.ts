@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { db, pages, shareLinks, pageCollaborators, users } from "@/db"
 import { eq, and } from "drizzle-orm"
 import { getServerSession } from "@/lib/auth-utils"
+import { rateLimitMemory, RATE_LIMITS } from "@/lib/rate-limit"
 import { z } from "zod"
 import { randomBytes } from "crypto"
+import bcrypt from "bcryptjs"
 
 const shareSettingsSchema = z.object({
   isPublic: z.boolean().optional(),
@@ -137,6 +139,11 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const rl = rateLimitMemory({ identifier: session.user.id, endpoint: "share-create", ...RATE_LIMITS.API_GENERAL })
+    if (!rl.success) {
+      return NextResponse.json({ error: "Rate limit exceeded", retryAfter: rl.retryAfter }, { status: 429 })
+    }
+
     const body = await request.json()
     const { permission = "view", expiresIn, password } = shareSettingsSchema.parse(body)
 
@@ -167,6 +174,7 @@ export async function POST(
 
     const token = generateToken()
     const expiresAt = expiresIn ? new Date(Date.now() + expiresIn * 60 * 60 * 1000) : null
+    const hashedPassword = password ? await bcrypt.hash(password, 10) : null
 
     const [newLink] = await db
       .insert(shareLinks)
@@ -175,7 +183,7 @@ export async function POST(
         token,
         createdBy: session.user.id,
         permission,
-        password: password || null,
+        password: hashedPassword,
         expiresAt,
       })
       .returning()
@@ -211,6 +219,11 @@ export async function PUT(
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const rl = rateLimitMemory({ identifier: session.user.id, endpoint: "share-settings", ...RATE_LIMITS.API_GENERAL })
+    if (!rl.success) {
+      return NextResponse.json({ error: "Rate limit exceeded", retryAfter: rl.retryAfter }, { status: 429 })
     }
 
     const body = await request.json()
@@ -272,6 +285,11 @@ export async function DELETE(
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const rl = rateLimitMemory({ identifier: session.user.id, endpoint: "share-delete", ...RATE_LIMITS.API_GENERAL })
+    if (!rl.success) {
+      return NextResponse.json({ error: "Rate limit exceeded", retryAfter: rl.retryAfter }, { status: 429 })
     }
 
     const { searchParams } = new URL(request.url)

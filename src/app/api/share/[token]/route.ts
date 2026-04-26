@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db, shareLinks, pages, users } from "@/db"
 import { eq, sql } from "drizzle-orm"
+import bcrypt from "bcryptjs"
 
 // GET /api/share/[token] - Get shared page content by token
 export async function GET(
@@ -34,9 +35,16 @@ export async function GET(
     // Check if password protected
     if (link.password) {
       const providedPassword = request.headers.get("X-Share-Password")
-      if (!providedPassword || providedPassword !== link.password) {
+      if (!providedPassword) {
         return NextResponse.json(
           { error: "Password required", requiresPassword: true },
+          { status: 401 }
+        )
+      }
+      const isValid = await bcrypt.compare(providedPassword, link.password)
+      if (!isValid) {
+        return NextResponse.json(
+          { error: "Incorrect password", requiresPassword: true },
           { status: 401 }
         )
       }

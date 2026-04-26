@@ -33,7 +33,12 @@ interface AIPanelProps {
 interface AIModel {
   id: string;
   name: string;
+  brandName?: string;
   provider: string;
+}
+
+function modelDisplayName(m: AIModel): string {
+  return m.brandName || m.name;
 }
 
 interface PendingEdit {
@@ -53,14 +58,16 @@ export function AIPanel({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState("");
-  const [, setModels] = useState<AIModel[]>([]);
+  const [models, setModels] = useState<AIModel[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("compound-beta");
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [aiAvailable, setAIAvailable] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [pendingEdit, setPendingEdit] = useState<PendingEdit | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const responseRef = useRef<HTMLDivElement>(null);
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch available models on mount
   useEffect(() => {
@@ -104,10 +111,20 @@ export function AIPanel({
 
   // Update mode when initialMode changes
   useEffect(() => {
-    if (initialMode) {
-      setMode(initialMode);
-    }
+    if (initialMode) setMode(initialMode);
   }, [initialMode]);
+
+  // Close model dropdown on outside click
+  useEffect(() => {
+    if (!modelDropdownOpen) return;
+    function handler(e: MouseEvent) {
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target as Node)) {
+        setModelDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [modelDropdownOpen]);
 
   // Focus input when panel opens
   useEffect(() => {
@@ -320,7 +337,7 @@ export function AIPanel({
           isExpanded ? "w-150" : "w-100"
         }`}
       >
-        {/* Header with Expand and Close */}
+        {/* Header with Expand, Model Selector, and Close */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-200 bg-zinc-50">
           <button
             type="button"
@@ -329,15 +346,55 @@ export function AIPanel({
             title={isExpanded ? "Collapse" : "Expand"}
           >
             <HugeiconsIcon
-              icon={
-                isExpanded ? CircleArrowShrink01Icon : CircleArrowExpand01Icon
-              }
+              icon={isExpanded ? CircleArrowShrink01Icon : CircleArrowExpand01Icon}
               className="h-4 w-4"
             />
           </button>
-          <span className="text-sm font-medium text-zinc-700">
-            AI Assistant
-          </span>
+
+          {/* Model Selector */}
+          <div className="relative" ref={modelDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setModelDropdownOpen(prev => !prev)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-medium text-zinc-700 hover:bg-zinc-200 transition-colors"
+            >
+              <span>
+                {modelDisplayName(models.find(m => m.id === selectedModel) || { id: selectedModel, name: selectedModel, provider: "groq" })}
+              </span>
+              <svg className="h-3 w-3 text-zinc-400" viewBox="0 0 12 12" fill="currentColor">
+                <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+              </svg>
+            </button>
+
+            {modelDropdownOpen && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-zinc-200 z-50 py-1 overflow-hidden">
+                {models.map(m => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => { setSelectedModel(m.id); setModelDropdownOpen(false); }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-50 transition-colors flex flex-col gap-0.5 ${selectedModel === m.id ? "bg-zinc-50 text-zinc-900 font-medium" : "text-zinc-700"}`}
+                  >
+                    <span>{modelDisplayName(m)}</span>
+                    {m.brandName && <span className="text-xs text-zinc-400">{m.name}</span>}
+                  </button>
+                ))}
+                <div className="border-t border-zinc-100 mt-1 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => { setModelDropdownOpen(false); window.location.href = "/profile?tab=api-keys"; }}
+                    className="w-full text-left px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M8 2a6 6 0 100 12A6 6 0 008 2zM7 7V5h2v2h2v2H9v2H7V9H5V7h2z"/>
+                    </svg>
+                    Add Model / Key
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             type="button"
             onClick={onClose}

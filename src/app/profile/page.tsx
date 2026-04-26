@@ -16,6 +16,7 @@ import {
   UsageStats,
 } from "@/types/subscription"
 import { getCustomerPortalUrl } from "@/lib/stripe-client"
+import { ApiKeysSettings } from "@/components/settings/ApiKeysSettings"
 
 function getInitials(name: string): string {
   return name
@@ -543,6 +544,11 @@ export default function ProfilePage() {
                   </button>
                 </div>
               )}
+            </div>
+
+            {/* API Keys */}
+            <div id="api-keys" className="rounded-2xl bg-foreground/[0.02] backdrop-blur-xl border border-foreground/10 p-6">
+              <ApiKeysSettings />
             </div>
 
             {/* Danger Zone */}

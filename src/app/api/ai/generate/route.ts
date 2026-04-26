@@ -6,8 +6,9 @@ import { getServerSession } from '@/lib/auth-utils'
 import { canUseAI, incrementAIUsage } from '@/lib/subscription'
 import { generateAIResponse, generateAIResponseStream, streamToSSE } from '@/lib/ai/generate'
 import { isAIAvailable } from '@/lib/ai/config'
-import { db, pages } from '@/db'
-import { eq } from 'drizzle-orm'
+import { db, pages, userApiKeys } from '@/db'
+import { eq, and } from 'drizzle-orm'
+import { decryptApiKey } from '@/lib/encryption'
 import type { AIMode } from '@/types/ai'
 
 export const runtime = 'nodejs'
@@ -49,15 +50,15 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json()
-    const { pageId, prompt, mode, model, stream = true, context: providedContext } = body
-
-    console.log('[API AI Generate] Received mode:', mode)
-    console.log('[API AI Generate] Valid modes:', VALID_MODES)
-    console.log('[API AI Generate] Mode is valid:', VALID_MODES.includes(mode))
+    const { pageId, prompt, mode, model, stream = true, context: providedContext, provider: requestedProvider } = body
 
     // Validate required fields
     if (!prompt || typeof prompt !== 'string') {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
+    }
+
+    if (prompt.length > 20000) {
+      return NextResponse.json({ error: 'Prompt too long (max 20000 chars)' }, { status: 400 })
     }
 
     if (!mode || !VALID_MODES.includes(mode)) {
@@ -65,6 +66,11 @@ export async function POST(request: NextRequest) {
         { error: `Invalid mode. Must be one of: ${VALID_MODES.join(', ')}` },
         { status: 400 }
       )
+    }
+
+    // Sanitize model identifier — allow only safe chars, prevent injection
+    if (model !== undefined && (typeof model !== 'string' || model.length > 100 || !/^[a-zA-Z0-9._:/-]+$/.test(model))) {
+      return NextResponse.json({ error: 'Invalid model identifier' }, { status: 400 })
     }
 
     // Get context - use provided context (from dashboard) or fetch from page
@@ -91,6 +97,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Look up active user API key for the selected provider (server-side only, never exposed to client)
+    let userApiKey: string | undefined
+    let userBaseUrl: string | undefined
+    if (requestedProvider) {
+      const [storedKey] = await db
+        .select({ encryptedKey: userApiKeys.encryptedKey, baseUrl: userApiKeys.baseUrl })
+        .from(userApiKeys)
+        .where(and(eq(userApiKeys.userId, userId), eq(userApiKeys.provider, requestedProvider), eq(userApiKeys.isActive, true)))
+      if (storedKey) {
+        try {
+          userApiKey = decryptApiKey(storedKey.encryptedKey)
+          userBaseUrl = storedKey.baseUrl ?? undefined
+        } catch {
+          console.warn('[AI Generate] Failed to decrypt user key for provider:', requestedProvider)
+        }
+      }
+    }
+
     // Increment AI usage before generating
     await incrementAIUsage(userId)
 
@@ -106,6 +130,9 @@ export async function POST(request: NextRequest) {
               mode,
               context,
               model,
+              provider: requestedProvider,
+              userApiKey,
+              userBaseUrl,
             })
 
             for await (const chunk of generator) {
@@ -140,6 +167,9 @@ export async function POST(request: NextRequest) {
       mode,
       context,
       model,
+      provider: requestedProvider,
+      userApiKey,
+      userBaseUrl,
     })
 
     return NextResponse.json({

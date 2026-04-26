@@ -47,14 +47,14 @@ export async function PATCH(
         ...updates,
         updatedAt: new Date(),
       })
-      .where(eq(todos.id, id))
+      .where(and(eq(todos.id, id), eq(todos.userId, session.user.id)))
       .returning()
 
     return NextResponse.json({ todo: updatedTodo })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid input', details: error.errors },
+        { error: 'Invalid input', details: error.issues },
         { status: 400 }
       )
     }
@@ -89,7 +89,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 })
     }
 
-    await db.delete(todos).where(eq(todos.id, id))
+    await db.delete(todos).where(and(eq(todos.id, id), eq(todos.userId, session.user.id)))
 
     return NextResponse.json({ success: true })
   } catch (error) {

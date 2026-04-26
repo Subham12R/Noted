@@ -7,6 +7,7 @@ export type AIMode = 'answer' | 'expand' | 'summarize' | 'translate' | 'explain'
 export interface AIModel {
   id: string
   name: string
+  brandName?: string  // Branded display name shown in the UI (e.g. "NoteFast")
   provider: AIProvider
   contextWindow: number
   description: string
@@ -23,34 +24,37 @@ export interface AIProviderConfig {
 
 // Available models configuration
 export const AI_MODELS: AIModel[] = [
-  // Groq Models (Active)
+  // Noted branded models (powered by Groq)
   {
     id: 'compound-beta',
-    name: 'Compound Beta (Agentic)',
+    name: 'Compound Beta',
+    brandName: 'NoteFast',
     provider: 'groq',
     contextWindow: 128000,
-    description: 'Agentic model with tool use and web search - Free',
+    description: 'Fast, agentic model with tool use — balanced for everyday tasks',
     enabled: true,
   },
   {
     id: 'compound-beta-mini',
-    name: 'Compound Beta Mini (Fast)',
+    name: 'Compound Beta Mini',
+    brandName: 'NoteMini',
     provider: 'groq',
     contextWindow: 128000,
-    description: 'Faster agentic model - Free',
+    description: 'Lightweight and quick — great for short tasks and drafts',
     enabled: true,
   },
   {
     id: 'llama-3.3-70b-versatile',
-    name: 'Llama 3.3 70B (Quality)',
+    name: 'Llama 3.3 70B',
+    brandName: 'NoteMax',
     provider: 'groq',
     contextWindow: 131072,
-    description: 'Best quality for complex tasks',
+    description: 'Most capable — best for complex reasoning and long documents',
     enabled: true,
   },
   {
     id: 'llama-3.1-8b-instant',
-    name: 'Llama 3.1 8B (Fast)',
+    name: 'Llama 3.1 8B',
     provider: 'groq',
     contextWindow: 131072,
     description: 'Fast responses, good for quick tasks',

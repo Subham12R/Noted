@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db, shareLinks, pages, pageCollaborators } from "@/db"
 import { eq, and } from "drizzle-orm"
 import { getServerSession } from "@/lib/auth-utils"
+import bcrypt from "bcryptjs"
 
 // POST /api/share/[token]/claim - Claim access to a shared page (adds user as collaborator)
 export async function POST(
@@ -44,9 +45,16 @@ export async function POST(
 
     // Check if password protected
     if (link.password) {
-      if (!providedPassword || providedPassword !== link.password) {
+      if (!providedPassword) {
         return NextResponse.json(
           { error: "Password required", requiresPassword: true },
+          { status: 401 }
+        )
+      }
+      const isValid = await bcrypt.compare(providedPassword, link.password)
+      if (!isValid) {
+        return NextResponse.json(
+          { error: "Incorrect password", requiresPassword: true },
           { status: 401 }
         )
       }

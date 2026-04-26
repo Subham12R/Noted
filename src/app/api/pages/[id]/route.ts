@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db, pages, folders, pageCollaborators, folderCollaborators } from "@/db"
 import { eq, and, or } from "drizzle-orm"
 import { getServerSession } from "@/lib/auth-utils"
+import { rateLimitMemory, RATE_LIMITS } from "@/lib/rate-limit"
 import { updatePageSchema, sanitizeBlocks, sanitizeContent } from "@/lib/validation"
 
 // Check if user has access to a page (owner, page collaborator, or folder collaborator)
@@ -111,6 +112,11 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const rl = rateLimitMemory({ identifier: session.user.id, endpoint: "page-update", ...RATE_LIMITS.API_GENERAL })
+    if (!rl.success) {
+      return NextResponse.json({ error: "Rate limit exceeded", retryAfter: rl.retryAfter }, { status: 429 })
+    }
+
     const body = await request.json()
     const validatedData = updatePageSchema.parse(body)
 
@@ -178,6 +184,11 @@ export async function DELETE(
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const rl = rateLimitMemory({ identifier: session.user.id, endpoint: "page-delete", ...RATE_LIMITS.API_GENERAL })
+    if (!rl.success) {
+      return NextResponse.json({ error: "Rate limit exceeded", retryAfter: rl.retryAfter }, { status: 429 })
     }
 
     // Check ownership (only owner can delete)

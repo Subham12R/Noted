@@ -235,6 +235,9 @@ export interface GenerateOptions {
   provider?: AIProvider
   maxTokens?: number
   temperature?: number // 0.0-2.0, lower = more deterministic, higher = more creative
+  // User-supplied key overrides (decrypted server-side before passing here)
+  userApiKey?: string
+  userBaseUrl?: string
 }
 
 /**
@@ -253,18 +256,15 @@ export async function generateAIResponse(options: GenerateOptions): Promise<{
     provider,
     maxTokens = AI_CONFIG.features.maxTokensPerRequest,
     temperature,
+    userApiKey,
+    userBaseUrl,
   } = options
 
   const modelId = model || getDefaultModel(provider)
 
-  // Determine temperature: use provided value, or fall back to mode-based defaults from config
   const getDefaultTemperature = () => {
-    if (['translate', 'flowchart', 'quiz', 'flashcard'].includes(mode)) {
-      return AI_CONFIG.temperature.precise
-    }
-    if (['expand'].includes(mode)) {
-      return AI_CONFIG.temperature.creative
-    }
+    if (['translate', 'flowchart', 'quiz', 'flashcard'].includes(mode)) return AI_CONFIG.temperature.precise
+    if (['expand'].includes(mode)) return AI_CONFIG.temperature.creative
     return AI_CONFIG.temperature.default
   }
   const finalTemperature = temperature ?? getDefaultTemperature()
@@ -277,49 +277,41 @@ export async function generateAIResponse(options: GenerateOptions): Promise<{
   console.log('[AI Generate] Mode:', mode)
   console.log('[AI Generate] Provider:', provider || AI_CONFIG.provider)
   console.log('[AI Generate] Model:', modelId)
-  console.log('[AI Generate] System prompt exists:', !!systemPrompt)
+  console.log('[AI Generate] User key override:', !!userApiKey)
   console.log('[AI Generate] Temperature:', finalTemperature)
 
-  // Handle Gemini provider separately
+  // Handle Gemini provider separately (user key or env key)
   if (isGeminiProvider(provider)) {
     try {
       const GenAI = getGoogleGenerativeAI()
-      const genAI = new GenAI(AI_CONFIG.gemini.apiKey)
-      const geminiModel = genAI.getGenerativeModel({ 
+      const genAI = new GenAI(userApiKey || AI_CONFIG.gemini.apiKey)
+      const geminiModel = genAI.getGenerativeModel({
         model: modelId,
-        systemInstruction: systemPrompt 
+        systemInstruction: systemPrompt
       })
 
-      console.log('[AI Generate] Sending request to Gemini...')
-      
       const result = await geminiModel.generateContent({
-        contents: [{ 
-          role: 'user', 
-          parts: [{ text: userMessage }] 
-        }],
-        generationConfig: {
-          maxOutputTokens: maxTokens,
-          temperature: finalTemperature,
-        },
+        contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+        generationConfig: { maxOutputTokens: maxTokens, temperature: finalTemperature },
       })
 
-      console.log('[AI Generate] Gemini response received')
-      const response = result.response
-      const content = response.text()
-
-      return {
-        content: content || '',
-        model: modelId,
-        tokensUsed: Math.ceil((content?.length || 0) / 4),
-      }
+      const content = result.response.text()
+      return { content: content || '', model: modelId, tokensUsed: Math.ceil((content?.length || 0) / 4) }
     } catch (error) {
       console.error('[AI Generate] Gemini error:', error)
       throw error
     }
   }
 
-  // Use OpenAI-compatible client for groq, openai, ollama
-  const openAIClient = getOpenAIClient(provider)
+  // If user supplied their own key, create an ad-hoc client (not cached)
+  // so their key never leaks into the shared cached client pool
+  let openAIClient
+  if (userApiKey) {
+    const OpenAI = (await import('openai')).default
+    openAIClient = new OpenAI({ apiKey: userApiKey, baseURL: userBaseUrl || undefined })
+  } else {
+    openAIClient = getOpenAIClient(provider)
+  }
   const response = await openAIClient.chat.completions.create({
     model: modelId,
     messages: [
@@ -351,19 +343,16 @@ export async function* generateAIResponseStream(
     provider,
     maxTokens = AI_CONFIG.features.maxTokensPerRequest,
     temperature,
+    userApiKey,
+    userBaseUrl,
   } = options
 
   const modelId = model || getDefaultModel(provider)
   const responseId = crypto.randomUUID()
 
-  // Determine temperature: use provided value, or fall back to mode-based defaults from config
   const getDefaultTemperature = () => {
-    if (['translate', 'flowchart', 'quiz', 'flashcard'].includes(mode)) {
-      return AI_CONFIG.temperature.precise
-    }
-    if (['expand'].includes(mode)) {
-      return AI_CONFIG.temperature.creative
-    }
+    if (['translate', 'flowchart', 'quiz', 'flashcard'].includes(mode)) return AI_CONFIG.temperature.precise
+    if (['expand'].includes(mode)) return AI_CONFIG.temperature.creative
     return AI_CONFIG.temperature.default
   }
   const finalTemperature = temperature ?? getDefaultTemperature()
@@ -376,23 +365,15 @@ export async function* generateAIResponseStream(
   console.log('[AI Generate Stream] Mode:', mode)
   console.log('[AI Generate Stream] Provider:', provider || AI_CONFIG.provider)
   console.log('[AI Generate Stream] Model:', modelId)
-  console.log('[AI Generate Stream] System prompt exists:', !!systemPrompt)
-  console.log('[AI Generate Stream] Has context:', !!context)
-  console.log('[AI Generate Stream] Temperature:', finalTemperature)
+  console.log('[AI Generate Stream] User key override:', !!userApiKey)
 
-  // Emit start event
-  yield {
-    type: 'start',
-    id: responseId,
-    model: modelId,
-  }
+  yield { type: 'start', id: responseId, model: modelId }
 
   try {
-    // Handle Gemini provider separately
     if (isGeminiProvider(provider)) {
       try {
         const GenAI = getGoogleGenerativeAI()
-        const genAI = new GenAI(AI_CONFIG.gemini.apiKey)
+        const genAI = new GenAI(userApiKey || AI_CONFIG.gemini.apiKey)
         console.log('[AI Generate Stream] Creating Gemini model with:', modelId)
         
         const geminiModel = genAI.getGenerativeModel({ 
@@ -446,9 +427,14 @@ export async function* generateAIResponseStream(
         return
       }
     } else {
-      // Use OpenAI-compatible client for groq, openai, ollama
       try {
-        const openAIClient = getOpenAIClient(provider)
+        let openAIClient
+        if (userApiKey) {
+          const OpenAI = (await import('openai')).default
+          openAIClient = new OpenAI({ apiKey: userApiKey, baseURL: userBaseUrl || undefined })
+        } else {
+          openAIClient = getOpenAIClient(provider)
+        }
         const stream = await openAIClient.chat.completions.create({
         model: modelId,
         messages: [

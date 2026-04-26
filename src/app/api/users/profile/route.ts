@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth-utils"
+import { rateLimitMemory, RATE_LIMITS } from "@/lib/rate-limit"
 import { db } from "@/db"
 import { users } from "@/db/schema"
 import { eq } from "drizzle-orm"
@@ -45,6 +46,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const rl = rateLimitMemory({ identifier: session.user.id, endpoint: "profile-update", ...RATE_LIMITS.API_GENERAL })
+    if (!rl.success) {
+      return NextResponse.json({ error: "Rate limit exceeded", retryAfter: rl.retryAfter }, { status: 429 })
+    }
+
     const body = await request.json()
     const { name, image } = body
 
@@ -56,11 +62,13 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    if (image !== undefined && typeof image !== "string" && image !== null) {
-      return NextResponse.json(
-        { error: "Image must be a string or null" },
-        { status: 400 }
-      )
+    if (image !== undefined && image !== null) {
+      if (typeof image !== "string" || !image.match(/^https?:\/\/.+/)) {
+        return NextResponse.json(
+          { error: "Image must be a valid HTTP(S) URL or null" },
+          { status: 400 }
+        )
+      }
     }
 
     // Build update object

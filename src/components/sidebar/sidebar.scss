@@ -1,5 +1,16 @@
-.sidebar {
-  --sidebar-width: 320px;
+// Light mode defaults
+:root {
+  --sidebar-bg: #f9f9f9;
+  --sidebar-bg-solid: #f4f4f5;
+  --sidebar-border: rgba(0, 0, 0, 0.07);
+  --sidebar-text: #18181b;
+  --sidebar-text-muted: #71717a;
+  --sidebar-hover: rgba(0, 0, 0, 0.04);
+  --sidebar-active: rgba(99, 102, 241, 0.08);
+}
+
+// Dark mode overrides
+.dark {
   --sidebar-bg: #0f0f0f;
   --sidebar-bg-solid: #0a0a0a;
   --sidebar-border: rgba(255, 255, 255, 0.08);
@@ -7,6 +18,10 @@
   --sidebar-text-muted: #6b6b6b;
   --sidebar-hover: rgba(255, 255, 255, 0.06);
   --sidebar-active: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar {
+  --sidebar-width: 300px;
   --sidebar-glass-blur: 20px;
 
   position: fixed;
@@ -68,7 +83,7 @@
 .sidebar-search {
   margin: 0.75rem;
   padding: 0.625rem 0.875rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--sidebar-hover);
   border: 1px solid var(--sidebar-border);
   border-radius: 0.5rem;
   display: flex;
@@ -80,8 +95,8 @@
     border-color 0.15s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.12);
+    background: var(--sidebar-active);
+    border-color: var(--sidebar-border);
   }
 
   .sidebar-search-icon {
@@ -99,7 +114,8 @@
 .sidebar-tabs {
   display: flex;
   margin: 0 0.75rem 0.75rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--sidebar-hover);
+  border: 1px solid var(--sidebar-border);
   border-radius: 0.5rem;
   padding: 0.25rem;
   gap: 0.25rem;
@@ -120,12 +136,19 @@
 
   &:hover {
     color: var(--sidebar-text);
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--sidebar-hover);
   }
 
   &[data-active="true"] {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    background: white;
+    color: #18181b;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+
+    .dark & {
+      background: rgba(255, 255, 255, 0.12);
+      color: white;
+      box-shadow: none;
+    }
   }
 }
 
@@ -220,7 +243,8 @@
   .folder-count {
     font-size: 0.75rem;
     color: var(--sidebar-text-muted);
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--sidebar-hover);
+    border: 1px solid var(--sidebar-border);
     padding: 0.125rem 0.5rem;
     border-radius: 0.75rem;
     min-width: 1.5rem;
@@ -375,8 +399,8 @@
 
 .sidebar-edit-input {
   flex: 1;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--sidebar-hover);
+  border: 1px solid var(--sidebar-border);
   border-radius: 0.25rem;
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
@@ -449,7 +473,8 @@
 .sidebar-tag-count {
   font-size: 0.75rem;
   color: var(--sidebar-text-muted);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--sidebar-hover);
+  border: 1px solid var(--sidebar-border);
   padding: 0.125rem 0.5rem;
   border-radius: 0.75rem;
   min-width: 1.5rem;

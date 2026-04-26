@@ -110,25 +110,26 @@ export function Dashboard() {
   // Skeleton loader component
   function DashboardSkeleton() {
     return (
-      <div className="min-h-full pb-20 bg-white dark:bg-zinc-950">
-        <div className="max-w-7xl mx-auto px-6 py-8 lg:px-8">
-          <header className="mb-12">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="h-4 w-32 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse mb-2" />
-                <div className="h-12 w-64 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse mb-3" />
-                <div className="h-5 w-96 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
-              </div>
+      <div className="min-h-screen bg-white dark:bg-zinc-950">
+        <header className="px-6 pt-8 pb-6 lg:px-10 border-b border-zinc-100 dark:border-zinc-800/60">
+          <div className="h-4 w-32 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse mb-2" />
+          <div className="h-12 w-64 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
+        </header>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] divide-x divide-zinc-100 dark:divide-zinc-800/60">
+          <div className="p-10 space-y-8">
+            <div className="h-5 w-28 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
+            <div className="flex gap-4">
+              {[1, 2, 3].map((i) => <div key={i} className="w-44 h-28 bg-neutral-200 dark:bg-neutral-800 rounded-2xl animate-pulse" />)}
             </div>
-          </header>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-20">
-            <div className="lg:col-span-2">
-              <div className="h-6 w-32 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse mb-4" />
-              <div className="flex gap-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="w-48 h-32 bg-neutral-200 dark:bg-neutral-800 rounded-2xl animate-pulse" />
-                ))}
-              </div>
+            <div className="h-5 w-24 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
+            <div className="grid grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => <div key={i} className="h-20 bg-neutral-200 dark:bg-neutral-800 rounded-xl animate-pulse" />)}
+            </div>
+          </div>
+          <div className="p-6 space-y-6">
+            <div className="h-5 w-20 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => <div key={i} className="h-10 bg-neutral-200 dark:bg-neutral-800 rounded-lg animate-pulse" />)}
             </div>
           </div>
         </div>
@@ -141,38 +142,32 @@ export function Dashboard() {
   }
 
   return (
-    <div className="min-h-full pb-20 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-6 py-8 lg:px-8">
-        {/* Header Section */}
-        <header className="mb-12">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mb-1 tracking-tighter">
-                {currentDate}
-              </p>
-              <h1 className="text-4xl lg:text-5xl font-bold tracking-tight mb-3">
-                <span className="text-neutral-500 dark:text-neutral-400">{greeting}, </span>
-                <span className="text-neutral-900 dark:text-white font-grandhotel italic text-6xl">{firstName}!</span>
-              </h1>
-              <p className="text-neutral-500 dark:text-neutral-400 max-w-lg">
-                Ready to capture your ideas? Create, organize, and collaborate on your notes.
-              </p>
-            </div>
-          </div>
-        </header>
+    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white transition-colors duration-300 flex flex-col">
+      {/* Header */}
+      <header className="px-6 pt-8 pb-6 lg:px-10 border-b border-zinc-100 dark:border-zinc-800/60">
+        <p className="text-sm font-medium text-neutral-400 dark:text-neutral-500 mb-1 tracking-tight">
+          {currentDate}
+        </p>
+        <h1 className="text-4xl lg:text-5xl font-bold tracking-tight">
+          <span className="text-neutral-400 dark:text-neutral-500">{greeting}, </span>
+          <span className="text-neutral-900 dark:text-white font-grandhotel italic text-6xl">{firstName}!</span>
+        </h1>
+      </header>
 
-        {/* Recent Notes & Todo List Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-20">
-          {/* Recent Notes Section - Takes 2 columns */}
-          {recentPages.length > 0 && (
-            <section className="lg:col-span-2 h-full">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <HugeiconsIcon icon={Clock01Icon} size={20} className="text-zinc-500 dark:text-zinc-400" />
-                  <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Recent Notes</h2>
-                </div>
-              </div>
-              <div className="flex gap-2 justify-start overflow-x-auto rounded-2xl py-2">
+      {/* Two-column fullscreen body */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_380px] divide-y lg:divide-y-0 lg:divide-x divide-zinc-100 dark:divide-zinc-800/60 min-h-0">
+
+        {/* LEFT COLUMN: Recent Pages → Folders */}
+        <div className="flex flex-col gap-0 overflow-y-auto">
+
+          {/* Recent Pages */}
+          <section className="px-6 lg:px-10 py-8 border-b border-zinc-100 dark:border-zinc-800/60">
+            <div className="flex items-center gap-2.5 mb-5">
+              <HugeiconsIcon icon={Clock01Icon} size={18} className="text-zinc-400 dark:text-zinc-500" />
+              <h2 className="text-base font-semibold text-zinc-700 dark:text-zinc-300">Recent Pages</h2>
+            </div>
+            {recentPages.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto pb-1">
                 {recentPages.slice(0, 10).map(({ page, folderId }) => (
                   <PageCard
                     key={page.id}
@@ -183,83 +178,84 @@ export function Dashboard() {
                   />
                 ))}
               </div>
-            </section>
-          )}
-
-          {/* Todo List Section */}
-          <section className={recentPages.length > 0 ? "lg:col-span-1" : "lg:col-span-3"}>
-            <div className="flex items-center gap-3 mb-4 ">
-              <HugeiconsIcon icon={CheckListIcon} size={20} className="text-zinc-500 dark:text-zinc-400" />
-              <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Todo List</h2>
-            </div>
-            <TodoList />
+            ) : (
+              <p className="text-sm text-zinc-400 dark:text-zinc-500 py-4">No recent pages yet. Open a note to see it here.</p>
+            )}
           </section>
-        </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* My Files Section - Takes more space */}
-          <section className="lg:col-span-3">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <HugeiconsIcon icon={Folder01Icon} size={20} className="text-zinc-500 dark:text-zinc-400" />
-                <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">My Files</h2>
+          {/* Folders */}
+          <section className="px-6 lg:px-10 py-8 flex-1">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2.5">
+                <HugeiconsIcon icon={Folder01Icon} size={18} className="text-zinc-400 dark:text-zinc-500" />
+                <h2 className="text-base font-semibold text-zinc-700 dark:text-zinc-300">My Folders</h2>
               </div>
               <button
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-900/10 border border-zinc-200/10 text-zinc-900 dark:text-zinc-200 backdrop-blur-3xl rounded-xl font-medium text-sm hover:opacity-90 active:scale-[0.98] transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-xl font-medium text-sm hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-[0.98] transition-all"
                 onClick={handleCreateFolder}
               >
-                <HugeiconsIcon icon={Add01Icon} size={16} />
+                <HugeiconsIcon icon={Add01Icon} size={14} />
                 <span>New Folder</span>
               </button>
             </div>
 
-            <div className="  min-h-[300px]">
-              {folders.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6">
-                  {folders.map((folder) => (
-                    <FolderCard
-                      key={folder.id}
-                      folder={folder}
-                      onDelete={deleteFolder}
-                      onRename={renameFolder}
-                      onMoveFolder={moveFolder}
-                      onMovePage={movePage}
-                      allFolders={folders}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState
-                  icon={<HugeiconsIcon icon={Folder01Icon} size={48} />}
-                  title="No folders yet"
-                  description="Create your first folder to start organizing your notes"
-                  action={
-                    <button
-                      onClick={handleCreateFolder}
-                      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium text-sm transition-colors"
-                    >
-                      <HugeiconsIcon icon={Add01Icon} size={16} />
-                      Create Folder
-                    </button>
-                  }
-                />
-              )}
+            {folders.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
+                {folders.map((folder) => (
+                  <FolderCard
+                    key={folder.id}
+                    folder={folder}
+                    onDelete={deleteFolder}
+                    onRename={renameFolder}
+                    onMoveFolder={moveFolder}
+                    onMovePage={movePage}
+                    allFolders={folders}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={<HugeiconsIcon icon={Folder01Icon} size={40} />}
+                title="No folders yet"
+                description="Create your first folder to start organizing your notes"
+                action={
+                  <button
+                    onClick={handleCreateFolder}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium text-sm transition-colors"
+                  >
+                    <HugeiconsIcon icon={Add01Icon} size={15} />
+                    Create Folder
+                  </button>
+                }
+              />
+            )}
+          </section>
+        </div>
+
+        {/* RIGHT COLUMN: Todo → Shared With Me */}
+        <div className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800/60 overflow-y-auto">
+
+          {/* Todo */}
+          <section className="px-6 py-8 flex-1 min-h-[300px]">
+            <div className="flex items-center gap-2.5 mb-5">
+              <HugeiconsIcon icon={CheckListIcon} size={18} className="text-zinc-400 dark:text-zinc-500" />
+              <h2 className="text-base font-semibold text-zinc-700 dark:text-zinc-300">Todo</h2>
             </div>
+            <TodoList />
           </section>
 
-          {/* Shared With Me Section */}
-          <section className="lg:col-span-2">
-            <div className="flex items-center gap-3 mb-8">
-              <HugeiconsIcon icon={Share01Icon} size={20} className="text-zinc-500 dark:text-zinc-400" />
-              <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Shared With Me</h2>
+          {/* Shared With Me */}
+          <section className="px-6 py-8">
+            <div className="flex items-center gap-2.5 mb-5">
+              <HugeiconsIcon icon={Share01Icon} size={18} className="text-zinc-400 dark:text-zinc-500" />
+              <h2 className="text-base font-semibold text-zinc-700 dark:text-zinc-300">Shared With Me</h2>
             </div>
             <SharedWithMe />
           </section>
         </div>
       </div>
 
-      {/* Always visible AI input at bottom of dashboard */}
+      {/* AI input pinned at bottom */}
       <DashboardAIInput />
     </div>
   )

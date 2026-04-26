@@ -479,6 +479,77 @@ export const folderTags = pgTable(
 )
 
 // ============================================================================
+// USER API KEYS (custom LLM keys, encrypted)
+// ============================================================================
+
+export const userApiKeys = pgTable(
+  "user_api_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: varchar("provider", { length: 50 }).notNull(), // 'openai' | 'anthropic' | 'gemini' | 'groq' | 'custom'
+    label: varchar("label", { length: 100 }).notNull(),
+    encryptedKey: text("encrypted_key").notNull(),
+    baseUrl: text("base_url"), // for custom/self-hosted endpoints
+    modelOverride: varchar("model_override", { length: 100 }), // optional default model for this key
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("user_api_keys_user_id_idx").on(table.userId),
+    index("user_api_keys_provider_idx").on(table.userId, table.provider),
+  ]
+)
+
+// ============================================================================
+// FLASHCARDS
+// ============================================================================
+
+export const flashcardDecks = pgTable(
+  "flashcard_decks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    sourcePageId: uuid("source_page_id").references(() => pages.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("flashcard_decks_user_id_idx").on(table.userId),
+    index("flashcard_decks_page_id_idx").on(table.sourcePageId),
+  ]
+)
+
+export const flashcards = pgTable(
+  "flashcards",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    deckId: uuid("deck_id")
+      .notNull()
+      .references(() => flashcardDecks.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    front: text("front").notNull(),
+    back: text("back").notNull(),
+    type: varchar("type", { length: 20 }).notNull().default("basic"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("flashcards_deck_id_idx").on(table.deckId),
+    index("flashcards_user_id_idx").on(table.userId),
+  ]
+)
+
+// ============================================================================
 // SECURITY: RATE LIMITING
 // ============================================================================
 
@@ -516,6 +587,9 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   files: many(files),
   fileFolders: many(fileFolders),
   tags: many(tags),
+  userApiKeys: many(userApiKeys),
+  flashcardDecks: many(flashcardDecks),
+  flashcards: many(flashcards),
 }))
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -702,6 +776,36 @@ export const folderTagsRelations = relations(folderTags, ({ one }) => ({
   }),
 }))
 
+export const userApiKeysRelations = relations(userApiKeys, ({ one }) => ({
+  user: one(users, {
+    fields: [userApiKeys.userId],
+    references: [users.id],
+  }),
+}))
+
+export const flashcardDecksRelations = relations(flashcardDecks, ({ one, many }) => ({
+  user: one(users, {
+    fields: [flashcardDecks.userId],
+    references: [users.id],
+  }),
+  sourcePage: one(pages, {
+    fields: [flashcardDecks.sourcePageId],
+    references: [pages.id],
+  }),
+  flashcards: many(flashcards),
+}))
+
+export const flashcardsRelations = relations(flashcards, ({ one }) => ({
+  deck: one(flashcardDecks, {
+    fields: [flashcards.deckId],
+    references: [flashcardDecks.id],
+  }),
+  user: one(users, {
+    fields: [flashcards.userId],
+    references: [users.id],
+  }),
+}))
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -762,3 +866,12 @@ export type NewPageTag = typeof pageTags.$inferInsert
 
 export type FolderTag = typeof folderTags.$inferSelect
 export type NewFolderTag = typeof folderTags.$inferInsert
+
+export type UserApiKey = typeof userApiKeys.$inferSelect
+export type NewUserApiKey = typeof userApiKeys.$inferInsert
+
+export type FlashcardDeck = typeof flashcardDecks.$inferSelect
+export type NewFlashcardDeck = typeof flashcardDecks.$inferInsert
+
+export type Flashcard = typeof flashcards.$inferSelect
+export type NewFlashcard = typeof flashcards.$inferInsert

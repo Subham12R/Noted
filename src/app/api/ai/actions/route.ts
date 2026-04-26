@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/auth-utils'
+import { rateLimitMemory, RATE_LIMITS } from '@/lib/rate-limit'
 import { db, folders, pages, todos } from '@/db'
 import { eq, and } from 'drizzle-orm'
 import { z } from 'zod'
@@ -103,6 +104,12 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = session.user.id
+
+    const rl = rateLimitMemory({ identifier: userId, endpoint: "ai-actions", ...RATE_LIMITS.API_GENERAL })
+    if (!rl.success) {
+      return NextResponse.json({ error: 'Rate limit exceeded', retryAfter: rl.retryAfter }, { status: 429 })
+    }
+
     const body = await request.json()
 
     // Validate request
