@@ -5,10 +5,8 @@ import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
 import { Input } from "@/components/Input"
 import { AdvancedSearch } from "@/components/search"
-import { FileLibrary } from "@/components/file-library"
 import { useNotes } from "@/context/NotesContext"
 import { useSidebarContext } from "@/context/SidebarContext"
-import { useFileLibrary } from "@/context/FileLibraryContext"
 import { DashboardToolbar } from "./DashboardToolbar"
 
 interface AppLayoutProps {
@@ -20,7 +18,6 @@ interface AppLayoutProps {
 export function AppLayout({ children, showInput = true, showToolbar = true }: AppLayoutProps) {
   const router = useRouter()
   const { isOpen, mode, closeSidebar, setMode } = useSidebarContext()
-  const { isPanelOpen: fileLibraryOpen } = useFileLibrary()
   const [searchOpen, setSearchOpen] = useState(false)
 
   const {
@@ -70,13 +67,6 @@ export function AppLayout({ children, showInput = true, showToolbar = true }: Ap
 
       {/* Advanced Search Modal */}
       <AdvancedSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
-
-      {/* File Library Panel */}
-      {fileLibraryOpen && (
-        <div className="fixed inset-y-0 right-0 w-96 z-50 shadow-2xl">
-          <FileLibrary />
-        </div>
-      )}
 
       <div className="flex-1 min-w-0 relative h-screen flex flex-col overflow-hidden">
         {showToolbar && <DashboardToolbar />}

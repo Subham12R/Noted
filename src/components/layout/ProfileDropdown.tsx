@@ -74,7 +74,7 @@ export function ProfileDropdown() {
       </button>
 
       {isOpen && (
-        <div className="absolute top-[calc(100%+0.5rem)] right-0 min-w-60 bg-zinc-950/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+        <div className="absolute top-[calc(100%+0.5rem)] right-0 min-w-60 bg-background/95 dark:bg-zinc-950/95 backdrop-blur-xl border border-foreground/10 rounded-xl shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="flex items-center gap-3 p-4">
             {avatarSrc ? (
               <Image
@@ -95,20 +95,20 @@ export function ProfileDropdown() {
             </div>
           </div>
 
-          <div className="h-px bg-white/10 my-1" />
+          <div className="h-px bg-foreground/10 my-1" />
 
           <div className="py-1">
-            <Link href="/profile" className="flex items-center gap-3 w-full px-4 py-2.5 text-foreground text-sm no-underline transition-all duration-150 hover:bg-white/10 [&_svg]:opacity-60 hover:[&_svg]:opacity-100" onClick={() => setIsOpen(false)}>
+            <Link href="/profile" className="flex items-center gap-3 w-full px-4 py-2.5 text-foreground text-sm no-underline transition-all duration-150 hover:bg-foreground/10 [&_svg]:opacity-60 hover:[&_svg]:opacity-100" onClick={() => setIsOpen(false)}>
               <UserIcon />
               <span>Profile</span>
             </Link>      
           </div>
 
-          <div className="h-px bg-white/10 my-1" />
+          <div className="h-px bg-foreground/10 my-1" />
 
           <div className="py-1">
             <button
-              className="flex items-center gap-3 w-full px-4 py-2.5 bg-transparent border-none text-foreground text-sm cursor-pointer transition-all duration-150 hover:bg-white/10 [&_svg]:opacity-60 hover:[&_svg]:opacity-100"
+              className="flex items-center gap-3 w-full px-4 py-2.5 bg-transparent border-none text-foreground text-sm cursor-pointer transition-all duration-150 hover:bg-foreground/10 [&_svg]:opacity-60 hover:[&_svg]:opacity-100"
               onClick={() => {
                 setIsOpen(false)
                 setIsKeyboardShortcutsOpen(true)
@@ -120,7 +120,7 @@ export function ProfileDropdown() {
             </button>
           </div>
 
-          <div className="h-px bg-white/10 my-1" />
+          <div className="h-px bg-foreground/10 my-1" />
 
           <div className="py-1">
             <button
