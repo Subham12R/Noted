@@ -102,7 +102,8 @@ import { LinkIcon } from "@/components/tiptap-icons/link-icon";
 import { useIsBreakpoint } from "@/hooks/use-is-breakpoint";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { useCursorVisibility } from "@/hooks/use-cursor-visibility";
-import { useRealtimeSync } from "@/hooks/use-realtime-sync";
+import { useYjsSync } from "@/hooks/use-yjs-sync"
+import Collaboration from "@tiptap/extension-collaboration";
 
 // --- Components ---
 import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle";
@@ -459,6 +460,7 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
   const [isAIPanelOpen, setIsAIPanelOpen] = useState(true);
   const [aiMode, setAiMode] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<ReturnType<typeof useEditor>>(null);
 
   const { getPageById, updatePageContent, renamePage } = useNotes();
   const pageInfo = getPageById(pageId);
@@ -590,10 +592,13 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
     [pageState.page, pageId, renamePage],
   );
 
-  // Track if we're currently receiving a remote update to prevent echo
-  const isRemoteUpdateRef = useRef(false);
-  // Ref to hold the broadcast function so it doesn't cause editor recreation
-  const broadcastContentRef = useRef<(content: string) => void>(() => {});
+  // Yjs CRDT collaboration hook — connects to WebSocket and manages Y.Doc
+  const { ydoc, isConnected, activeUsers } = useYjsSync({ pageId, enabled: true })
+
+  // Ref for seeding ydoc from database content on first collaborative session
+  const initialContentRef = useRef(initialContent)
+  initialContentRef.current = initialContent
+  const seededRef = useRef(false)
 
   const editor = useEditor(
     {
@@ -612,9 +617,27 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
         StarterKit.configure({
           horizontalRule: false,
           codeBlock: false, // Disabled in favor of EnhancedCodeBlock
+          undoRedo: false, // Collaboration extension provides its own undo/redo via Yjs
           link: {
             openOnClick: false,
             enableClickSelection: true,
+          },
+        }),
+        Collaboration.configure({
+          document: ydoc,
+          onFirstRender: () => {
+            // If the Y.Doc's fragment is empty (new page or first collaborative session),
+            // seed it from the database-stored HTML content.
+            const fragment = ydoc.getXmlFragment("default")
+            if (fragment.length === 0 && initialContentRef.current && !seededRef.current) {
+              seededRef.current = true
+              // Use requestAnimationFrame to ensure editor is fully mounted
+              requestAnimationFrame(() => {
+                editorRef.current?.commands.setContent(initialContentRef.current)
+              })
+            } else {
+              seededRef.current = true
+            }
           },
         }),
         EnhancedCodeBlock,
@@ -656,17 +679,10 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
         TableHeader,
         TableCell,
       ],
-      content: initialContent,
       onUpdate: ({ editor }) => {
-        // Skip if this update was triggered by a remote sync
-        if (isRemoteUpdateRef.current) return;
-
         const content = editor.getHTML();
 
-        // Broadcast to other users via WebSocket (use ref to avoid stale closure)
-        broadcastContentRef.current(content);
-
-        // Use debounced save to persist to database
+        // Persist to database (Yjs handles broadcasting to collaborators)
         if (isSharedPage) {
           debouncedSaveShared(pageId, content);
         } else {
@@ -674,18 +690,11 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
         }
       },
     },
-    [initialContent, canEditPage],
+    [ydoc, canEditPage],
   );
 
-  // Real-time sync with other users - use stable pageId only, not canEditPage which changes
-  const { broadcastContent, isConnected, activeUsers } = useRealtimeSync({
-    pageId,
-    editor,
-    enabled: true, // Always enable if we have a pageId, the hook handles auth internally
-  });
-
-  // Keep broadcast ref in sync
-  broadcastContentRef.current = broadcastContent;
+  // Keep editorRef in sync so onFirstRender can access the editor instance
+  editorRef.current = editor;
 
   // Keyboard shortcut to open shortcuts modal (Ctrl+K)
   useHotkeys(

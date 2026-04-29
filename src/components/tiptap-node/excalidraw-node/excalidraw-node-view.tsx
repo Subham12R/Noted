@@ -7,9 +7,15 @@ import { Maximize2, Minimize2, Download, Trash2, GripVertical, Users } from "luc
 import { io, Socket } from "socket.io-client"
 import { useAuth } from "@/context/AuthContext"
 
-// Track if socket is initialized globally
-let socketInstance: Socket | null = null
-let socketPageId: string | null = null
+// Get page ID from the URL path when not available in node attributes
+function resolvePageId(attrPageId?: string): string {
+  if (attrPageId) return attrPageId
+  if (typeof window !== "undefined") {
+    const match = window.location.pathname.match(/\/note\/([^/]+)/)
+    if (match?.[1]) return match[1]
+  }
+  return "default"
+}
 
 // Error boundary for Excalidraw component
 class ExcalidrawErrorBoundary extends Component<
@@ -101,87 +107,84 @@ export function ExcalidrawNodeView({ node, updateAttributes, deleteNode, selecte
     return dimensions.width <= maxSafeSize && dimensions.height <= maxSafeSize
   }, [dimensions])
 
-  // Initialize socket connection for collaboration
+  // Initialize socket connection for collaboration (component-local, cleaned up on unmount)
   useEffect(() => {
     if (!user?.id) return
 
-    // Get page ID - try to get from node attrs or fall back to a default
-    const pageId = node.attrs.pageId || 'default'
-    const roomId = `excalidraw:${pageId}`
-
+    const pageId = resolvePageId(node.attrs.pageId)
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3001"
 
-    // Reuse existing socket if already connected to same room
-    if (socketInstance && socketPageId === roomId) {
-      socketRef.current = socketInstance
-    } else {
-      // Create new socket connection
-      socketInstance = io(wsUrl, {
-        auth: {
-          userId: user.id,
-          userName: user.name || "Anonymous",
-          userAvatar: user.image,
-        },
-        transports: ["websocket", "polling"],
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-      })
+    const socket = io(wsUrl, {
+      auth: {
+        userId: user.id,
+        userName: user.name || "Anonymous",
+        userAvatar: user.image,
+      },
+      transports: ["polling", "websocket"],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    })
 
-      socketRef.current = socketInstance
-      socketPageId = roomId
+    socketRef.current = socket
 
-      socketInstance.on("connect", () => {
-        console.log("Excalidraw: Connected to collaboration server")
-        socketInstance?.emit("join-page", roomId)
-      })
+    socket.on("connect", () => {
+      socket.emit("join-page", pageId)
+    })
 
-      // Listen for excalidraw updates from other users
-      socketInstance.on("excalidraw-update", (data: {
-        userId: string
-        userName: string
-        userColor: string
-        elements: string
-        appState: string
-      }) => {
-        if (data.userId === user.id) return
+    // Receive updates from other collaborators and merge by element version
+    socket.on("excalidraw-update", (data: {
+      userId: string
+      userName: string
+      userColor: string
+      elements: string
+      appState: string
+    }) => {
+      if (data.userId === user.id) return
 
-        try {
-          isRemoteUpdateRef.current = true
-          const remoteElements = JSON.parse(data.elements)
-          
-          // Merge remote elements with local
-          if (excalidrawRef.current) {
-            excalidrawRef.current.updateScene({
-              elements: remoteElements,
-              appState: JSON.parse(data.appState || "{}"),
-            })
+      try {
+        const remoteElements: Array<{ id: string; version: number }> = JSON.parse(data.elements)
+
+        // Merge: keep the element with the higher version number
+        const localMap = new Map(
+          localElementsRef.current.map((el: { id: string }) => [el.id, el])
+        )
+        for (const remoteEl of remoteElements) {
+          const localEl = localMap.get(remoteEl.id) as { version?: number } | undefined
+          if (!localEl || remoteEl.version > (localEl.version ?? 0)) {
+            localMap.set(remoteEl.id, remoteEl)
           }
-          isRemoteUpdateRef.current = false
-        } catch (e) {
-          console.error("Failed to apply remote excalidraw update:", e)
-          isRemoteUpdateRef.current = false
         }
-      })
 
-      // Listen for collaborator join/leave
-      socketInstance.on("room-users", (users: { id: string; name: string; color: string }[]) => {
-        setCollaborators(users.filter(u => u.id !== user.id))
-      })
+        const merged = Array.from(localMap.values())
+        localElementsRef.current = merged
 
-      socketInstance.on("user-joined", (userInfo: { id: string; name: string; color: string }) => {
-        if (userInfo.id !== user.id) {
-          setCollaborators(prev => [...prev.filter(u => u.id !== userInfo.id), userInfo])
-        }
-      })
+        isRemoteUpdateRef.current = true
+        excalidrawRef.current?.updateScene({ elements: merged })
+        isRemoteUpdateRef.current = false
+      } catch (e) {
+        console.error("Excalidraw: failed to apply remote update", e)
+        isRemoteUpdateRef.current = false
+      }
+    })
 
-      socketInstance.on("user-left", ({ userId }: { userId: string }) => {
-        setCollaborators(prev => prev.filter(u => u.id !== userId))
-      })
-    }
+    socket.on("room-users", (users: { id: string; name: string; color: string }[]) => {
+      setCollaborators(users.filter(u => u.id !== user.id))
+    })
+
+    socket.on("user-joined", (userInfo: { id: string; name: string; color: string }) => {
+      if (userInfo.id === user.id) return
+      setCollaborators(prev => [...prev.filter(u => u.id !== userInfo.id), userInfo])
+    })
+
+    socket.on("user-left", ({ userId }: { userId: string }) => {
+      setCollaborators(prev => prev.filter(u => u.id !== userId))
+    })
 
     return () => {
-      // Don't disconnect on unmount - keep socket alive for other components
+      socket.emit("leave-page")
+      socket.disconnect()
+      socketRef.current = null
     }
   }, [user?.id, node.attrs.pageId])
 
