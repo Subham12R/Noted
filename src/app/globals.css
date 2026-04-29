@@ -2,6 +2,9 @@
 @import '../styles/_variables.scss';
 @import '../styles/_keyframe-animations.scss';
 
+/* Tailwind v4: configure class-based dark mode (replaces darkMode: 'class' from v3 config) */
+@variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -21,12 +24,6 @@
   --font-grandhotel: 'Grandhotel', cursive;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not(.dark) {
-    --background: #ffffff;
-    --foreground: #171717;
-  }
-}
 
 body {
   background: var(--background);

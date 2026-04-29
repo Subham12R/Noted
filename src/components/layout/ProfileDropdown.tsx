@@ -53,7 +53,7 @@ export function ProfileDropdown() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        className="flex items-center justify-center p-0 border-2 border-transparent rounded-full bg-transparent cursor-pointer transition-all duration-150 hover:border-white/20 focus:outline-none focus:border-indigo-500/50"
+        className="flex items-center justify-center p-0 border-2 border-transparent rounded-full bg-transparent cursor-pointer transition-all duration-150 hover:border-zinc-300 dark:hover:border-white/20 focus:outline-none focus:border-indigo-500/50"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -74,7 +74,7 @@ export function ProfileDropdown() {
       </button>
 
       {isOpen && (
-        <div className="absolute top-[calc(100%+0.5rem)] right-0 min-w-60 bg-zinc-950/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+        <div className="absolute top-[calc(100%+0.5rem)] right-0 min-w-60 bg-white dark:bg-zinc-950/95 backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-xl shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="flex items-center gap-3 p-4">
             {avatarSrc ? (
               <Image
@@ -90,25 +90,29 @@ export function ProfileDropdown() {
               </div>
             )}
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-semibold text-foreground truncate">{userName}</span>
-              <span className="text-xs text-foreground/50 truncate">{userEmail}</span>
+              <span className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{userName}</span>
+              <span className="text-xs text-zinc-500 dark:text-white/50 truncate">{userEmail}</span>
             </div>
           </div>
 
-          <div className="h-px bg-white/10 my-1" />
+          <div className="h-px bg-zinc-200 dark:bg-white/10 my-1" />
 
           <div className="py-1">
-            <Link href="/profile" className="flex items-center gap-3 w-full px-4 py-2.5 text-foreground text-sm no-underline transition-all duration-150 hover:bg-white/10 [&_svg]:opacity-60 hover:[&_svg]:opacity-100" onClick={() => setIsOpen(false)}>
+            <Link
+              href="/profile"
+              className="flex items-center gap-3 w-full px-4 py-2.5 text-zinc-700 dark:text-zinc-200 text-sm no-underline transition-all duration-150 hover:bg-zinc-100 dark:hover:bg-white/10 [&_svg]:opacity-60 hover:[&_svg]:opacity-100"
+              onClick={() => setIsOpen(false)}
+            >
               <UserIcon />
               <span>Profile</span>
-            </Link>      
+            </Link>
           </div>
 
-          <div className="h-px bg-white/10 my-1" />
+          <div className="h-px bg-zinc-200 dark:bg-white/10 my-1" />
 
           <div className="py-1">
             <button
-              className="flex items-center gap-3 w-full px-4 py-2.5 bg-transparent border-none text-foreground text-sm cursor-pointer transition-all duration-150 hover:bg-white/10 [&_svg]:opacity-60 hover:[&_svg]:opacity-100"
+              className="flex items-center gap-3 w-full px-4 py-2.5 bg-transparent border-none text-zinc-700 dark:text-zinc-200 text-sm cursor-pointer transition-all duration-150 hover:bg-zinc-100 dark:hover:bg-white/10 [&_svg]:opacity-60 hover:[&_svg]:opacity-100"
               onClick={() => {
                 setIsOpen(false)
                 setIsKeyboardShortcutsOpen(true)
@@ -116,15 +120,15 @@ export function ProfileDropdown() {
             >
               <KeyboardIcon />
               <span>Keyboard Shortcuts</span>
-              <span className="ml-auto text-xs text-foreground/40 font-mono">Ctrl+K</span>
+              <span className="ml-auto text-xs text-zinc-400 dark:text-white/40 font-mono">Ctrl+K</span>
             </button>
           </div>
 
-          <div className="h-px bg-white/10 my-1" />
+          <div className="h-px bg-zinc-200 dark:bg-white/10 my-1" />
 
           <div className="py-1">
             <button
-              className="flex items-center gap-3 w-full px-4 py-2.5 bg-transparent border-none text-red-500 text-sm cursor-pointer transition-all duration-150 hover:bg-red-500/10 [&_svg]:text-red-500"
+              className="flex items-center gap-3 w-full px-4 py-2.5 bg-transparent border-none text-red-500 text-sm cursor-pointer transition-all duration-150 hover:bg-red-50 dark:hover:bg-red-500/10 [&_svg]:text-red-500"
               onClick={async () => {
                 setIsOpen(false)
                 await signOut()
