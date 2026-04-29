@@ -261,7 +261,7 @@ export const Input = ({
         const res = await fetch("/api/ai/models");
         if (res.ok) {
           const data = await res.json();
-          setAvailableModels(data.allModels || []);
+          setAvailableModels((data.allModels || []).filter((m: { available: boolean; brandName?: string; provider: string }) => m.available && (m.brandName || m.provider !== 'groq')));
           if (data.defaultModel) {
             setSelectedModel(data.defaultModel);
           }
@@ -271,6 +271,8 @@ export const Input = ({
       }
     }
     fetchModels();
+    window.addEventListener("userApiKeysUpdated", fetchModels);
+    return () => window.removeEventListener("userApiKeysUpdated", fetchModels);
   }, []);
 
   // Close model dropdown on outside click
@@ -378,6 +380,7 @@ export const Input = ({
           prompt: prompt,
           mode: mode,
           model: selectedModel,
+          provider: availableModels.find(m => m.id === selectedModel)?.provider,
           context: contextText,
           stream: true,
         }),
@@ -898,6 +901,7 @@ export const Input = ({
           prompt: inputValue.trim(),
           mode: modeToUse,
           model: selectedModel,
+          provider: availableModels.find(m => m.id === selectedModel)?.provider,
           context: contextText,
           stream: true,
         }),
@@ -1620,9 +1624,7 @@ export const Input = ({
                   title="Select AI model"
                 >
                   <span className="truncate max-w-24 sm:max-w-none">
-                    {availableModels
-                      .find((m) => m.id === selectedModel)
-                      ?.name?.split(" ")[0] || "Model"}
+                    {(() => { const m = availableModels.find((m) => m.id === selectedModel); return m?.brandName || m?.name?.split(" ")[0] || "Model"; })()}
                   </span>
                   <ChevronDownIcon className="w-3.5 h-3.5 text-neutral-400" />
                 </button>
@@ -1658,7 +1660,7 @@ export const Input = ({
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium truncate">
-                                  {model.name}
+                                  {model.brandName || model.name}
                                 </span>
                                 {!model.available && (
                                   <span className="text-[10px] px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-md text-zinc-500 dark:text-zinc-400 shrink-0">

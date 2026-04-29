@@ -15,6 +15,13 @@ function getGoogleGenerativeAI() {
   return GoogleGenerativeAI
 }
 
+// Return the configured base URL for a provider (used when user key has no custom base URL)
+function getProviderBaseUrl(provider?: AIProvider): string | undefined {
+  if (!provider) return undefined
+  const cfg = AI_CONFIG as Record<string, { baseUrl?: string }>
+  return cfg[provider]?.baseUrl
+}
+
 // Helper to check if provider is Gemini - ONLY true if explicitly set to 'gemini'
 function isGeminiProvider(provider?: AIProvider): boolean {
   return provider === 'gemini'
@@ -308,7 +315,12 @@ export async function generateAIResponse(options: GenerateOptions): Promise<{
   let openAIClient
   if (userApiKey) {
     const OpenAI = (await import('openai')).default
-    openAIClient = new OpenAI({ apiKey: userApiKey, baseURL: userBaseUrl || undefined })
+    openAIClient = new OpenAI({
+      apiKey: userApiKey,
+      baseURL: userBaseUrl || getProviderBaseUrl(provider) || undefined,
+      timeout: 120000,
+      maxRetries: 0,
+    })
   } else {
     openAIClient = getOpenAIClient(provider)
   }
@@ -431,31 +443,40 @@ export async function* generateAIResponseStream(
         let openAIClient
         if (userApiKey) {
           const OpenAI = (await import('openai')).default
-          openAIClient = new OpenAI({ apiKey: userApiKey, baseURL: userBaseUrl || undefined })
+          openAIClient = new OpenAI({
+            apiKey: userApiKey,
+            baseURL: userBaseUrl || getProviderBaseUrl(provider) || undefined,
+            timeout: 120000,
+            maxRetries: 0,
+          })
         } else {
           openAIClient = getOpenAIClient(provider)
         }
         const stream = await openAIClient.chat.completions.create({
-        model: modelId,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
-        ],
-        max_tokens: maxTokens,
-        temperature: finalTemperature,
-        stream: true,
-      })
+          model: modelId,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage },
+          ],
+          max_tokens: maxTokens,
+          temperature: finalTemperature,
+          stream: true,
+        })
 
       let totalContent = ''
 
       for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content
+        const delta = chunk.choices[0]?.delta as Record<string, string | undefined>
+        // Handle thinking models that stream reasoning_content before content
+        const reasoning = delta?.reasoning_content
+        if (reasoning) {
+          yield { type: 'chunk', content: reasoning }
+          totalContent += reasoning
+        }
+        const content = delta?.content
         if (content) {
           totalContent += content
-          yield {
-            type: 'chunk',
-            content,
-          }
+          yield { type: 'chunk', content }
         }
       }
 

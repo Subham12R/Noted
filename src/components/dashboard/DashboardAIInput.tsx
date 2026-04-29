@@ -248,7 +248,7 @@ export function DashboardAIInput({ preSelectedFolder }: DashboardAIInputProps) {
         const res = await fetch("/api/ai/models")
         if (res.ok) {
           const data = await res.json()
-          setAvailableModels(data.allModels || [])
+          setAvailableModels((data.allModels || []).filter((m: AIModel & { available: boolean; userKeyId?: string }) => m.available && (m.brandName || m.userKeyId || m.provider !== 'groq')))
           if (data.defaultModel) {
             setSelectedModel(data.defaultModel)
           }
@@ -258,6 +258,8 @@ export function DashboardAIInput({ preSelectedFolder }: DashboardAIInputProps) {
       }
     }
     fetchModels()
+    window.addEventListener("userApiKeysUpdated", fetchModels)
+    return () => window.removeEventListener("userApiKeysUpdated", fetchModels)
   }, [])
 
   // Close model dropdown on outside click
@@ -501,6 +503,7 @@ INSTRUCTIONS:
           prompt: userMessage.content,
           mode: "answer",
           model: selectedModel,
+          provider: availableModels.find(m => m.id === selectedModel)?.provider,
           context: contextText,
           stream: true,
         }),
@@ -607,15 +610,6 @@ INSTRUCTIONS:
       setIsProcessing(false)
     }
   }, [inputValue, selectedFolder, folders, messages])
-
-  // Copy last response to clipboard
-  const copyLastResponse = useCallback(() => {
-    const lastAssistantMessage = [...messages].reverse().find((m) => m.role === "assistant")
-    if (lastAssistantMessage) {
-      navigator.clipboard.writeText(lastAssistantMessage.content)
-      toast.success("Copied to clipboard")
-    }
-  }, [messages])
 
   // Clear conversation
   const clearConversation = useCallback(() => {
@@ -747,7 +741,7 @@ INSTRUCTIONS:
                 </div>
               )}
               <SyntaxHighlighter
-                style={oneDark as Record<string, React.CSSProperties>}
+                style={oneDark as unknown as { [key: string]: React.CSSProperties }}
                 language={match ? match[1] : "text"}
                 PreTag="div"
                 customStyle={{
@@ -982,23 +976,22 @@ INSTRUCTIONS:
           />
 
           {/* Model Selector and Send Button */}
-          <div className="flex items-center gap-1 px-2 py-2 relative">
+          <div className="flex items-center gap-1 px-2 py-2">
             {/* Model Selector */}
-             <button
-               onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-               disabled={isProcessing}
-               className="absolute top-[-40%] bg-white dark:bg-[#1C1C1C] border border-neutral-200 dark:border-neutral-700 right-[50px] inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-2xl transition-colors disabled:opacity-50"
-               title="Select AI model"
-             >
-               <ModelIcon className="w-4 h-4" />
-               <span className="max-w-[80px] truncate hidden sm:inline">
-                 {availableModels.find(m => m.id === selectedModel)?.name?.split(' ')[0] || 'Model'}
-               </span>
-               <ChevronDownIcon className="w-3 h-3" />
-             </button>
-
             <div className="relative" ref={modelDropdownRef}>
-             
+              <button
+                onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                disabled={isProcessing}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-2xl transition-colors disabled:opacity-50"
+                title="Select AI model"
+              >
+                <ModelIcon className="w-4 h-4" />
+                <span className="max-w-20 truncate hidden sm:inline">
+                  {(() => { const m = availableModels.find(m => m.id === selectedModel); return m?.brandName || m?.name?.split(' ')[0] || 'Model' })()}
+                </span>
+                <ChevronDownIcon className="w-3 h-3" />
+              </button>
+
               {/* Model Dropdown */}
               {isModelDropdownOpen && (
                 <div className="absolute bottom-full right-0 mb-2 w-72 bg-white dark:bg-[#1C1C1C] border border-neutral-100 dark:border-neutral-800 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] overflow-hidden z-50">
@@ -1027,7 +1020,7 @@ INSTRUCTIONS:
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium truncate">{model.name}</span>
+                              <span className="font-medium truncate">{model.brandName || model.name}</span>
                               {!model.available && (
                                 <span className="text-[10px] px-1.5 py-0.5 bg-neutral-200 dark:bg-neutral-700 rounded text-neutral-500 dark:text-neutral-400 shrink-0">
                                   Unavailable
@@ -1158,14 +1151,6 @@ const CopyIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
-const RegenerateIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-    <path d="M21 3v5h-5" />
-    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-    <path d="M8 16H3v5" />
-  </svg>
-)
 
 const CloseIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1186,43 +1171,6 @@ const CollapseIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
-const ErrorIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <path d="m15 9-6 6" />
-    <path d="m9 9 6 6" />
-  </svg>
-)
-
-const UserIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-)
-
-const SparklesIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-    <path d="M5 3v4" />
-    <path d="M19 17v4" />
-    <path d="M3 5h4" />
-    <path d="M17 19h4" />
-  </svg>
-)
-
-const ActionIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2v4" />
-    <path d="m16.24 7.76-2.12 2.12" />
-    <path d="M20 12h-4" />
-    <path d="m16.24 16.24-2.12-2.12" />
-    <path d="M12 18v4" />
-    <path d="m7.76 16.24 2.12-2.12" />
-    <path d="M4 12h4" />
-    <path d="m7.76 7.76 2.12 2.12" />
-  </svg>
-)
 
 const CheckIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

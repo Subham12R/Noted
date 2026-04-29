@@ -1,6 +1,6 @@
 // AI Types and Configuration
 
-export type AIProvider = 'groq' | 'ollama' | 'openai' | 'anthropic' | 'gemini'
+export type AIProvider = 'groq' | 'ollama' | 'openai' | 'anthropic' | 'gemini' | 'minimax' | 'nvidia'
 
 export type AIMode = 'answer' | 'expand' | 'summarize' | 'translate' | 'explain' | 'improve' | 'flowchart' | 'quiz' | 'flashcard'
 
@@ -66,65 +66,6 @@ export const AI_MODELS: AIModel[] = [
     provider: 'groq',
     contextWindow: 32768,
     description: 'Good balance of speed and quality',
-    enabled: true,
-  },
-  // Ollama Models (Disabled by default - local)
-  {
-    id: 'llama3.1:8b',
-    name: 'Llama 3.1 8B (Local)',
-    provider: 'ollama',
-    contextWindow: 131072,
-    description: 'Run locally with Ollama - requires setup',
-    enabled: false, // Disabled until Ollama is configured
-  },
-  {
-    id: 'mistral:7b',
-    name: 'Mistral 7B (Local)',
-    provider: 'ollama',
-    contextWindow: 32768,
-    description: 'Fast local model - requires setup',
-    enabled: false,
-  },
-  // Gemini Models (Google AI) - 2026 Latest
-  {
-    id: 'gemini-3.1-flash-preview',
-    name: 'Gemini 3.1 Flash (Recommended)',
-    provider: 'gemini',
-    contextWindow: 1048576,
-    description: 'Latest - Best price-performance, reasoning capabilities',
-    enabled: true,
-  },
-  {
-    id: 'gemini-3.1-pro-preview',
-    name: 'Gemini 3.1 Pro',
-    provider: 'gemini',
-    contextWindow: 1048576,
-    description: 'Latest - Advanced reasoning and complex problem-solving',
-    enabled: true,
-  },
-  {
-    id: 'gemini-3.1-flash-lite-preview',
-    name: 'Gemini 3.1 Flash-Lite',
-    provider: 'gemini',
-    contextWindow: 1048576,
-    description: 'Latest - Most cost-efficient for high-volume tasks',
-    enabled: true,
-  },
-  // Gemini 2.5 Models - Deprecated June 2026
-  {
-    id: 'gemini-2.5-flash',
-    name: 'Gemini 2.5 Flash (Deprecated)',
-    provider: 'gemini',
-    contextWindow: 1048576,
-    description: 'DEPRECATED - Use 3.1 Flash, works until June 2026',
-    enabled: true,
-  },
-  {
-    id: 'gemini-2.5-pro',
-    name: 'Gemini 2.5 Pro (Deprecated)',
-    provider: 'gemini',
-    contextWindow: 1048576,
-    description: 'DEPRECATED - Use 3.1 Pro, works until June 2026',
     enabled: true,
   },
 ]

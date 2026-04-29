@@ -138,34 +138,27 @@ export function TodoList() {
   const totalCount = todos.length
 
   return (
-    <div className="bg-zinc-50 relative dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-950 rounded-2xl h-full flex flex-col ">
-      {/* Header with Add Button */}
-              <button
+    <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+          {totalCount > 0 ? `${completedCount}/${totalCount} done` : "No tasks"}
+        </span>
+        <button
           onClick={() => setIsModalOpen(true)}
-          className="p-2 absolute top-[-45px] right-[-10px] z-10 bg-white/10 backdrop-blur-2xl border border-white/20 text-white rounded-lg hover:bg-zinc-600 transition-colors shadow-sm"
+          className="p-1.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
           title="Add task"
-      >
-            <HugeiconsIcon icon={Add01Icon} size={16} />
+        >
+          <HugeiconsIcon icon={Add01Icon} size={16} />
         </button>
-        
-      <div className="flex items-center justify-between p-4 ">
-        <div className="flex items-center gap-2">
-          {totalCount > 0 && (
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">
-              {completedCount}/{totalCount} done
-            </span>
-          )}
-        </div>
-
-      
       </div>
 
       {/* Progress Bar */}
       {totalCount > 0 && (
-        <div className="px-4 pt-3">
-          <div className="h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+        <div className="px-4 pb-2">
+          <div className="h-1 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
             <div
-              className="h-full bg-white/20 transition-all duration-300"
+              className="h-full bg-indigo-500 transition-all duration-300"
               style={{ width: `${(completedCount / totalCount) * 100}%` }}
             />
           </div>
@@ -173,7 +166,7 @@ export function TodoList() {
       )}
 
       {/* Todo List - Scrollable with fixed height */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2 max-h-[180px]">
+      <div className="flex-1 overflow-y-auto p-4 space-y-2 max-h-45">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="w-5 h-5 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
@@ -209,7 +202,7 @@ export function TodoList() {
                 )}
               </button>
               <span
-                className={`flex-1 text-sm transition-all break-words ${
+                className={`flex-1 text-sm transition-all wrap-break-word ${
                   todo.completed
                     ? "text-zinc-400 line-through"
                     : "text-zinc-900 dark:text-white"

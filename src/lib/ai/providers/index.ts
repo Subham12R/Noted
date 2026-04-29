@@ -52,6 +52,20 @@ export function createOpenAIClient(provider?: AIProvider): OpenAI {
       })
       break
 
+    case 'minimax':
+      client = new OpenAI({
+        apiKey: AI_CONFIG.minimax.apiKey,
+        baseURL: AI_CONFIG.minimax.baseUrl,
+      })
+      break
+
+    case 'nvidia':
+      client = new OpenAI({
+        apiKey: AI_CONFIG.nvidia.apiKey,
+        baseURL: AI_CONFIG.nvidia.baseUrl,
+      })
+      break
+
     default:
       // Default to groq
       client = new OpenAI({
@@ -103,6 +117,10 @@ export function isProviderAvailable(provider: AIProvider): boolean {
       return AI_CONFIG.openai.enabled && !!AI_CONFIG.openai.apiKey
     case 'gemini':
       return AI_CONFIG.gemini.enabled && !!AI_CONFIG.gemini.apiKey
+    case 'minimax':
+      return AI_CONFIG.minimax.enabled && !!AI_CONFIG.minimax.apiKey
+    case 'nvidia':
+      return AI_CONFIG.nvidia.enabled && !!AI_CONFIG.nvidia.apiKey
     default:
       return false
   }
@@ -118,6 +136,8 @@ export function getAvailableProviders(): AIProvider[] {
   if (isProviderAvailable('ollama')) providers.push('ollama')
   if (isProviderAvailable('openai')) providers.push('openai')
   if (isProviderAvailable('gemini')) providers.push('gemini')
+  if (isProviderAvailable('minimax')) providers.push('minimax')
+  if (isProviderAvailable('nvidia')) providers.push('nvidia')
 
   return providers
 }

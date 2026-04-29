@@ -5,7 +5,7 @@ import { getServerSession } from "@/lib/auth-utils"
 import { encryptApiKey, maskApiKey } from "@/lib/encryption"
 import { rateLimitMemory, RATE_LIMITS } from "@/lib/rate-limit"
 
-const ALLOWED_PROVIDERS = ["openai", "anthropic", "gemini", "groq", "custom"] as const
+const ALLOWED_PROVIDERS = ["openai", "anthropic", "gemini", "groq", "minimax", "nvidia", "custom"] as const
 
 // GET /api/user/api-keys — list the user's saved keys (keys are masked, never returned in plaintext)
 export async function GET() {

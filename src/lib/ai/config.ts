@@ -3,7 +3,7 @@
 
 export const AI_CONFIG = {
   // Active provider
-  provider: (process.env.AI_PROVIDER || 'groq') as 'groq' | 'ollama' | 'openai' | 'gemini',
+  provider: (process.env.AI_PROVIDER || 'groq') as 'groq' | 'ollama' | 'openai' | 'gemini' | 'minimax' | 'nvidia',
 
   // Groq Configuration (Active)
   groq: {
@@ -34,6 +34,22 @@ export const AI_CONFIG = {
     baseUrl: 'https://generativelanguage.googleapis.com/v1',
     defaultModel: 'gemini-3.1-flash-preview',
     enabled: true,
+  },
+
+  // NVIDIA NIM Configuration
+  nvidia: {
+    apiKey: process.env.NVIDIA_API_KEY,
+    baseUrl: 'https://integrate.api.nvidia.com/v1',
+    defaultModel: 'meta/llama-3.1-70b-instruct',
+    enabled: !!process.env.NVIDIA_API_KEY,
+  },
+
+  // MiniMax Configuration
+  minimax: {
+    apiKey: process.env.MINIMAX_API_KEY,
+    baseUrl: 'https://api.minimax.io/v1',
+    defaultModel: 'MiniMax-M2.5',
+    enabled: !!process.env.MINIMAX_API_KEY,
   },
 
   // Feature flags

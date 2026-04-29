@@ -161,7 +161,7 @@ export function Dashboard() {
         <div className="flex flex-col gap-0 overflow-y-auto">
 
           {/* Recent Pages */}
-          <section className="px-6 lg:px-10 py-8 border-b border-zinc-100 dark:border-zinc-800/60">
+          <section className="px-4 lg:px-6 py-6 border-b border-zinc-100 dark:border-zinc-800/60">
             <div className="flex items-center gap-2.5 mb-5">
               <HugeiconsIcon icon={Clock01Icon} size={18} className="text-zinc-400 dark:text-zinc-500" />
               <h2 className="text-base font-semibold text-zinc-700 dark:text-zinc-300">Recent Pages</h2>
@@ -184,8 +184,8 @@ export function Dashboard() {
           </section>
 
           {/* Folders */}
-          <section className="px-6 lg:px-10 py-8 flex-1">
-            <div className="flex items-center justify-between mb-5">
+          <section className="px-4 lg:px-6 py-6 flex-1">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
                 <HugeiconsIcon icon={Folder01Icon} size={18} className="text-zinc-400 dark:text-zinc-500" />
                 <h2 className="text-base font-semibold text-zinc-700 dark:text-zinc-300">My Folders</h2>
@@ -200,7 +200,7 @@ export function Dashboard() {
             </div>
 
             {folders.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
+              <div className="flex flex-wrap gap-4">
                 {folders.map((folder) => (
                   <FolderCard
                     key={folder.id}
