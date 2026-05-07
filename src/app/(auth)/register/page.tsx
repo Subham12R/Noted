@@ -8,54 +8,63 @@ export const metadata = {
 
 export default function RegisterPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#1a1a1a] px-4 py-12">
-      <div className="w-full max-w-4xl">
-        {/* Logo */}
-        <div className="text-center mb-10">
-          <Link href="/" className="inline-block">
-            <h1
-              className="text-5xl text-white tracking-tight"
-              style={{ fontFamily: "var(--font-grandhotel)" }}
-            >
-              Noted
-            </h1>
-          </Link>
-          <p className="text-neutral-500 text-sm mt-2">
-            Start your journey to better note-taking.
+    <div className="min-h-screen bg-[#1a1a1a] flex flex-col">
+      {/* Main Content */}
+      <div className="flex-1 max-w-4xl mx-auto px-6 py-16 w-full">
+        {/* Hero Card */}
+        <div className="border border-neutral-800 bg-[#1a1a1a] p-8 md:p-12 mb-8">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="px-2 py-0.5 bg-white text-black text-xs font-medium">
+              Live
+            </span>
+            <span className="text-neutral-500 text-sm">
+              Agentic Note Taking Environment - Start Writing in Seconds
+            </span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-semibold text-white tracking-tight mb-4">
+            Create Your<br />Account
+          </h1>
+          <p className="text-neutral-500 text-base max-w-xl">
+            Start your journey to better note-taking. Organize, collaborate, and create with ease.
+            No setup friction — just open and write.
           </p>
         </div>
 
-        {/* Card */}
-        <div className="bg-[#121212] border border-neutral-800 p-8 md:p-12">
-          {/* Welcome text */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold text-white mb-2">
+        {/* Register Form Card */}
+        <div className="border border-neutral-800 bg-black p-8 md:p-12">
+          <div className="max-w-md">
+            <h2 className="text-xl font-semibold text-white mb-2">
               Create your account
             </h2>
-            <p className="text-neutral-500 text-sm">
+            <p className="text-neutral-500 text-sm mb-8">
               Start organizing your thoughts today
             </p>
+
+            <RegisterForm />
+
+            <p className="text-sm text-neutral-500 mt-8 pt-6 border-t border-neutral-800">
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="text-white hover:text-neutral-300 font-medium transition-colors"
+              >
+                Sign in
+              </Link>
+            </p>
           </div>
+        </div>
+      </div>
 
-          {/* Register Form */}
-          <RegisterForm />
-
-          {/* Sign in link */}
-          <p className="text-center text-sm text-neutral-500 mt-8 pt-6 border-t border-neutral-800">
-            Already have an account?{" "}
-            <Link
-              href="/login"
-              className="text-white hover:text-neutral-300 font-medium transition-colors"
-            >
-              Sign in
-            </Link>
+      {/* Footer */}
+      <div className="border-t border-neutral-800 mt-auto">
+        <div className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
+          <p className="text-xs text-neutral-600">
+            By creating an account, you agree to our Terms of Service and Privacy Policy.
+          </p>
+          <p className="text-xs text-neutral-600">
+            &copy; {new Date().getFullYear()} Noted
           </p>
         </div>
-
-        {/* Footer */}
-        <p className="text-center text-xs text-neutral-600 mt-8">
-          By creating an account, you agree to our Terms of Service and Privacy Policy.
-        </p>
       </div>
     </div>
   )
