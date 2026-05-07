@@ -1,45 +1,11 @@
 // Export utilities for converting HTML content to various formats
-
-// Type declarations for html2pdf.js
-declare const html2pdf: {
-  (): {
-    set: (options: Record<string, unknown>) => {
-      from: (element: HTMLElement) => {
-        save: (filename: string) => Promise<void>
-      }
-    }
-  }
-}
-
-/**
- * Load html2pdf.js dynamically (client-side only)
- */
-async function loadHtml2Pdf(): Promise<typeof html2pdf> {
-  if (typeof window === "undefined") {
-    throw new Error("html2pdf can only be used in the browser")
-  }
-
-  // Check if already loaded
-  if ((window as Window & typeof globalThis & { html2pdf?: typeof html2pdf }).html2pdf) {
-    return (window as Window & typeof globalThis & { html2pdf: typeof html2pdf }).html2pdf
-  }
-
-  // Dynamically import
-  try {
-    const html2pdfModule = await import("html2pdf.js")
-    return html2pdfModule.default || html2pdfModule
-  } catch (error) {
-    console.error("Failed to load html2pdf.js:", error)
-    throw new Error("Failed to load PDF library. Please try again.")
-  }
-}
+import { jsPDF } from "jspdf"
+import html2canvas from "html2canvas"
 
 /**
  * Export content as PDF
  */
 export async function exportToPdf(htmlContent: string, filename: string): Promise<void> {
-  const html2pdfLib = await loadHtml2Pdf()
-
   // Create a temporary container with proper styling
   const container = document.createElement("div")
   container.innerHTML = htmlContent
@@ -51,6 +17,7 @@ export async function exportToPdf(htmlContent: string, filename: string): Promis
     padding: 40px;
     max-width: 800px;
     margin: 0 auto;
+    background: white;
   `
 
   // Style headings
@@ -96,24 +63,37 @@ export async function exportToPdf(htmlContent: string, filename: string): Promis
 
   document.body.appendChild(container)
 
-  const options = {
-    margin: [10, 10, 10, 10],
-    filename: `${filename}.pdf`,
-    image: { type: "jpeg", quality: 0.98 },
-    html2canvas: {
+  try {
+    const canvas = await html2canvas(container, {
       scale: 2,
       useCORS: true,
-      letterRendering: true,
-    },
-    jsPDF: {
-      unit: "mm",
-      format: "a4",
-      orientation: "portrait",
-    },
-  }
+      logging: false,
+      backgroundColor: "#ffffff",
+    })
 
-  try {
-    await html2pdfLib().set(options).from(container).save(filename)
+    const imgData = canvas.toDataURL("image/png")
+    const pdf = new jsPDF("p", "mm", "a4")
+
+    const pdfWidth = pdf.internal.pageSize.getWidth()
+    const pdfHeight = pdf.internal.pageSize.getHeight()
+    const margin = 10
+    const contentWidth = pdfWidth - margin * 2
+    const contentHeight = (canvas.height * contentWidth) / canvas.width
+
+    let heightLeft = contentHeight
+    let position = 0
+
+    pdf.addImage(imgData, "PNG", margin, margin, contentWidth, contentHeight)
+    heightLeft -= pdfHeight - margin * 2
+
+    while (heightLeft > 0) {
+      position = heightLeft - contentHeight + margin
+      pdf.addPage()
+      pdf.addImage(imgData, "PNG", margin, position, contentWidth, contentHeight)
+      heightLeft -= pdfHeight - margin * 2
+    }
+
+    pdf.save(`${filename}.pdf`)
   } finally {
     document.body.removeChild(container)
   }

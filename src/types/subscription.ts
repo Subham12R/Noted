@@ -30,14 +30,14 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, TierConfig> = {
       maxFolders: 3,
       maxCollaboratorsPerNote: 2,
       maxStorageMB: 50,   // 50 MB
-      maxAiRequestsPerMonth: 10,
+      maxAiRequestsPerMonth: 3,
     },
     features: [
       "Up to 10 notes",
       "3 folders",
       "Basic collaboration (2 users)",
       "50 MB storage",
-      "10 AI requests/month",
+      "3 AI requests/month",
     ],
   },
   pro: {

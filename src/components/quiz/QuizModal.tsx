@@ -426,8 +426,8 @@ export function QuizModal() {
         {/* Header */}
         <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500/20 rounded-lg">
-              <HelpCircle className="text-purple-400" size={20} />
+            <div className="p-2 bg-zinc-800 rounded-lg">
+              <HelpCircle className="text-zinc-400" size={20} />
             </div>
             <h2 className="text-lg font-semibold text-white">Quizzes</h2>
           </div>
@@ -466,7 +466,7 @@ export function QuizModal() {
                       <p className="text-xs text-zinc-500">
                         {quiz.questions.length} questions
                         {quiz.isAIGenerated && (
-                          <span className="text-purple-400 ml-2">AI Generated</span>
+                          <span className="text-zinc-500 ml-2">AI Generated</span>
                         )}
                       </p>
                     </div>

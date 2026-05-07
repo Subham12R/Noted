@@ -3,14 +3,12 @@
 import { useFlashcards } from "@/context/FlashcardContext"
 import { useQuiz } from "@/context/QuizContext"
 import { usePomodoro } from "@/context/PomodoroContext"
-import { useFileLibrary } from "@/context/FileLibraryContext"
 import { useStudyToolbar } from "@/context/StudyToolbarContext"
 import {
   Layers,
   Brain,
   HelpCircle,
   BarChart3,
-  FolderOpen,
   Timer,
   Search,
 } from "lucide-react"
@@ -32,7 +30,6 @@ export function SidebarStudyTab({ onSearchClick }: SidebarStudyTabProps) {
   const { openModal: openFlashcards } = useFlashcards()
   const { openModal: openQuiz } = useQuiz()
   const { toggleVisibility: togglePomodoro, isVisible: pomodoroVisible } = usePomodoro()
-  const { togglePanel: toggleFileLibrary, isPanelOpen: fileLibraryOpen } = useFileLibrary()
   const { badges, togglePanel } = useStudyToolbar()
 
   const items: StudyToolItem[] = [
@@ -59,13 +56,6 @@ export function SidebarStudyTab({ onSearchClick }: SidebarStudyTabProps) {
       shortcut: "Ctrl+Shift+P",
       onClick: () => togglePomodoro(),
     },
-    {
-      id: "file-library",
-      icon: <FolderOpen size={18} />,
-      label: "File Library",
-      shortcut: "Ctrl+Shift+L",
-      onClick: () => toggleFileLibrary(),
-    },
   ]
 
   return (
@@ -75,10 +65,7 @@ export function SidebarStudyTab({ onSearchClick }: SidebarStudyTabProps) {
           key={item.id}
           className="sidebar-study-item"
           onClick={item.onClick}
-          data-active={
-            (item.id === "pomodoro" && pomodoroVisible) ||
-            (item.id === "file-library" && fileLibraryOpen)
-          }
+          data-active={item.id === "pomodoro" && pomodoroVisible}
         >
           <span className="sidebar-study-icon">{item.icon}</span>
           <span className="sidebar-study-label">{item.label}</span>

@@ -119,30 +119,20 @@ export function ApiKeysSettings() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-semibold text-zinc-900 dark:text-white">API Keys</h3>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Add your own keys for OpenAI, Gemini, Claude, Groq, or self-hosted models. Keys are encrypted and never shared.
-          </p>
-        </div>
+      <div>
+        <h3 className="text-base font-semibold text-zinc-900 dark:text-white">API Keys</h3>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+          Add your own keys for OpenAI, Gemini, Claude, Groq, or self-hosted models. Keys are encrypted and never shared.
+        </p>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-medium rounded-lg hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors shrink-0 whitespace-nowrap"
+          className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-medium rounded-lg hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors"
         >
           <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 3a1 1 0 011 1v3h3a1 1 0 010 2H9v3a1 1 0 01-2 0V9H4a1 1 0 010-2h3V4a1 1 0 011-1z"/>
           </svg>
           Add Model / Key
         </button>
-      </div>
-
-      {/* Security note */}
-      <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-400">
-        <svg className="h-4 w-4 mt-0.5 shrink-0" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm.75 10.5h-1.5v-1.5h1.5v1.5zm0-3h-1.5V4.5h1.5V8.5z"/>
-        </svg>
-        Your keys are encrypted with AES-256-GCM before storage and are never sent to the browser in plaintext.
       </div>
 
       {/* Key list */}

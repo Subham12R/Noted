@@ -317,7 +317,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-2xl bg-background/60 border-b border-foreground/5">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-foreground/70 hover:text-foreground no-underline transition-colors">
             <ArrowLeftIcon />
             <span className="text-sm font-medium">Back</span>
@@ -327,7 +327,7 @@ export default function ProfilePage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-6 py-8">
         {/* Profile Header */}
         <div className="rounded-2xl bg-foreground/[0.02] backdrop-blur-xl border border-foreground/10 p-6 mb-6">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">

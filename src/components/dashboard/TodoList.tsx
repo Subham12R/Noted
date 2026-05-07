@@ -166,7 +166,7 @@ export function TodoList() {
       )}
 
       {/* Todo List - Scrollable with fixed height */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2 max-h-45">
+      <div className="flex-1 overflow-y-auto p-4 space-y-2 max-h-[180px]">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="w-5 h-5 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />

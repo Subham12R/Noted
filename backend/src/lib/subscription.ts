@@ -1,4 +1,4 @@
-import { db, subscriptions, folders, pages, aiUsage } from "../db/index.js"
+import { db, subscriptions, folders, pages, aiUsage, userApiKeys } from "../db/index.js"
 import { eq, count, and } from "drizzle-orm"
 import type { SubscriptionTier } from "../types/subscription.js"
 import { SUBSCRIPTION_TIERS } from "../types/subscription.js"
@@ -22,8 +22,30 @@ export async function canCreatePage(_userId: string) {
   return { allowed: true, current: 0, limit: -1, reason: "" }
 }
 
-export async function canUseAI(_userId: string) {
-  return { allowed: true, current: 0, limit: -1, reason: "" }
+export async function canUseAI(userId: string) {
+  // Check if user has their own API key configured
+  const [userKey] = await db.select().from(userApiKeys).where(and(eq(userApiKeys.userId, userId), eq(userApiKeys.isActive, true)))
+  if (userKey) {
+    return { allowed: true, current: 0, limit: -1, reason: "" }
+  }
+
+  const { tier } = await getUserSubscription(userId)
+  const limits = SUBSCRIPTION_TIERS[tier].limits
+  const currentMonth = getCurrentMonth()
+
+  const [usage] = await db.select().from(aiUsage).where(and(eq(aiUsage.userId, userId), eq(aiUsage.month, currentMonth)))
+  const current = usage?.requestCount ?? 0
+
+  if (limits.maxAiRequestsPerMonth !== -1 && current >= limits.maxAiRequestsPerMonth) {
+    return {
+      allowed: false,
+      current,
+      limit: limits.maxAiRequestsPerMonth,
+      reason: `You've reached your monthly limit of ${limits.maxAiRequestsPerMonth} AI requests. Connect your own API key or upgrade to continue.`,
+    }
+  }
+
+  return { allowed: true, current, limit: limits.maxAiRequestsPerMonth, reason: "" }
 }
 
 export async function incrementAIUsage(userId: string): Promise<void> {

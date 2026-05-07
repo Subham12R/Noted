@@ -19,12 +19,12 @@ import {
   X,
   Upload,
   Search,
-  ChevronRight,
-  MoreVertical,
   Eye,
   MessageSquare,
   Sparkles,
+  AlertCircle,
 } from "lucide-react"
+import { toast } from "sonner"
 
 // File type icons
 const FILE_TYPE_ICONS = {
@@ -54,6 +54,33 @@ function formatDate(date: Date): string {
   })
 }
 
+// Validate file before upload
+function validateFile(file: File, storage: { used: number; limit: number } | null): string | null {
+  const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50 MB per file
+  const ALLOWED_TYPES = [
+    "image/", "application/pdf", "video/", "audio/",
+    "application/msword", "application/vnd.openxmlformats-officedocument",
+    "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml",
+    "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml",
+    "text/", "application/json", "application/zip", "application/x-zip-compressed",
+  ]
+
+  if (file.size > MAX_FILE_SIZE) {
+    return `File too large. Maximum size is ${formatFileSize(MAX_FILE_SIZE)}.`
+  }
+
+  if (storage && storage.limit > 0 && storage.used + file.size > storage.limit) {
+    return "Not enough storage space. Please delete some files or upgrade your plan."
+  }
+
+  const isAllowed = ALLOWED_TYPES.some((type) => file.type.startsWith(type) || file.type === type)
+  if (!isAllowed && file.type) {
+    return "File type not supported."
+  }
+
+  return null
+}
+
 export function FileLibrary() {
   const {
     files,
@@ -81,6 +108,7 @@ export function FileLibrary() {
 
   const [searchQuery, setSearchQuery] = useState("")
   const [isDragging, setIsDragging] = useState(false)
+  const [uploadErrors, setUploadErrors] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dropZoneRef = useRef<HTMLDivElement>(null)
 
@@ -97,11 +125,29 @@ export function FileLibrary() {
   // Handle file upload
   const handleUpload = useCallback(
     async (fileList: FileList) => {
+      const errors: string[] = []
+      let successCount = 0
+
       for (let i = 0; i < fileList.length; i++) {
-        await uploadFile(fileList[i])
+        const file = fileList[i]
+        const validationError = validateFile(file, storage)
+        if (validationError) {
+          errors.push(`${file.name}: ${validationError}`)
+          continue
+        }
+        const result = await uploadFile(file)
+        if (result) successCount++
+      }
+
+      if (errors.length > 0) {
+        setUploadErrors(errors)
+        toast.error(`Failed to upload ${errors.length} file(s)`)
+      }
+      if (successCount > 0) {
+        toast.success(`${successCount} file(s) uploaded`)
       }
     },
-    [uploadFile]
+    [uploadFile, storage]
   )
 
   // Handle drag and drop
@@ -127,37 +173,37 @@ export function FileLibrary() {
   )
 
   return (
-    <div className="h-full flex flex-col bg-zinc-900 text-white">
+    <div className="h-full flex flex-col bg-zinc-950 text-white">
       {/* Header */}
-      <div className="flex-none p-4 border-b border-zinc-800">
+      <div className="flex-none p-4 border-b border-zinc-900">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <FolderOpen size={20} />
+          <h2 className="text-base font-semibold flex items-center gap-2 text-white">
+            <FolderOpen size={18} className="text-zinc-400" />
             File Library
           </h2>
           <button
             onClick={closePanel}
-            className="p-1 hover:bg-zinc-800 rounded-lg transition-colors"
+            className="p-1.5 hover:bg-zinc-900 rounded-lg transition-colors text-zinc-400 hover:text-white"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Storage bar */}
         {storage && (
           <div className="mb-4">
-            <div className="flex justify-between text-xs text-zinc-400 mb-1">
+            <div className="flex justify-between text-xs text-zinc-500 mb-1.5">
               <span>{formatFileSize(storage.used)} used</span>
               <span>{formatFileSize(storage.limit)}</span>
             </div>
-            <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-zinc-900 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${
                   storage.percentage > 90
                     ? "bg-red-500"
                     : storage.percentage > 70
-                    ? "bg-yellow-500"
-                    : "bg-indigo-500"
+                    ? "bg-zinc-400"
+                    : "bg-zinc-500"
                 }`}
                 style={{ width: `${Math.min(storage.percentage, 100)}%` }}
               />
@@ -167,13 +213,13 @@ export function FileLibrary() {
 
         {/* Search */}
         <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={14} />
           <input
             type="text"
             placeholder="Search files..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+            className="w-full pl-9 pr-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors"
           />
         </div>
 
@@ -183,7 +229,7 @@ export function FileLibrary() {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as typeof filterType)}
-            className="px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+            className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-300 focus:outline-none focus:border-zinc-600 transition-colors cursor-pointer"
           >
             <option value="all">All Files</option>
             <option value="image">Images</option>
@@ -196,39 +242,39 @@ export function FileLibrary() {
           {/* Starred toggle */}
           <button
             onClick={() => setShowStarred(!showStarred)}
-            className={`p-2 rounded-lg transition-colors ${
-              showStarred ? "bg-yellow-500/20 text-yellow-400" : "hover:bg-zinc-800 text-zinc-400"
+            className={`p-1.5 rounded-lg transition-colors ${
+              showStarred ? "bg-zinc-800 text-zinc-200" : "hover:bg-zinc-900 text-zinc-500 hover:text-zinc-300"
             }`}
             title={showStarred ? "Show all" : "Show starred"}
           >
-            <Star size={16} />
+            <Star size={14} />
           </button>
 
           {/* View mode */}
-          <div className="flex border border-zinc-700 rounded-lg overflow-hidden ml-auto">
+          <div className="flex border border-zinc-800 rounded-lg overflow-hidden ml-auto">
             <button
               onClick={() => setViewMode("grid")}
-              className={`p-2 ${viewMode === "grid" ? "bg-indigo-600" : "hover:bg-zinc-800"}`}
+              className={`p-1.5 transition-colors ${viewMode === "grid" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300"}`}
               title="Grid view"
             >
-              <Grid size={16} />
+              <Grid size={14} />
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`p-2 ${viewMode === "list" ? "bg-indigo-600" : "hover:bg-zinc-800"}`}
+              className={`p-1.5 transition-colors ${viewMode === "list" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300"}`}
               title="List view"
             >
-              <List size={16} />
+              <List size={14} />
             </button>
           </div>
 
           {/* Upload button */}
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="p-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+            className="p-1.5 bg-white text-zinc-950 hover:bg-zinc-200 rounded-lg transition-colors"
             title="Upload files"
           >
-            <Upload size={16} />
+            <Upload size={14} />
           </button>
           <input
             ref={fileInputRef}
@@ -240,18 +286,41 @@ export function FileLibrary() {
         </div>
       </div>
 
+      {/* Upload errors */}
+      {uploadErrors.length > 0 && (
+        <div className="flex-none px-4 py-2 bg-red-500/10 border-b border-red-500/20">
+          <div className="flex items-start gap-2">
+            <AlertCircle size={14} className="text-red-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-xs text-red-400 font-medium mb-1">Upload issues</p>
+              <div className="space-y-0.5">
+                {uploadErrors.map((err, i) => (
+                  <p key={i} className="text-[11px] text-red-300">{err}</p>
+                ))}
+              </div>
+              <button
+                onClick={() => setUploadErrors([])}
+                className="text-[11px] text-red-400 hover:text-red-300 mt-1 underline"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Selected actions */}
       {selectedFiles.length > 0 && (
-        <div className="flex-none px-4 py-2 bg-indigo-600/20 border-b border-indigo-500/30 flex items-center gap-4">
-          <span className="text-sm">{selectedFiles.length} selected</span>
+        <div className="flex-none px-4 py-2 bg-zinc-900 border-b border-zinc-800 flex items-center gap-4">
+          <span className="text-xs text-zinc-400">{selectedFiles.length} selected</span>
           <button
             onClick={deleteSelected}
-            className="text-sm text-red-400 hover:text-red-300 flex items-center gap-1"
+            className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors"
           >
-            <Trash2 size={14} />
+            <Trash2 size={12} />
             Delete
           </button>
-          <button onClick={clearSelection} className="text-sm text-zinc-400 hover:text-white ml-auto">
+          <button onClick={clearSelection} className="text-xs text-zinc-500 hover:text-zinc-300 ml-auto transition-colors">
             Clear
           </button>
         </div>
@@ -264,23 +333,23 @@ export function FileLibrary() {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`flex-1 overflow-y-auto p-4 transition-colors ${
-          isDragging ? "bg-indigo-500/10 border-2 border-dashed border-indigo-500" : ""
+          isDragging ? "bg-zinc-900/50 border-2 border-dashed border-zinc-600" : ""
         }`}
       >
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-zinc-600 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : error ? (
-          <div className="flex items-center justify-center h-full text-red-400">{error}</div>
+          <div className="flex items-center justify-center h-full text-red-400 text-sm">{error}</div>
         ) : filteredFiles.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-zinc-400">
-            <FolderOpen size={48} className="mb-4 opacity-50" />
-            <p className="text-lg mb-2">No files yet</p>
-            <p className="text-sm">Drag and drop files here or click upload</p>
+          <div className="flex flex-col items-center justify-center h-full text-zinc-500">
+            <FolderOpen size={40} className="mb-3 opacity-30" />
+            <p className="text-sm font-medium">No files yet</p>
+            <p className="text-xs mt-1">Drag and drop files here or click upload</p>
           </div>
         ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {filteredFiles.map((file) => (
               <FileCard
                 key={file.id}
@@ -294,7 +363,7 @@ export function FileLibrary() {
             ))}
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {filteredFiles.map((file) => (
               <FileRow
                 key={file.id}
@@ -338,13 +407,13 @@ function FileCard({
 
   return (
     <div
-      className={`group relative bg-zinc-800 rounded-lg overflow-hidden border-2 transition-colors cursor-pointer ${
-        isSelected ? "border-indigo-500" : "border-transparent hover:border-zinc-600"
+      className={`group relative bg-zinc-900 rounded-xl overflow-hidden border transition-colors cursor-pointer ${
+        isSelected ? "border-zinc-500" : "border-zinc-800 hover:border-zinc-700"
       }`}
       onClick={onPreview}
     >
       {/* Thumbnail / Icon */}
-      <div className="aspect-square flex items-center justify-center bg-zinc-900">
+      <div className="aspect-square flex items-center justify-center bg-zinc-950">
         {file.type === "image" && file.thumbnailUrl ? (
           <img
             src={file.thumbnailUrl}
@@ -352,16 +421,16 @@ function FileCard({
             className="w-full h-full object-cover"
           />
         ) : (
-          <Icon size={48} className="text-zinc-500" />
+          <Icon size={32} className="text-zinc-600" />
         )}
       </div>
 
       {/* Info */}
-      <div className="p-2">
-        <p className="text-sm font-medium truncate" title={file.originalName}>
+      <div className="p-2.5">
+        <p className="text-xs font-medium truncate text-zinc-200" title={file.originalName}>
           {file.originalName}
         </p>
-        <p className="text-xs text-zinc-400">{formatFileSize(file.size)}</p>
+        <p className="text-[11px] text-zinc-500 mt-0.5">{formatFileSize(file.size)}</p>
       </div>
 
       {/* Actions overlay */}
@@ -371,29 +440,29 @@ function FileCard({
             e.stopPropagation()
             onStar()
           }}
-          className={`p-1.5 rounded ${
-            file.isStarred ? "bg-yellow-500/20 text-yellow-400" : "bg-zinc-800 text-zinc-400 hover:text-white"
+          className={`p-1.5 rounded-md transition-colors ${
+            file.isStarred ? "bg-zinc-800 text-zinc-200" : "bg-zinc-950/80 text-zinc-400 hover:text-white"
           }`}
         >
-          {file.isStarred ? <Star size={14} /> : <StarOff size={14} />}
+          {file.isStarred ? <Star size={12} /> : <StarOff size={12} />}
         </button>
         <button
           onClick={(e) => {
             e.stopPropagation()
             onDelete()
           }}
-          className="p-1.5 bg-zinc-800 text-zinc-400 hover:text-red-400 rounded"
+          className="p-1.5 bg-zinc-950/80 text-zinc-400 hover:text-red-400 rounded-md transition-colors"
         >
-          <Trash2 size={14} />
+          <Trash2 size={12} />
         </button>
       </div>
 
       {/* Selection checkbox */}
       <div
-        className={`absolute top-2 left-2 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+        className={`absolute top-2 left-2 w-4 h-4 rounded border flex items-center justify-center transition-all ${
           isSelected
-            ? "bg-indigo-500 border-indigo-500"
-            : "bg-zinc-800/80 border-zinc-600 opacity-0 group-hover:opacity-100"
+            ? "bg-white border-white"
+            : "bg-zinc-950/80 border-zinc-600 opacity-0 group-hover:opacity-100"
         }`}
         onClick={(e) => {
           e.stopPropagation()
@@ -401,7 +470,7 @@ function FileCard({
         }}
       >
         {isSelected && (
-          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-3 h-3 text-zinc-950" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
         )}
@@ -430,15 +499,15 @@ function FileRow({
 
   return (
     <div
-      className={`flex items-center gap-3 p-3 bg-zinc-800 rounded-lg border-2 transition-colors cursor-pointer ${
-        isSelected ? "border-indigo-500" : "border-transparent hover:border-zinc-600"
+      className={`flex items-center gap-3 p-2.5 bg-zinc-900 rounded-xl border transition-colors cursor-pointer ${
+        isSelected ? "border-zinc-500" : "border-zinc-800 hover:border-zinc-700"
       }`}
       onClick={onPreview}
     >
       {/* Checkbox */}
       <div
-        className={`w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center ${
-          isSelected ? "bg-indigo-500 border-indigo-500" : "border-zinc-600"
+        className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-all ${
+          isSelected ? "bg-white border-white" : "border-zinc-600"
         }`}
         onClick={(e) => {
           e.stopPropagation()
@@ -446,54 +515,54 @@ function FileRow({
         }}
       >
         {isSelected && (
-          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-3 h-3 text-zinc-950" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
         )}
       </div>
 
       {/* Icon */}
-      <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-zinc-900 rounded">
+      <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-zinc-950 rounded-lg">
         {file.type === "image" && file.thumbnailUrl ? (
           <img
             src={file.thumbnailUrl}
             alt={file.originalName}
-            className="w-full h-full object-cover rounded"
+            className="w-full h-full object-cover rounded-lg"
           />
         ) : (
-          <Icon size={20} className="text-zinc-400" />
+          <Icon size={16} className="text-zinc-500" />
         )}
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{file.originalName}</p>
-        <p className="text-xs text-zinc-400">
-          {formatFileSize(file.size)} • {formatDate(file.updatedAt)}
+        <p className="text-xs font-medium truncate text-zinc-200">{file.originalName}</p>
+        <p className="text-[11px] text-zinc-500">
+          {formatFileSize(file.size)} &middot; {formatDate(file.updatedAt)}
         </p>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         <button
           onClick={(e) => {
             e.stopPropagation()
             onStar()
           }}
-          className={`p-2 rounded transition-colors ${
-            file.isStarred ? "text-yellow-400" : "text-zinc-400 hover:text-white"
+          className={`p-1.5 rounded transition-colors ${
+            file.isStarred ? "text-zinc-200" : "text-zinc-500 hover:text-white"
           }`}
         >
-          {file.isStarred ? <Star size={16} /> : <StarOff size={16} />}
+          {file.isStarred ? <Star size={14} /> : <StarOff size={14} />}
         </button>
         <button
           onClick={(e) => {
             e.stopPropagation()
             onDelete()
           }}
-          className="p-2 text-zinc-400 hover:text-red-400 rounded transition-colors"
+          className="p-1.5 text-zinc-500 hover:text-red-400 rounded transition-colors"
         >
-          <Trash2 size={16} />
+          <Trash2 size={14} />
         </button>
       </div>
     </div>
@@ -513,7 +582,6 @@ function FilePreviewPanel({ file, onClose }: { file: FileItem; onClose: () => vo
     setIsExtracting(true)
     setInsertSuccess(false)
     try {
-      // Use fileId for more reliable extraction
       const response = await fetch("/api/files/extract-text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -529,7 +597,7 @@ function FilePreviewPanel({ file, onClose }: { file: FileItem; onClose: () => vo
       setExtractedText(text)
     } catch (error) {
       console.error("Text extraction error:", error)
-      alert(error instanceof Error ? error.message : "Failed to extract text")
+      toast.error(error instanceof Error ? error.message : "Failed to extract text")
     } finally {
       setIsExtracting(false)
     }
@@ -537,7 +605,6 @@ function FilePreviewPanel({ file, onClose }: { file: FileItem; onClose: () => vo
 
   const handleInsertToPage = () => {
     if (extractedText) {
-      // Dispatch event to insert text into the active page editor
       window.dispatchEvent(new CustomEvent("insertPDFText", { detail: { text: extractedText } }))
       setInsertSuccess(true)
       setTimeout(() => setInsertSuccess(false), 2000)
@@ -584,9 +651,8 @@ ${extractedText.substring(0, 30000)}`,
 
           buffer += decoder.decode(value, { stream: true })
 
-          // Parse SSE events from buffer
           const lines = buffer.split("\n")
-          buffer = lines.pop() || "" // Keep incomplete line in buffer
+          buffer = lines.pop() || ""
 
           for (const line of lines) {
             if (line.startsWith("data: ")) {
@@ -598,7 +664,7 @@ ${extractedText.substring(0, 30000)}`,
                 } else if (data.type === "error") {
                   throw new Error(data.error)
                 }
-              } catch (e) {
+              } catch {
                 // Skip invalid JSON lines
               }
             }
@@ -607,7 +673,7 @@ ${extractedText.substring(0, 30000)}`,
       }
     } catch (error) {
       console.error("Note generation error:", error)
-      alert("Failed to generate notes. Please try again.")
+      toast.error("Failed to generate notes. Please try again.")
     } finally {
       setIsGeneratingNotes(false)
     }
@@ -624,17 +690,18 @@ ${extractedText.substring(0, 30000)}`,
   const copyToClipboard = async () => {
     if (extractedText) {
       await navigator.clipboard.writeText(extractedText)
+      toast.success("Copied to clipboard")
     }
   }
 
   return (
     <>
-      <div className="fixed inset-y-0 right-0 w-80 bg-zinc-900 border-l border-zinc-800 shadow-2xl z-50 flex flex-col">
+      <div className="fixed inset-y-0 right-0 w-80 bg-zinc-950 border-l border-zinc-900 shadow-2xl z-50 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-zinc-800">
-          <h3 className="font-medium truncate">{file.originalName}</h3>
-          <button onClick={onClose} className="p-1 hover:bg-zinc-800 rounded">
-            <X size={18} />
+        <div className="flex items-center justify-between p-4 border-b border-zinc-900">
+          <h3 className="text-sm font-medium truncate text-white">{file.originalName}</h3>
+          <button onClick={onClose} className="p-1 hover:bg-zinc-900 rounded text-zinc-400 hover:text-white transition-colors">
+            <X size={16} />
           </button>
         </div>
 
@@ -644,7 +711,7 @@ ${extractedText.substring(0, 30000)}`,
             <img
               src={file.url}
               alt={file.originalName}
-              className="w-full rounded-lg mb-4"
+              className="w-full rounded-xl mb-4"
             />
           )}
 
@@ -652,16 +719,16 @@ ${extractedText.substring(0, 30000)}`,
             <div className="mb-4">
               <div
                 onClick={() => setShowPDFViewer(true)}
-                className="aspect-[3/4] bg-zinc-800 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-700/50 transition-colors group"
+                className="aspect-[3/4] bg-zinc-900 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-800 transition-colors group"
               >
-                <FileText size={48} className="text-zinc-500 group-hover:text-indigo-400 transition-colors" />
-                <span className="text-sm text-zinc-400 mt-2 group-hover:text-indigo-300">Click to view PDF</span>
+                <FileText size={40} className="text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+                <span className="text-xs text-zinc-500 mt-2 group-hover:text-zinc-300">Click to view PDF</span>
               </div>
               <button
                 onClick={() => setShowPDFViewer(true)}
-                className="w-full mt-2 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                className="w-full mt-2 py-2 bg-zinc-900 hover:bg-zinc-800 rounded-xl text-xs font-medium transition-colors flex items-center justify-center gap-2 text-zinc-300"
               >
-                <Eye size={16} />
+                <Eye size={14} />
                 Open PDF Viewer
               </button>
             </div>
@@ -669,13 +736,13 @@ ${extractedText.substring(0, 30000)}`,
 
           {/* Extracted Text Section for PDFs */}
           {file.type === "pdf" && (
-            <div className="mb-4 p-3 bg-zinc-800/50 rounded-lg">
+            <div className="mb-4 p-3 bg-zinc-900 rounded-xl border border-zinc-900">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-zinc-400 font-medium">AI Text Extraction</span>
+                <span className="text-[11px] text-zinc-500 font-medium uppercase tracking-wider">Text Extraction</span>
                 {extractedText && (
                   <button
                     onClick={copyToClipboard}
-                    className="text-xs text-indigo-400 hover:text-indigo-300"
+                    className="text-[11px] text-zinc-400 hover:text-white transition-colors"
                   >
                     Copy
                   </button>
@@ -685,86 +752,86 @@ ${extractedText.substring(0, 30000)}`,
                 <button
                   onClick={handleExtractText}
                   disabled={isExtracting}
-                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:cursor-wait rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 disabled:bg-zinc-900 disabled:cursor-wait rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 text-zinc-200"
                 >
                   {isExtracting ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
                       Extracting...
                     </>
                   ) : (
                     <>
-                      <MessageSquare size={16} />
+                      <MessageSquare size={14} />
                       Extract Text
                     </>
                   )}
                 </button>
               ) : (
                 <>
-                  <div className="max-h-40 overflow-y-auto text-xs text-zinc-300 bg-zinc-900 p-2 rounded mb-2">
+                  <div className="max-h-40 overflow-y-auto text-xs text-zinc-300 bg-zinc-950 p-2.5 rounded-lg mb-2 border border-zinc-900">
                     {extractedText.substring(0, 500)}
                     {extractedText.length > 500 && "..."}
                   </div>
                   <button
                     onClick={handleInsertToPage}
-                    className={`w-full py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                    className={`w-full py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 ${
                       insertSuccess
-                        ? "bg-green-600 text-white"
-                        : "bg-indigo-600 hover:bg-indigo-500 text-white"
+                        ? "bg-zinc-700 text-white"
+                        : "bg-zinc-800 hover:bg-zinc-700 text-white"
                     }`}
                   >
                     {insertSuccess ? (
                       <>
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                         Inserted!
                       </>
                     ) : (
                       <>
-                        <FileText size={16} />
+                        <FileText size={14} />
                         Insert Raw Text
                       </>
                     )}
                   </button>
 
                   {/* AI Note Generation Section */}
-                  <div className="mt-3 pt-3 border-t border-zinc-700">
-                    <span className="text-xs text-zinc-400 font-medium block mb-2">AI-Powered Notes</span>
+                  <div className="mt-3 pt-3 border-t border-zinc-900">
+                    <span className="text-[11px] text-zinc-500 font-medium uppercase tracking-wider block mb-2">AI Notes</span>
                     {!generatedNotes ? (
                       <button
                         onClick={handleGenerateNotes}
                         disabled={isGeneratingNotes}
-                        className="w-full py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 disabled:cursor-wait rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                        className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 disabled:bg-zinc-900 disabled:cursor-wait rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 text-zinc-200"
                       >
                         {isGeneratingNotes ? (
                           <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            Generating Notes...
+                            <div className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
+                            Generating...
                           </>
                         ) : (
                           <>
-                            <Sparkles size={16} />
-                            Generate AI Notes
+                            <Sparkles size={14} />
+                            Generate Notes
                           </>
                         )}
                       </button>
                     ) : (
                       <>
-                        <div className="max-h-48 overflow-y-auto text-xs text-zinc-300 bg-zinc-900 p-2 rounded mb-2 whitespace-pre-wrap">
+                        <div className="max-h-48 overflow-y-auto text-xs text-zinc-300 bg-zinc-950 p-2.5 rounded-lg mb-2 border border-zinc-900 whitespace-pre-wrap">
                           {generatedNotes}
                         </div>
                         <div className="flex gap-2">
                           <button
                             onClick={handleInsertGeneratedNotes}
-                            className="flex-1 py-2 bg-green-600 hover:bg-green-500 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                            className="flex-1 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-xs font-medium transition-colors text-white flex items-center justify-center gap-2"
                           >
-                            <FileText size={16} />
+                            <FileText size={14} />
                             Insert Notes
                           </button>
                           <button
                             onClick={() => setGeneratedNotes(null)}
-                            className="py-2 px-3 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-sm font-medium transition-colors"
+                            className="py-2 px-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs font-medium transition-colors text-zinc-300"
                           >
                             Clear
                           </button>
@@ -778,34 +845,34 @@ ${extractedText.substring(0, 30000)}`,
           )}
 
           {/* Details */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div>
-              <label className="text-xs text-zinc-400">Type</label>
-              <p className="text-sm">{file.mimeType}</p>
+              <label className="text-[11px] text-zinc-500 uppercase tracking-wider">Type</label>
+              <p className="text-xs text-zinc-300 mt-0.5">{file.mimeType}</p>
             </div>
             <div>
-              <label className="text-xs text-zinc-400">Size</label>
-              <p className="text-sm">{formatFileSize(file.size)}</p>
+              <label className="text-[11px] text-zinc-500 uppercase tracking-wider">Size</label>
+              <p className="text-xs text-zinc-300 mt-0.5">{formatFileSize(file.size)}</p>
             </div>
             <div>
-              <label className="text-xs text-zinc-400">Uploaded</label>
-              <p className="text-sm">{formatDate(file.createdAt)}</p>
+              <label className="text-[11px] text-zinc-500 uppercase tracking-wider">Uploaded</label>
+              <p className="text-xs text-zinc-300 mt-0.5">{formatDate(file.createdAt)}</p>
             </div>
             <div>
-              <label className="text-xs text-zinc-400">Last accessed</label>
-              <p className="text-sm">{formatDate(file.accessedAt)}</p>
+              <label className="text-[11px] text-zinc-500 uppercase tracking-wider">Last accessed</label>
+              <p className="text-xs text-zinc-300 mt-0.5">{formatDate(file.accessedAt)}</p>
             </div>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="p-4 border-t border-zinc-800 flex gap-2">
+        <div className="p-4 border-t border-zinc-900">
           <a
             href={file.url}
             download={file.originalName}
-            className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-center text-sm font-medium transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-white text-zinc-950 hover:bg-zinc-200 rounded-xl text-center text-xs font-medium transition-colors flex items-center justify-center gap-2"
           >
-            <Download size={16} />
+            <Download size={14} />
             Download
           </a>
         </div>

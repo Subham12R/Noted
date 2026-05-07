@@ -188,6 +188,7 @@ export function DashboardAIInput({ preSelectedFolder }: DashboardAIInputProps) {
   const [selectedModel, setSelectedModel] = useState("compound-beta")
   const [availableModels, setAvailableModels] = useState<(AIModel & { available: boolean })[]>([])
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false)
+  const [aiUsageStats, setAiUsageStats] = useState<{ current: number; limit: number; allowed: boolean } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -241,7 +242,7 @@ export function DashboardAIInput({ preSelectedFolder }: DashboardAIInputProps) {
     }
   }, [messages, streamingContent])
 
-  // Fetch available models
+  // Fetch available models and AI usage
   useEffect(() => {
     async function fetchModels() {
       try {
@@ -257,7 +258,19 @@ export function DashboardAIInput({ preSelectedFolder }: DashboardAIInputProps) {
         console.error("Failed to fetch models:", error)
       }
     }
+    async function fetchUsage() {
+      try {
+        const res = await fetch("/api/ai/generate")
+        if (res.ok) {
+          const data = await res.json()
+          setAiUsageStats({ current: data.current ?? 0, limit: data.limit ?? -1, allowed: data.allowed ?? true })
+        }
+      } catch (error) {
+        console.error("Failed to fetch AI usage:", error)
+      }
+    }
     fetchModels()
+    fetchUsage()
     window.addEventListener("userApiKeysUpdated", fetchModels)
     return () => window.removeEventListener("userApiKeysUpdated", fetchModels)
   }, [])
@@ -512,6 +525,9 @@ INSTRUCTIONS:
 
       if (!res.ok) {
         const errorData = await res.json()
+        if (res.status === 429) {
+          setAiUsageStats({ current: errorData.current ?? 0, limit: errorData.limit ?? 0, allowed: false })
+        }
         throw new Error(errorData.error || "Generation failed")
       }
 
@@ -767,7 +783,7 @@ INSTRUCTIONS:
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 pt-6 pb-4 px-4">
-      <div className="max-w-3xl mx-auto relative">
+      <div className="max-w-6xl mx-auto relative">
         {/* Chat Area */}
         {(messages.length > 0 || streamingContent || isProcessing || error) && (
           <div
@@ -905,63 +921,108 @@ INSTRUCTIONS:
           </div>
         )}
 
-        {/* Main Input Container */}
-        <div className="relative flex items-end gap-2 bg-white dark:bg-[#1C1C1C] rounded-[32px] border border-neutral-200 dark:border-neutral-800 p-2">
-          {/* Folder Selector - Custom styled dropdown */}
-          <div className="relative p-2 ml-1 group">
-            <button
-              onClick={() => setIsFolderDropdownOpen(!isFolderDropdownOpen)}
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-neutral-100 dark:bg-white/10 border border-neutral-200 dark:border-neutral-700 cursor-pointer hover:bg-neutral-200 dark:hover:bg-white/20 transition-colors"
-              title={selectedFolder ? selectedFolder.name : "All folders"}
-            >
-              <FolderIcon className={`w-4 h-4 ${selectedFolderId ? 'text-indigo-500' : 'text-neutral-500'}`} />
-            </button>
+        {/* AI Limit Prompt */}
+        {aiUsageStats && !aiUsageStats.allowed && (
+          <div className="mb-3 p-4 bg-zinc-900 border border-zinc-800 rounded-2xl">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-amber-500/10 rounded-lg shrink-0">
+                <svg className="w-5 h-5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-semibold text-white">AI Request Limit Reached</h4>
+                <p className="text-xs text-zinc-400 mt-1">
+                  You've used {aiUsageStats.current} of {aiUsageStats.limit} free AI requests this month. Connect your own API key for unlimited access or upgrade your plan.
+                </p>
+                <div className="flex items-center gap-2 mt-3">
+                  <a
+                    href="/profile"
+                    className="px-3 py-1.5 bg-white text-zinc-900 text-xs font-medium rounded-lg hover:bg-zinc-200 transition-colors"
+                  >
+                    Connect API Key
+                  </a>
+                  <a
+                    href="/pricing"
+                    className="px-3 py-1.5 bg-zinc-800 text-white text-xs font-medium rounded-lg hover:bg-zinc-700 transition-colors"
+                  >
+                    Upgrade Plan
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-            {/* Custom Dropdown Menu */}
-            {isFolderDropdownOpen && (
-              <>
-                {/* Backdrop to close dropdown */}
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setIsFolderDropdownOpen(false)}
-                />
-                {/* Dropdown content */}
-                <div className="absolute bottom-full left-0 mb-2 w-64 max-h-80 overflow-y-auto bg-white dark:bg-[#1C1C1C] border border-neutral-100 dark:border-neutral-800 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50">
-                  <div className="p-1">
+        {/* Usage warning */}
+        {aiUsageStats && aiUsageStats.allowed && aiUsageStats.limit !== -1 && aiUsageStats.current >= Math.max(1, aiUsageStats.limit - 1) && (
+          <div className="mb-3 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center gap-2">
+            <svg className="w-4 h-4 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span className="text-xs text-amber-400">
+              {aiUsageStats.limit - aiUsageStats.current} free message{aiUsageStats.limit - aiUsageStats.current !== 1 ? 's' : ''} remaining this month. <a href="/profile" className="underline hover:text-amber-300">Connect your API key</a> for unlimited access.
+            </span>
+          </div>
+        )}
+
+        {/* Main Input Container */}
+        <div className="relative flex items-center gap-3 bg-[#1C1C1C] rounded-full border border-neutral-800 px-4 py-3 shadow-2xl">
+          {/* Folder Selector */}
+          <button
+            onClick={() => setIsFolderDropdownOpen(!isFolderDropdownOpen)}
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-colors shrink-0"
+            title={selectedFolder ? selectedFolder.name : "All folders"}
+          >
+            <FolderIcon className="w-4 h-4" />
+          </button>
+
+          {/* Custom Dropdown Menu */}
+          {isFolderDropdownOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setIsFolderDropdownOpen(false)}
+              />
+              <div className="absolute bottom-full left-0 mb-2 w-64 max-h-80 overflow-y-auto bg-[#1C1C1C] border border-neutral-800 rounded-2xl shadow-2xl z-50">
+                <div className="p-1">
+                  <button
+                    onClick={() => {
+                      setSelectedFolderId(null)
+                      setIsFolderDropdownOpen(false)
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${
+                      !selectedFolderId
+                        ? 'bg-white/10 text-white'
+                        : 'text-neutral-400 hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    All folders
+                  </button>
+                  {folders.map((f) => (
                     <button
+                      key={f.id}
                       onClick={() => {
-                        setSelectedFolderId(null)
+                        setSelectedFolderId(f.id)
                         setIsFolderDropdownOpen(false)
                       }}
                       className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${
-                        !selectedFolderId
-                          ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
-                          : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10'
+                        selectedFolderId === f.id
+                          ? 'bg-white/10 text-white'
+                          : 'text-neutral-400 hover:bg-white/5 hover:text-white'
                       }`}
                     >
-                      All folders
+                      {f.name}
                     </button>
-                    {folders.map((f) => (
-                      <button
-                        key={f.id}
-                        onClick={() => {
-                          setSelectedFolderId(f.id)
-                          setIsFolderDropdownOpen(false)
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${
-                          selectedFolderId === f.id
-                            ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
-                            : 'text-zinc-300 hover:bg-zinc-800'
-                        }`}
-                      >
-                        {f.name}
-                      </button>
-                    ))}
-                  </div>
+                  ))}
                 </div>
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
 
           {/* Text Input */}
           <textarea
@@ -972,20 +1033,20 @@ INSTRUCTIONS:
             placeholder={selectedFolder ? `Ask anything about "${selectedFolder.name}"...` : "Ask me anything, say hi, or search your notes..."}
             rows={1}
             disabled={isProcessing}
-            className="flex-1 bg-transparent py-4 pr-2 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 resize-none focus:outline-none text-sm sm:text-base max-h-[200px] disabled:opacity-50"
+            className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 resize-none focus:outline-none max-h-[120px] disabled:opacity-50 py-1"
           />
 
           {/* Model Selector and Send Button */}
-          <div className="flex items-center gap-1 px-2 py-2">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Model Selector */}
             <div className="relative" ref={modelDropdownRef}>
               <button
                 onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
                 disabled={isProcessing}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-2xl transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-400 hover:bg-white/5 rounded-full transition-colors disabled:opacity-50"
                 title="Select AI model"
               >
-                <ModelIcon className="w-4 h-4" />
+                <ModelIcon className="w-3.5 h-3.5" />
                 <span className="max-w-20 truncate hidden sm:inline">
                   {(() => { const m = availableModels.find(m => m.id === selectedModel); return m?.brandName || m?.name?.split(' ')[0] || 'Model' })()}
                 </span>
@@ -994,8 +1055,8 @@ INSTRUCTIONS:
 
               {/* Model Dropdown */}
               {isModelDropdownOpen && (
-                <div className="absolute bottom-full right-0 mb-2 w-72 bg-white dark:bg-[#1C1C1C] border border-neutral-100 dark:border-neutral-800 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] overflow-hidden z-50">
-                  <div className="p-2 border-b border-neutral-100 dark:border-neutral-800">
+                <div className="absolute bottom-full right-0 mb-2 w-72 bg-[#1C1C1C] border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden z-50">
+                  <div className="p-2 border-b border-neutral-800">
                     <p className="text-xs font-medium text-neutral-500 px-2">Select Model</p>
                   </div>
                   <div className="max-h-64 overflow-y-auto p-1">
@@ -1011,10 +1072,10 @@ INSTRUCTIONS:
                         disabled={!model.available}
                         className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors ${
                           selectedModel === model.id
-                            ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                            ? 'bg-white/10 text-white'
                             : model.available
-                            ? 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10'
-                            : 'text-neutral-400 dark:text-neutral-600 cursor-not-allowed opacity-60'
+                            ? 'text-neutral-300 hover:bg-white/5'
+                            : 'text-neutral-600 cursor-not-allowed opacity-60'
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -1022,7 +1083,7 @@ INSTRUCTIONS:
                             <div className="flex items-center gap-2">
                               <span className="font-medium truncate">{model.brandName || model.name}</span>
                               {!model.available && (
-                                <span className="text-[10px] px-1.5 py-0.5 bg-neutral-200 dark:bg-neutral-700 rounded text-neutral-500 dark:text-neutral-400 shrink-0">
+                                <span className="text-[10px] px-1.5 py-0.5 bg-neutral-800 rounded text-neutral-500 shrink-0">
                                   Unavailable
                                 </span>
                               )}
@@ -1032,7 +1093,7 @@ INSTRUCTIONS:
                             </p>
                           </div>
                           {selectedModel === model.id && model.available && (
-                            <CheckIcon className="w-4 h-4 text-indigo-400 shrink-0 ml-2" />
+                            <CheckIcon className="w-4 h-4 text-white shrink-0 ml-2" />
                           )}
                         </div>
                       </button>
@@ -1046,7 +1107,7 @@ INSTRUCTIONS:
             <button
               onClick={handleGenerate}
               disabled={isProcessing || !inputValue.trim()}
-              className="p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title="Send"
             >
               {isProcessing ? (
@@ -1061,30 +1122,30 @@ INSTRUCTIONS:
         {/* Quick Actions */}
         {!inputValue && (
           <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
-            <span className="text-xs text-neutral-500 dark:text-neutral-400">Try:</span>
+            <span className="text-xs text-neutral-500">Try:</span>
             {selectedFolder ? (
               <>
                 <button
                   onClick={() => setInputValue("Summarize the notes in this folder")}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all"
+                  className="px-3 py-1.5 text-xs rounded-full bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600/30 transition-all"
                 >
                   Summarize
                 </button>
                 <button
                   onClick={() => setInputValue("Create a new note about today's meeting")}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-all"
+                  className="px-3 py-1.5 text-xs rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 transition-all"
                 >
                   + New Note
                 </button>
                 <button
                   onClick={() => setInputValue("Create a flowchart of the main concepts")}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-white/10 transition-all"
+                  className="px-3 py-1.5 text-xs rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 transition-all"
                 >
                   Flowchart
                 </button>
                 <button
                   onClick={() => setInputValue("Organize and rename the notes in this folder")}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-white/10 transition-all"
+                  className="px-3 py-1.5 text-xs rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 transition-all"
                 >
                   Organize
                 </button>
@@ -1093,25 +1154,25 @@ INSTRUCTIONS:
               <>
                 <button
                   onClick={() => setInputValue("Hi! What can you help me with?")}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all"
+                  className="px-3 py-1.5 text-xs rounded-full bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600/30 transition-all"
                 >
                   Say Hi
                 </button>
                 <button
                   onClick={() => setInputValue("Create a new folder for my projects")}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-all"
+                  className="px-3 py-1.5 text-xs rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 transition-all"
                 >
                   + New Folder
                 </button>
                 <button
                   onClick={() => setInputValue("Give me an overview of all my notes")}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10 transition-all"
+                  className="px-3 py-1.5 text-xs rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 transition-all"
                 >
                   Overview
                 </button>
                 <button
                   onClick={() => setInputValue("Help me organize my workspace with a good folder structure")}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10 transition-all"
+                  className="px-3 py-1.5 text-xs rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 transition-all"
                 >
                   Organize
                 </button>

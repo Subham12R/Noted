@@ -1168,7 +1168,7 @@ export const Input = ({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 pt-6 pb-4 px-4 pointer-events-none">
-      <div className="max-w-3xl mx-auto relative pointer-events-auto">
+      <div className="max-w-6xl mx-auto relative pointer-events-auto">
         {/* Output Area - Solid design */}
         {(response || isProcessing || error) && (
           <div
@@ -1502,7 +1502,17 @@ export const Input = ({
         )}
 
         {/* Main Input Container */}
-        <div className="relative flex flex-col bg-white dark:bg-[#1C1C1C] rounded-[32px] border border-neutral-200 dark:border-neutral-800 p-2">
+        <div className="relative flex items-center gap-3 bg-[#1C1C1C] rounded-full border border-neutral-800 px-4 py-3 shadow-2xl">
+          {/* Plus Button for Upload */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-colors shrink-0"
+            title="Upload file"
+          >
+            <PlusIcon className="w-4 h-4" />
+          </button>
+
           {/* Text Input */}
           <textarea
             ref={textareaRef}
@@ -1512,213 +1522,102 @@ export const Input = ({
             placeholder="Ask AI to help with your notes..."
             rows={1}
             disabled={isProcessing}
-            className="w-full bg-transparent px-4 pt-3 pb-2 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 resize-none focus:outline-none text-base max-h-50 disabled:opacity-50"
+            className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 resize-none focus:outline-none max-h-[120px] disabled:opacity-50 py-1"
           />
 
-          {/* Bottom Actions */}
-          <div className="flex items-center justify-between mt-2 pl-2 pr-1 pb-1">
-            <div className="flex items-center gap-2">
-              {/* Plus Button for Upload */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center justify-center w-10 h-10 border border-neutral-200 dark:border-neutral-700 rounded-full text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-                  title="Upload file"
-                >
-                  <PlusIcon className="w-5 h-5" />
-                </button>
-              </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Model Selector */}
+            <div className="relative" ref={modelDropdownRef}>
+              <button
+                onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                disabled={isProcessing}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-400 hover:bg-white/5 rounded-full transition-colors disabled:opacity-50"
+                title="Select AI model"
+              >
+                <span className="truncate max-w-20 hidden sm:inline">
+                  {(() => { const m = availableModels.find((m) => m.id === selectedModel); return m?.brandName || m?.name?.split(" ")[0] || "Model"; })()}
+                </span>
+                <ChevronDownIcon className="w-3 h-3" />
+              </button>
 
-              {/* Inspiration Button */}
-              <div className="relative" ref={inspirationRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsInspirationOpen(!isInspirationOpen)}
-                  className="hidden sm:flex items-center gap-1.5 px-4 h-10 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-                >
-                  {activeToolObj ? (
-                    activeToolObj.icon
-                  ) : (
-                    <SparklesIcon className="w-4 h-4 text-green-500" />
-                  )}
-                  {activeToolObj ? activeToolObj.label : "Inspiration"}
-                  <ChevronDownIcon className="w-3.5 h-3.5 text-neutral-400 ml-0.5" />
-                </button>
-
-                {isInspirationOpen && (
-                  <div className="absolute bottom-full left-0 mb-3 w-56 bg-white dark:bg-[#1A1A1A] rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] border border-neutral-100 dark:border-neutral-800 overflow-hidden z-50 p-2">
-                    {[
-                      {
-                        id: "summarize",
-                        label: "Summarize",
-                        icon: (
-                          <AlignLeftIcon className="w-4 h-4 text-neutral-500" />
-                        ),
-                      },
-                      {
-                        id: "improve",
-                        label: "Improve writing",
-                        icon: <WandIcon className="w-4 h-4 text-neutral-500" />,
-                      },
-                      {
-                        id: "explain",
-                        label: "Explain",
-                        icon: (
-                          <MessageCircleIcon className="w-4 h-4 text-neutral-500" />
-                        ),
-                      },
-                      {
-                        id: "flowchart",
-                        label: "Create flowchart",
-                        icon: (
-                          <GitCommitIcon className="w-4 h-4 text-neutral-500" />
-                        ),
-                      },
-                      {
-                        id: "quiz",
-                        label: "Generate quiz",
-                        icon: (
-                          <HelpCircleIcon className="w-4 h-4 text-neutral-500" />
-                        ),
-                      },
-                      {
-                        id: "flashcard",
-                        label: "Make flashcards",
-                        icon: (
-                          <CardsIcon className="w-4 h-4 text-neutral-500" />
-                        ),
-                      },
-                    ].map((tool) => (
+              {/* Model Dropdown */}
+              {isModelDropdownOpen && (
+                <div className="absolute bottom-full right-0 mb-2 w-72 bg-[#1C1C1C] border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden z-50">
+                  <div className="p-2 border-b border-neutral-800">
+                    <p className="text-xs font-medium text-neutral-500 px-2">Select Model</p>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto p-1">
+                    {availableModels.map((model) => (
                       <button
-                        key={tool.id}
-                        type="button"
+                        key={model.id}
                         onClick={() => {
-                          setInputValue(
-                            MODE_DEFAULT_PROMPTS[tool.id as AIMode],
-                          );
-                          setActiveMode(tool.id as AIMode);
-                          setIsInspirationOpen(false);
-                          setTimeout(() => textareaRef.current?.focus(), 0);
+                          if (model.available) {
+                            setSelectedModel(model.id);
+                            setIsModelDropdownOpen(false);
+                          }
                         }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors text-left"
+                        disabled={!model.available}
+                        className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors ${
+                          selectedModel === model.id
+                            ? "bg-white/10 text-white"
+                            : model.available
+                              ? "text-neutral-300 hover:bg-white/5"
+                              : "text-neutral-600 cursor-not-allowed opacity-60"
+                        }`}
                       >
-                        {tool.icon}
-                        <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                          {tool.label}
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium truncate">
+                                {model.brandName || model.name}
+                              </span>
+                              {!model.available && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-neutral-800 rounded text-neutral-500 shrink-0">
+                                  Unavailable
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-neutral-500 truncate mt-0.5">
+                              {model.description}
+                            </p>
+                          </div>
+                          {selectedModel === model.id && model.available && (
+                            <CheckIcon className="w-4 h-4 text-white shrink-0 ml-2" />
+                          )}
+                        </div>
                       </button>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center gap-1 sm:gap-2">
-              {/* Model Selector */}
-              <div className="relative" ref={modelDropdownRef}>
-                <button
-                  onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                  disabled={isProcessing}
-                  className="flex items-center gap-1.5 px-3 h-10 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-2xl transition-colors disabled:opacity-50"
-                  title="Select AI model"
-                >
-                  <span className="truncate max-w-24 sm:max-w-none">
-                    {(() => { const m = availableModels.find((m) => m.id === selectedModel); return m?.brandName || m?.name?.split(" ")[0] || "Model"; })()}
-                  </span>
-                  <ChevronDownIcon className="w-3.5 h-3.5 text-neutral-400" />
-                </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileUpload}
+              className="hidden"
+            />
 
-                {/* Model Dropdown */}
-                {isModelDropdownOpen && (
-                  <div className="absolute bottom-full right-0 mb-3 w-64 bg-white dark:bg-[#1C1C1C] rounded-2xl border border-neutral-100 dark:border-neutral-800 shadow-[0_4px_24px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] overflow-hidden z-50">
-                    <div className="p-2 border-b border-neutral-100 dark:border-neutral-800">
-                      <p className="text-xs font-medium text-neutral-500 px-2">
-                        Select Model
-                      </p>
-                    </div>
-                    <div className="max-h-64 overflow-y-auto p-1.5">
-                      {availableModels.map((model) => (
-                        <button
-                          key={model.id}
-                          onClick={() => {
-                            if (model.available) {
-                              setSelectedModel(model.id);
-                              setIsModelDropdownOpen(false);
-                            }
-                          }}
-                          disabled={!model.available}
-                          className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors ${
-                            selectedModel === model.id
-                              ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
-                              : model.available
-                                ? "text-neutral-700 dark:text-neutral-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                                : "text-neutral-400 dark:text-neutral-600 cursor-not-allowed opacity-60"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium truncate">
-                                  {model.brandName || model.name}
-                                </span>
-                                {!model.available && (
-                                  <span className="text-[10px] px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-md text-zinc-500 dark:text-zinc-400 shrink-0">
-                                    Unavailable
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs text-neutral-500 dark:text-neutral-500 truncate mt-0.5">
-                                {model.description}
-                              </p>
-                            </div>
-                            {selectedModel === model.id && model.available && (
-                              <CheckIcon className="w-4 h-4 text-indigo-500 shrink-0 ml-2" />
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-
-              {/* Send Button */}
-              <button
-                onClick={handleSubmit}
-                disabled={
-                  isProcessing ||
-                  (!inputValue.trim() && attachedFiles.length === 0)
-                }
-                className="flex items-center justify-center w-10 h-10 ml-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
-                title="Send"
-              >
-                {isProcessing ? (
-                  <LoadingIcon className="w-5 h-5 animate-spin" />
-                ) : (
-                  <ArrowUpIcon className="w-5 h-5" />
-                )}
-              </button>
-            </div>
+            {/* Send Button */}
+            <button
+              onClick={handleSubmit}
+              disabled={
+                isProcessing ||
+                (!inputValue.trim() && attachedFiles.length === 0)
+              }
+              className="p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+              title="Send"
+            >
+              {isProcessing ? (
+                <LoadingIcon className="w-5 h-5 animate-spin" />
+              ) : (
+                <ArrowUpIcon className="w-5 h-5" />
+              )}
+            </button>
           </div>
         </div>
-
-        {/* Helper Text */}
-        <p className="text-center text-xs text-neutral-400 dark:text-neutral-600 mt-2">
-          Add context with{" "}
-          <span className="inline-flex items-center gap-0.5">
-            <PlusIcon className="w-3 h-3" />
-          </span>{" "}
-          to help AI understand your request better
-        </p>
       </div>
     </div>
   );

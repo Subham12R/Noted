@@ -59,7 +59,7 @@ import { ResizableImage } from "@/components/tiptap-node/image-node";
 import { DragHandle } from "@/components/tiptap-node/drag-handle";
 import { Columns, Column } from "@/components/tiptap-node/columns-node";
 import { GridDropZone } from "@/components/tiptap-node/grid-drop-zone";
-import { ExcalidrawNode } from "@/components/tiptap-node/excalidraw-node/excalidraw-node-extension";
+
 
 import "@/components/tiptap-node/blockquote-node/blockquote-node.scss";
 import "@/components/tiptap-node/code-block-node/code-block-node.scss";
@@ -91,7 +91,7 @@ import { TextAlignButton } from "@/components/tiptap-ui/text-align-button";
 import { UndoRedoButton } from "@/components/tiptap-ui/undo-redo-button";
 import { WhiteboardButton } from "@/components/tiptap-ui/whiteboard-button";
 import { ColumnsButton } from "@/components/tiptap-ui/columns-button";
-import { ExcalidrawButton } from "@/components/tiptap-ui/excalidraw-button/excalidraw-button";
+
 
 // --- Icons ---
 import { ArrowLeftIcon } from "@/components/tiptap-icons/arrow-left-icon";
@@ -309,7 +309,6 @@ const MainToolbarContent = ({
       <ToolbarGroup>
         <ImageUploadButton text="Add" />
         <WhiteboardButton />
-        <ExcalidrawButton />
         <ColumnsButton />
       </ToolbarGroup>
 
@@ -668,7 +667,6 @@ export function NoteEditor({ pageId }: NoteEditorProps) {
         }),
         WhiteboardNode,
         MermaidNode,
-        ExcalidrawNode,
         Table.configure({
           resizable: true,
           HTMLAttributes: {

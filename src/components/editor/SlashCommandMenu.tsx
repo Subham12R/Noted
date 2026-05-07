@@ -165,12 +165,6 @@ const FlowchartIcon = () => (
   </svg>
 )
 
-const ExcalidrawIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-  </svg>
-)
-
 const QuizIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -299,7 +293,7 @@ export const slashCommands: SlashCommand[] = [
     label: "Whiteboard",
     description: "Add a drawing canvas",
     icon: <WhiteboardIcon />,
-    category: "advanced",
+    category: "media",
     action: (editor) => {
       editor.chain().focus().insertContent({ type: "whiteboard" }).run()
     },
@@ -324,17 +318,7 @@ export const slashCommands: SlashCommand[] = [
         .run()
     },
   },
-  {
-    id: "excalidraw",
-    label: "Excalidraw",
-    description: "Add an interactive drawing canvas",
-    icon: <ExcalidrawIcon />,
-    category: "advanced",
-    action: (editor) => {
-      // @ts-ignore - custom command
-      editor.chain().focus().insertExcalidraw().run()
-    },
-  },
+
   {
     id: "quiz",
     label: "Quiz",
