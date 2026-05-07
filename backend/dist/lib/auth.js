@@ -5,6 +5,25 @@ const better_auth_1 = require("better-auth");
 const drizzle_1 = require("better-auth/adapters/drizzle");
 const index_js_1 = require("../db/index.js");
 const schema_js_1 = require("../db/schema.js");
+function normalizeOrigin(origin) {
+    return origin.trim().replace(/\/+$/, "");
+}
+function parseOrigins(value) {
+    if (!value)
+        return [];
+    return value
+        .split(",")
+        .map((v) => normalizeOrigin(v))
+        .filter(Boolean);
+}
+const trustedOrigins = Array.from(new Set([
+    normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+    normalizeOrigin(process.env.BETTER_AUTH_URL || "http://localhost:3000"),
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://noted-main.vercel.app",
+    ...parseOrigins(process.env.TRUSTED_ORIGINS),
+]));
 exports.auth = (0, better_auth_1.betterAuth)({
     database: (0, drizzle_1.drizzleAdapter)(index_js_1.db, {
         provider: "pg",
@@ -32,10 +51,6 @@ exports.auth = (0, better_auth_1.betterAuth)({
         cookieCache: { enabled: true, maxAge: 60 * 5 },
     },
     rateLimit: { window: 60, max: 10 },
-    trustedOrigins: [
-        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-        "http://localhost:3000",
-        "https://noted-main.vercel.app",
-    ],
+    trustedOrigins,
 });
 //# sourceMappingURL=auth.js.map

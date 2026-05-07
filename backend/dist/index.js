@@ -62,7 +62,25 @@ const ai_js_1 = __importDefault(require("./routes/ai.js"));
 const PORT = parseInt(process.env.PORT || "8080");
 const CLIENT_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const REDIS_URL = process.env.REDIS_URL || "";
-const allowedOrigins = [CLIENT_URL, "http://localhost:3000", "https://noted-main.vercel.app"].filter(Boolean);
+function normalizeOrigin(origin) {
+    return origin.trim().replace(/\/+$/, "");
+}
+function parseOrigins(value) {
+    if (!value)
+        return [];
+    return value
+        .split(",")
+        .map((v) => normalizeOrigin(v))
+        .filter(Boolean);
+}
+const allowedOrigins = Array.from(new Set([
+    normalizeOrigin(CLIENT_URL),
+    normalizeOrigin(process.env.BETTER_AUTH_URL || "http://localhost:3000"),
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://noted-main.vercel.app",
+    ...parseOrigins(process.env.TRUSTED_ORIGINS),
+])).filter(Boolean);
 process.on("unhandledRejection", (reason) => {
     console.error("Unhandled Rejection:", reason);
 });
@@ -77,7 +95,12 @@ process.on("uncaughtException", (error) => {
 // Hono app
 const app = new hono_1.Hono();
 app.use("*", (0, cors_1.cors)({
-    origin: (origin) => (allowedOrigins.includes(origin) ? origin : allowedOrigins[0]),
+    origin: (origin) => {
+        if (!origin)
+            return allowedOrigins[0];
+        const normalized = normalizeOrigin(origin);
+        return allowedOrigins.includes(normalized) ? origin : allowedOrigins[0];
+    },
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization", "X-Share-Password", "stripe-signature"],
