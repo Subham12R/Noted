@@ -41,10 +41,10 @@ export function LoginForm() {
 
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200 dark:border-zinc-700" />
+          <div className="w-full border-t border-neutral-800" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-white dark:bg-zinc-950 text-gray-500 dark:text-gray-400">
+          <span className="px-4 bg-[#121212] text-neutral-500">
             or continue with email
           </span>
         </div>
@@ -52,7 +52,7 @@ export function LoginForm() {
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
-          <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
+          <div className="p-3 bg-red-950/30 border border-red-900 text-red-400 text-sm">
             {error}
           </div>
         )}
@@ -60,7 +60,7 @@ export function LoginForm() {
         <div>
           <label
             htmlFor="email"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+            className="block text-sm font-medium text-neutral-300 mb-1.5"
           >
             Email address
           </label>
@@ -72,7 +72,7 @@ export function LoginForm() {
             placeholder="you@example.com"
             required
             disabled={disabled}
-            className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+            className="w-full px-4 py-3 bg-[#1a1a1a] border border-neutral-800 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-neutral-600"
           />
         </div>
 
@@ -80,13 +80,13 @@ export function LoginForm() {
           <div className="flex items-center justify-between mb-1.5">
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="block text-sm font-medium text-neutral-300"
             >
               Password
             </label>
             <a
               href="#"
-              className="text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors"
+              className="text-sm text-neutral-400 hover:text-white font-medium transition-colors"
             >
               Forgot password?
             </a>
@@ -100,14 +100,14 @@ export function LoginForm() {
             required
             disabled={disabled}
             minLength={8}
-            className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+            className="w-full px-4 py-3 bg-[#1a1a1a] border border-neutral-800 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-neutral-600"
           />
         </div>
 
         <button
           type="submit"
           disabled={disabled}
-          className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
+          className="w-full py-3 px-4 bg-white hover:bg-neutral-200 text-black font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <span className="flex items-center justify-center gap-2">

@@ -52,10 +52,10 @@ export function RegisterForm() {
 
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200 dark:border-zinc-700" />
+          <div className="w-full border-t border-neutral-800" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-white dark:bg-zinc-950 text-gray-500 dark:text-gray-400">
+          <span className="px-4 bg-[#121212] text-neutral-500">
             or register with email
           </span>
         </div>
@@ -63,13 +63,13 @@ export function RegisterForm() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
+          <div className="p-3 bg-red-950/30 border border-red-900 text-red-400 text-sm">
             {error}
           </div>
         )}
 
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+          <label htmlFor="name" className="block text-sm font-medium text-neutral-300 mb-1.5">
             Full name
           </label>
           <input
@@ -80,12 +80,12 @@ export function RegisterForm() {
             placeholder="John Doe"
             required
             disabled={disabled}
-            className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+            className="w-full px-4 py-3 bg-[#1a1a1a] border border-neutral-800 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-neutral-600"
           />
         </div>
 
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+          <label htmlFor="email" className="block text-sm font-medium text-neutral-300 mb-1.5">
             Email address
           </label>
           <input
@@ -96,13 +96,13 @@ export function RegisterForm() {
             placeholder="you@example.com"
             required
             disabled={disabled}
-            className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+            className="w-full px-4 py-3 bg-[#1a1a1a] border border-neutral-800 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-neutral-600"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <label htmlFor="password" className="block text-sm font-medium text-neutral-300 mb-1.5">
               Password
             </label>
             <input
@@ -114,12 +114,12 @@ export function RegisterForm() {
               required
               disabled={disabled}
               minLength={8}
-              className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+              className="w-full px-4 py-3 bg-[#1a1a1a] border border-neutral-800 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-neutral-600"
             />
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-neutral-300 mb-1.5">
               Confirm
             </label>
             <input
@@ -131,22 +131,22 @@ export function RegisterForm() {
               required
               disabled={disabled}
               minLength={8}
-              className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+              className="w-full px-4 py-3 bg-[#1a1a1a] border border-neutral-800 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-neutral-600"
             />
           </div>
         </div>
 
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-neutral-500">
           By creating an account, you agree to our{" "}
-          <a href="#" className="text-purple-600 hover:underline">Terms of Service</a>
+          <a href="#" className="text-neutral-300 hover:text-white transition-colors">Terms of Service</a>
           {" "}and{" "}
-          <a href="#" className="text-purple-600 hover:underline">Privacy Policy</a>
+          <a href="#" className="text-neutral-300 hover:text-white transition-colors">Privacy Policy</a>
         </p>
 
         <button
           type="submit"
           disabled={disabled}
-          className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
+          className="w-full py-3 px-4 bg-white hover:bg-neutral-200 text-black font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <span className="flex items-center justify-center gap-2">
