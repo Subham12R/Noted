@@ -971,59 +971,7 @@ INSTRUCTIONS:
         )}
 
         {/* Main Input Container */}
-        <div className="relative flex items-center gap-3 bg-[#1C1C1C] rounded-full border border-neutral-800 px-4 py-3 shadow-2xl">
-          {/* Folder Selector */}
-          <button
-            onClick={() => setIsFolderDropdownOpen(!isFolderDropdownOpen)}
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-colors shrink-0"
-            title={selectedFolder ? selectedFolder.name : "All folders"}
-          >
-            <FolderIcon className="w-4 h-4" />
-          </button>
-
-          {/* Custom Dropdown Menu */}
-          {isFolderDropdownOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setIsFolderDropdownOpen(false)}
-              />
-              <div className="absolute bottom-full left-0 mb-2 w-64 max-h-80 overflow-y-auto bg-[#1C1C1C] border border-neutral-800 rounded-2xl shadow-2xl z-50">
-                <div className="p-1">
-                  <button
-                    onClick={() => {
-                      setSelectedFolderId(null)
-                      setIsFolderDropdownOpen(false)
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${
-                      !selectedFolderId
-                        ? 'bg-white/10 text-white'
-                        : 'text-neutral-400 hover:bg-white/5 hover:text-white'
-                    }`}
-                  >
-                    All folders
-                  </button>
-                  {folders.map((f) => (
-                    <button
-                      key={f.id}
-                      onClick={() => {
-                        setSelectedFolderId(f.id)
-                        setIsFolderDropdownOpen(false)
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${
-                        selectedFolderId === f.id
-                          ? 'bg-white/10 text-white'
-                          : 'text-neutral-400 hover:bg-white/5 hover:text-white'
-                      }`}
-                    >
-                      {f.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-
+        <div className="relative flex flex-col bg-white dark:bg-[#1C1C1C] rounded-[32px] border border-neutral-200 dark:border-neutral-800 p-2">
           {/* Text Input */}
           <textarea
             ref={textareaRef}
@@ -1033,119 +981,174 @@ INSTRUCTIONS:
             placeholder={selectedFolder ? `Ask anything about "${selectedFolder.name}"...` : "Ask me anything, say hi, or search your notes..."}
             rows={1}
             disabled={isProcessing}
-            className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 resize-none focus:outline-none max-h-[120px] disabled:opacity-50 py-1"
+            className="w-full bg-transparent px-4 pt-3 pb-2 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 resize-none focus:outline-none text-base max-h-50 disabled:opacity-50"
           />
 
-          {/* Model Selector and Send Button */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Model Selector */}
-            <div className="relative" ref={modelDropdownRef}>
-              <button
-                onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                disabled={isProcessing}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-400 hover:bg-white/5 rounded-full transition-colors disabled:opacity-50"
-                title="Select AI model"
-              >
-                <ModelIcon className="w-3.5 h-3.5" />
-                <span className="max-w-20 truncate hidden sm:inline">
-                  {(() => { const m = availableModels.find(m => m.id === selectedModel); return m?.brandName || m?.name?.split(' ')[0] || 'Model' })()}
-                </span>
-                <ChevronDownIcon className="w-3 h-3" />
-              </button>
+          {/* Bottom Actions */}
+          <div className="flex items-center justify-between mt-2 pl-2 pr-1 pb-1">
+            <div className="flex items-center gap-2">
+              {/* Folder Selector */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsFolderDropdownOpen(!isFolderDropdownOpen)}
+                  className="flex items-center justify-center w-10 h-10 border border-neutral-200 dark:border-neutral-700 rounded-full text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                  title={selectedFolder ? selectedFolder.name : "All folders"}
+                >
+                  <FolderIcon className="w-4 h-4" />
+                </button>
 
-              {/* Model Dropdown */}
-              {isModelDropdownOpen && (
-                <div className="absolute bottom-full right-0 mb-2 w-72 bg-[#1C1C1C] border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden z-50">
-                  <div className="p-2 border-b border-neutral-800">
-                    <p className="text-xs font-medium text-neutral-500 px-2">Select Model</p>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto p-1">
-                    {availableModels.map((model) => (
+                {/* Folder Dropdown */}
+                {isFolderDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsFolderDropdownOpen(false)}
+                    />
+                    <div className="absolute bottom-full left-0 mb-3 w-64 max-h-80 overflow-y-auto bg-white dark:bg-[#1C1C1C] border border-neutral-100 dark:border-neutral-800 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50 p-1">
                       <button
-                        key={model.id}
                         onClick={() => {
-                          if (model.available) {
-                            setSelectedModel(model.id)
-                            setIsModelDropdownOpen(false)
-                          }
+                          setSelectedFolderId(null)
+                          setIsFolderDropdownOpen(false)
                         }}
-                        disabled={!model.available}
-                        className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors ${
-                          selectedModel === model.id
-                            ? 'bg-white/10 text-white'
-                            : model.available
-                            ? 'text-neutral-300 hover:bg-white/5'
-                            : 'text-neutral-600 cursor-not-allowed opacity-60'
+                        className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${
+                          !selectedFolderId
+                            ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                            : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10'
                         }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium truncate">{model.brandName || model.name}</span>
-                              {!model.available && (
-                                <span className="text-[10px] px-1.5 py-0.5 bg-neutral-800 rounded text-neutral-500 shrink-0">
-                                  Unavailable
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-neutral-500 truncate mt-0.5">
-                              {model.description}
-                            </p>
-                          </div>
-                          {selectedModel === model.id && model.available && (
-                            <CheckIcon className="w-4 h-4 text-white shrink-0 ml-2" />
-                          )}
-                        </div>
+                        All folders
                       </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+                      {folders.map((f) => (
+                        <button
+                          key={f.id}
+                          onClick={() => {
+                            setSelectedFolderId(f.id)
+                            setIsFolderDropdownOpen(false)
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${
+                            selectedFolderId === f.id
+                              ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                              : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10'
+                          }`}
+                        >
+                          {f.name}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
-            {/* Send Button */}
-            <button
-              onClick={handleGenerate}
-              disabled={isProcessing || !inputValue.trim()}
-              className="p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              title="Send"
-            >
-              {isProcessing ? (
-                <LoadingIcon className="w-5 h-5 animate-spin" />
-              ) : (
-                <SendIcon className="w-5 h-5" />
-              )}
-            </button>
+            <div className="flex items-center gap-1 sm:gap-2">
+              {/* Model Selector */}
+              <div className="relative" ref={modelDropdownRef}>
+                <button
+                  onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                  disabled={isProcessing}
+                  className="flex items-center gap-1.5 px-3 h-10 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-2xl transition-colors disabled:opacity-50"
+                  title="Select AI model"
+                >
+                  <span className="truncate max-w-24 sm:max-w-none">
+                    {(() => { const m = availableModels.find(m => m.id === selectedModel); return m?.brandName || m?.name?.split(' ')[0] || 'Model' })()}
+                  </span>
+                  <ChevronDownIcon className="w-3.5 h-3.5 text-neutral-400" />
+                </button>
+
+                {/* Model Dropdown */}
+                {isModelDropdownOpen && (
+                  <div className="absolute bottom-full right-0 mb-3 w-64 bg-white dark:bg-[#1C1C1C] rounded-2xl border border-neutral-100 dark:border-neutral-800 shadow-[0_4px_24px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] overflow-hidden z-50">
+                    <div className="p-2 border-b border-neutral-100 dark:border-neutral-800">
+                      <p className="text-xs font-medium text-neutral-500 px-2">Select Model</p>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto p-1.5">
+                      {availableModels.map((model) => (
+                        <button
+                          key={model.id}
+                          onClick={() => {
+                            if (model.available) {
+                              setSelectedModel(model.id)
+                              setIsModelDropdownOpen(false)
+                            }
+                          }}
+                          disabled={!model.available}
+                          className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors ${
+                            selectedModel === model.id
+                              ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                              : model.available
+                                ? 'text-neutral-700 dark:text-neutral-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                                : 'text-neutral-400 dark:text-neutral-600 cursor-not-allowed opacity-60'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium truncate">{model.brandName || model.name}</span>
+                                {!model.available && (
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-md text-zinc-500 dark:text-zinc-400 shrink-0">
+                                    Unavailable
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-neutral-500 dark:text-neutral-500 truncate mt-0.5">
+                                {model.description}
+                              </p>
+                            </div>
+                            {selectedModel === model.id && model.available && (
+                              <CheckIcon className="w-4 h-4 text-indigo-500 shrink-0 ml-2" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Send Button */}
+              <button
+                onClick={handleGenerate}
+                disabled={isProcessing || !inputValue.trim()}
+                className="flex items-center justify-center w-10 h-10 ml-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+                title="Send"
+              >
+                {isProcessing ? (
+                  <LoadingIcon className="w-5 h-5 animate-spin" />
+                ) : (
+                  <SendIcon className="w-5 h-5" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Quick Actions */}
         {!inputValue && (
           <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
-            <span className="text-xs text-neutral-500">Try:</span>
+            <span className="text-xs text-neutral-500 dark:text-neutral-400">Try:</span>
             {selectedFolder ? (
               <>
                 <button
                   onClick={() => setInputValue("Summarize the notes in this folder")}
-                  className="px-3 py-1.5 text-xs rounded-full bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600/30 transition-all"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all"
                 >
                   Summarize
                 </button>
                 <button
                   onClick={() => setInputValue("Create a new note about today's meeting")}
-                  className="px-3 py-1.5 text-xs rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 transition-all"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-all"
                 >
                   + New Note
                 </button>
                 <button
                   onClick={() => setInputValue("Create a flowchart of the main concepts")}
-                  className="px-3 py-1.5 text-xs rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 transition-all"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-white/10 transition-all"
                 >
                   Flowchart
                 </button>
                 <button
                   onClick={() => setInputValue("Organize and rename the notes in this folder")}
-                  className="px-3 py-1.5 text-xs rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 transition-all"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-white/10 transition-all"
                 >
                   Organize
                 </button>
@@ -1154,25 +1157,25 @@ INSTRUCTIONS:
               <>
                 <button
                   onClick={() => setInputValue("Hi! What can you help me with?")}
-                  className="px-3 py-1.5 text-xs rounded-full bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600/30 transition-all"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all"
                 >
                   Say Hi
                 </button>
                 <button
                   onClick={() => setInputValue("Create a new folder for my projects")}
-                  className="px-3 py-1.5 text-xs rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 transition-all"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-all"
                 >
                   + New Folder
                 </button>
                 <button
                   onClick={() => setInputValue("Give me an overview of all my notes")}
-                  className="px-3 py-1.5 text-xs rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 transition-all"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10 transition-all"
                 >
                   Overview
                 </button>
                 <button
                   onClick={() => setInputValue("Help me organize my workspace with a good folder structure")}
-                  className="px-3 py-1.5 text-xs rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 transition-all"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10 transition-all"
                 >
                   Organize
                 </button>
