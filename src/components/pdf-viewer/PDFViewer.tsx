@@ -131,7 +131,7 @@ export function PDFViewer({
     : "flex flex-col h-full bg-zinc-900 rounded-lg overflow-hidden"
 
   const viewerClass = isFullscreen || isModal
-    ? "w-full h-full max-w-6xl max-h-[90vh] bg-zinc-900 rounded-lg overflow-hidden flex flex-col shadow-2xl"
+    ? "w-full h-full max-w-4xl max-h-[90vh] bg-zinc-900 rounded-lg overflow-hidden flex flex-col shadow-2xl"
     : "flex-1 flex flex-col"
 
   return (

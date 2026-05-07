@@ -202,7 +202,7 @@ export default function SharedPage({ params }: { params: Promise<{ token: string
     <div className="min-h-screen bg-zinc-950">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="text-xl font-grandhotel text-white">
               Noted.
@@ -245,7 +245,7 @@ export default function SharedPage({ params }: { params: Promise<{ token: string
       </header>
 
       {/* Content */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="simple-editor-wrapper shared-wrapper">
           <EditorContent
             editor={editor}
@@ -256,7 +256,7 @@ export default function SharedPage({ params }: { params: Promise<{ token: string
 
       {/* Footer */}
       <footer className="border-t border-zinc-800 mt-auto">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between text-sm text-zinc-500">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between text-sm text-zinc-500">
           <span>
             Last updated: {new Date(data.page.updatedAt).toLocaleDateString()}
           </span>

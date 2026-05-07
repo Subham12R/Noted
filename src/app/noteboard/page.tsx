@@ -6,7 +6,7 @@ import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor
 export default function NoteBoardPage() {
   return (
       <div className="min-h-screen w-full">
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <SimpleEditor />
           </div>
           <div className="flex justify bottom-0 max-w-full items-center z-10">

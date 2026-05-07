@@ -1168,7 +1168,7 @@ export const Input = ({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 pt-6 pb-4 px-4 pointer-events-none">
-      <div className="max-w-6xl mx-auto relative pointer-events-auto">
+      <div className="max-w-4xl mx-auto relative pointer-events-auto">
         {/* Output Area - Solid design */}
         {(response || isProcessing || error) && (
           <div
