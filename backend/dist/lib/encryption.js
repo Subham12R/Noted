@@ -1,0 +1,44 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.encryptApiKey = encryptApiKey;
+exports.decryptApiKey = decryptApiKey;
+exports.maskApiKey = maskApiKey;
+const crypto_1 = require("crypto");
+const ALGORITHM = "aes-256-gcm";
+const IV_LENGTH = 12;
+function getKey() {
+    const raw = process.env.NODE_ENCRYPTION_KEY;
+    if (!raw)
+        throw new Error("NODE_ENCRYPTION_KEY is not set");
+    const key = Buffer.from(raw, "hex");
+    if (key.length !== 32)
+        throw new Error("NODE_ENCRYPTION_KEY must be a 32-byte hex string");
+    return key;
+}
+function encryptApiKey(plaintext) {
+    const key = getKey();
+    const iv = (0, crypto_1.randomBytes)(IV_LENGTH);
+    const cipher = (0, crypto_1.createCipheriv)(ALGORITHM, key, iv);
+    const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+    return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted.toString("hex")}`;
+}
+function decryptApiKey(ciphertext) {
+    const key = getKey();
+    const parts = ciphertext.split(":");
+    if (parts.length !== 3)
+        throw new Error("Invalid encrypted key format");
+    const [ivHex, authTagHex, encryptedHex] = parts;
+    const iv = Buffer.from(ivHex, "hex");
+    const authTag = Buffer.from(authTagHex, "hex");
+    const encrypted = Buffer.from(encryptedHex, "hex");
+    const decipher = (0, crypto_1.createDecipheriv)(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+    return decipher.update(encrypted).toString("utf8") + decipher.final("utf8");
+}
+function maskApiKey(plaintext) {
+    if (plaintext.length <= 8)
+        return "****";
+    return `${plaintext.slice(0, 4)}****${plaintext.slice(-4)}`;
+}
+//# sourceMappingURL=encryption.js.map

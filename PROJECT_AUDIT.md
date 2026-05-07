@@ -224,7 +224,7 @@ noted/
 │   │   └── schema.ts                 # Drizzle ORM schema (27 tables)
 │   ├── types/                        # TypeScript type definitions
 │   └── styles/                       # Global stylesheets
-├── server/                           # WebSocket server (separate process)
+├── backend/                          # Backend API + WebSocket server
 │   ├── index.ts                      # Socket.io + Y.js + Redis
 │   ├── socket-handlers/              # Event handler modules
 │   ├── Dockerfile                    # Server container
@@ -800,7 +800,7 @@ Billing handled end-to-end by Stripe: checkout sessions, customer portal, webhoo
 | Script | Purpose |
 |--------|---------|
 | `npm run dev` | Start Next.js dev server (port 3000) |
-| `npm run dev:ws` | Start WebSocket server (port 3001) |
+| `npm run dev:backend` | Start backend API + WebSocket server |
 | `npm run build` | Production build (standalone output) |
 | `npm run start` | Start production server |
 | `npm run lint` | ESLint checks |

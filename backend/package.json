@@ -1,0 +1,42 @@
+{
+  "name": "noted-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Noted backend API + WebSocket server",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1037.0",
+    "@aws-sdk/s3-request-presigner": "^3.1037.0",
+    "@google/generative-ai": "^0.24.1",
+    "@hono/node-server": "^1.13.7",
+    "@socket.io/redis-adapter": "^8.2.0",
+    "bcryptjs": "^3.0.3",
+    "better-auth": "^1.4.16",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.0",
+    "drizzle-orm": "^0.45.1",
+    "hono": "^4.7.10",
+    "openai": "^6.16.0",
+    "postgres": "^3.4.8",
+    "redis": "^4.6.0",
+    "socket.io": "^4.7.0",
+    "stripe": "^18.0.0",
+    "yjs": "^13.6.0",
+    "pdfjs-dist": "^5.4.530",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^22.0.0",
+    "drizzle-kit": "^0.31.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

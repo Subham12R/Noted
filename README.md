@@ -357,8 +357,8 @@ npm run db:push
 # Terminal 1: Next.js app
 npm run dev
 
-# Terminal 2: WebSocket server
-npm run dev:ws
+# Terminal 2: Backend API + WebSocket server
+npm run dev:backend
 ```
 
 6. **Open the app**
@@ -679,8 +679,8 @@ noted/
 │   ├── db/                     # Database layer
 │   │   └── schema.ts           # Drizzle ORM schema
 │   └── types/                  # TypeScript definitions
-├── server/                     # WebSocket server
-│   └── index.ts                # Socket.io + Y.js handler
+├── backend/                    # Backend API + WebSocket server
+│   └── src/index.ts            # Hono + Socket.io + Y.js handler
 ├── drizzle/                    # Database migrations
 ├── public/                     # Static assets
 └── docker-compose.yml          # Docker configuration
@@ -693,7 +693,7 @@ noted/
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start development server |
-| `npm run dev:ws` | Start WebSocket server |
+| `npm run dev:backend` | Start backend API + WebSocket server |
 | `npm run build` | Build for production |
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint |

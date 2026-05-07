@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { X, Pencil, Eye } from "lucide-react"
 import { toast } from "sonner"
-import type { SharedPage, SharedFolder } from "@/app/api/shared-with-me/route"
+import type { SharedPage, SharedFolder } from "@/types/shared-with-me"
 
 function SharedPageCard({ page, onRemove }: { page: SharedPage; onRemove: (id: string) => void }) {
   const [isRemoving, setIsRemoving] = useState(false)

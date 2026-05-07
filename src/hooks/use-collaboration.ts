@@ -85,7 +85,7 @@ export function useCollaboration(options: UseCollaborationOptions) {
     updateListenerRef.current = () => yblocks.unobserve(blocksObserver)
 
     // Connect to WebSocket server
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3001"
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:8080"
     const socket = io(wsUrl, {
       auth: {
         userId: user.id,

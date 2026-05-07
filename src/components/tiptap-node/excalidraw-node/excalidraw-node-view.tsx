@@ -112,7 +112,7 @@ export function ExcalidrawNodeView({ node, updateAttributes, deleteNode, selecte
     if (!user?.id) return
 
     const pageId = resolvePageId(node.attrs.pageId)
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3001"
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:8080"
 
     const socket = io(wsUrl, {
       auth: {

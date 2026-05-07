@@ -77,7 +77,7 @@ export function useRealtimeSync(options: UseRealtimeSyncOptions) {
       socketRef.current = null
     }
 
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3001"
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:8080"
 
     // Small delay on initial connection to avoid race conditions during hydration
     const connectionDelay = initialConnectionAttemptRef.current ? 0 : 100
