@@ -31,12 +31,12 @@ export function OAuthButtons({ disabled, redirectTo }: OAuthButtonsProps) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className=" gap-3">
       <button
         type="button"
         onClick={handleGoogleSignIn}
         disabled={disabled || loadingProvider !== null}
-        className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#1a1a1a] border border-neutral-800 hover:border-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group"
+        className="flex rounded items-center justify-center gap-2 w-full px-4 py-3 bg-[#1a1a1a] border border-neutral-800 hover:border-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group"
       >
         {loadingProvider === "google" ? (
           <svg className="animate-spin h-5 w-5 text-neutral-500" viewBox="0 0 24 24">
@@ -64,15 +64,15 @@ export function OAuthButtons({ disabled, redirectTo }: OAuthButtonsProps) {
           </svg>
         )}
         <span className="text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">
-          Google
+          Sign in with Google
         </span>
       </button>
 
-      <button
+      {/*<button
         type="button"
         onClick={handleGitHubSignIn}
         disabled={disabled || loadingProvider !== null}
-        className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#1a1a1a] border border-neutral-800 hover:border-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group"
+        className="flex rounded items-center justify-center gap-2 w-full px-4 py-3 bg-[#1a1a1a] border border-neutral-800 hover:border-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group"
       >
         {loadingProvider === "github" ? (
           <svg className="animate-spin h-5 w-5 text-neutral-500" viewBox="0 0 24 24">
@@ -87,7 +87,7 @@ export function OAuthButtons({ disabled, redirectTo }: OAuthButtonsProps) {
         <span className="text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">
           GitHub
         </span>
-      </button>
+      </button>*/}
     </div>
   )
 }

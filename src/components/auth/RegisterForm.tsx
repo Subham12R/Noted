@@ -55,7 +55,7 @@ export function RegisterForm() {
           <div className="w-full border-t border-neutral-800" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-[#121212] text-neutral-500">
+          <span className="px-4 bg-[#1a1a1a] text-neutral-500">
             or register with email
           </span>
         </div>
@@ -80,7 +80,7 @@ export function RegisterForm() {
             placeholder="John Doe"
             required
             disabled={disabled}
-            className="w-full px-4 py-3 bg-[#1a1a1a] border border-neutral-800 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-neutral-600"
+            className="w-full rounded px-4 py-3 bg-[#1a1a1a] border border-neutral-800 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-neutral-600"
           />
         </div>
 
@@ -96,7 +96,7 @@ export function RegisterForm() {
             placeholder="you@example.com"
             required
             disabled={disabled}
-            className="w-full px-4 py-3 bg-[#1a1a1a] border border-neutral-800 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-neutral-600"
+            className="w-full rounded px-4 py-3 bg-[#1a1a1a] border border-neutral-800 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-neutral-600"
           />
         </div>
 
@@ -114,7 +114,7 @@ export function RegisterForm() {
               required
               disabled={disabled}
               minLength={8}
-              className="w-full px-4 py-3 bg-[#1a1a1a] border border-neutral-800 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-neutral-600"
+              className="w-full rounded px-4 py-3 bg-[#1a1a1a] border border-neutral-800 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-neutral-600"
             />
           </div>
 
@@ -131,7 +131,7 @@ export function RegisterForm() {
               required
               disabled={disabled}
               minLength={8}
-              className="w-full px-4 py-3 bg-[#1a1a1a] border border-neutral-800 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-neutral-600"
+              className="w-full rounded px-4 py-3 bg-[#1a1a1a] border border-neutral-800 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-neutral-600"
             />
           </div>
         </div>
@@ -146,7 +146,7 @@ export function RegisterForm() {
         <button
           type="submit"
           disabled={disabled}
-          className="w-full py-3 px-4 bg-white hover:bg-neutral-200 text-black font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3 rounded px-4 bg-white hover:bg-neutral-200 text-black font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <span className="flex items-center justify-center gap-2">
