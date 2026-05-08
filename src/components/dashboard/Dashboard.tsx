@@ -142,15 +142,15 @@ export function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white transition-colors duration-300 flex flex-col">
+    <div className="min-h-screen  mx-auto  text-zinc-900 dark:text-white transition-colors duration-300 flex flex-col">
       {/* Header */}
       <header className="px-6 pt-8 pb-6 lg:px-10 border-b border-zinc-100 dark:border-zinc-800/60">
         <p className="text-sm font-medium text-neutral-400 dark:text-neutral-500 mb-1 tracking-tight">
           {currentDate}
         </p>
         <h1 className="text-4xl lg:text-5xl font-bold tracking-tight">
-          <span className="text-neutral-400 dark:text-neutral-500">{greeting}, </span>
-          <span className="text-neutral-900 dark:text-white font-grandhotel italic text-6xl">{firstName}!</span>
+          <span className="text-amber-400 dark:text-zinc-100">{greeting}, </span>
+          <span className="text-neutral-900 dark:text-white  text-5xl">{firstName}!</span>
         </h1>
       </header>
 

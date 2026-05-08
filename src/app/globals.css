@@ -7,12 +7,12 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1a1a1a;
   --font-grandhotel: 'Grandhotel', cursive;
 }
 
 .dark {
-  --background: #121212;
+  --background: #1a1a1a;
   --foreground: #ededed;
 }
 
