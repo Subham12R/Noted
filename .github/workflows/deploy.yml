@@ -51,7 +51,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /home/subham/trace
+            cd /home/subham/noted
             docker compose pull
             docker compose up -d --remove-orphans
             docker image prune -f
