@@ -18,6 +18,6 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY package*.json ./
 
-EXPOSE 3001
+EXPOSE 8080
 
 CMD ["node", "dist/index.js"]
