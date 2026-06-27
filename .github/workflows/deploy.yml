@@ -34,7 +34,7 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ghcr.io/subham12r/trace-cloud:latest
+          tags: ghcr.io/subham12r/noted:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
